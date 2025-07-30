@@ -1,0 +1,52 @@
+{
+  "name": "mcp-crawl4ai",
+  "version": "1.0.0",
+  "description": "MCP server for Crawl4AI - web crawling and content extraction",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:integration": "tsx src/test.ts",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "check": "npm run lint && npm run format:check && npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "crawl4ai",
+    "web-scraping",
+    "markdown",
+    "pdf",
+    "screenshot"
+  ],
+  "author": "Juan González Cano",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "axios": "^1.7.9",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.32.0",
+    "@jest/globals": "^30.0.5",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^22.10.6",
+    "@typescript-eslint/eslint-plugin": "^8.38.0",
+    "@typescript-eslint/parser": "^8.38.0",
+    "eslint": "^9.32.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.3",
+    "jest": "^30.0.5",
+    "prettier": "^3.6.2",
+    "ts-jest": "^29.4.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}
