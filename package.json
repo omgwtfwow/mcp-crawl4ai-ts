@@ -1,8 +1,11 @@
 {
-  "name": "mcp-crawl4ai",
-  "version": "1.0.0",
-  "description": "MCP server for Crawl4AI - web crawling and content extraction",
+  "name": "mcp-crawl4ai-ts",
+  "version": "1.0.2",
+  "description": "TypeScript MCP server for Crawl4AI - web crawling and content extraction",
   "main": "dist/index.js",
+  "bin": {
+    "mcp-crawl4ai-ts": "dist/index.js"
+  },
   "type": "module",
   "scripts": {
     "build": "tsc",
@@ -28,6 +31,19 @@
   ],
   "author": "Juan González Cano",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/omgwtfwow/mcp-crawl4ai-ts.git"
+  },
+  "bugs": {
+    "url": "https://github.com/omgwtfwow/mcp-crawl4ai-ts/issues"
+  },
+  "homepage": "https://github.com/omgwtfwow/mcp-crawl4ai-ts#readme",
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE"
+  ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.4",
     "axios": "^1.7.9",
