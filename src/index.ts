@@ -66,7 +66,8 @@ class Crawl4AIServer {
       tools: [
         {
           name: 'crawl_page',
-          description: 'Crawl a webpage and extract markdown content with various filtering options',
+          description:
+            'Basic webpage crawling for clean markdown extraction. Use when: you need simple content without JavaScript, want to filter specific HTML tags, or need quick markdown conversion. Prefer crawl_with_config for advanced needs',
           inputSchema: {
             type: 'object',
             properties: {
@@ -101,7 +102,8 @@ class Crawl4AIServer {
               },
               wait_for: {
                 type: 'string',
-                description: 'CSS selector to wait for before extracting content',
+                description:
+                  'Wait for element before extraction. Use CSS selector like ".content-loaded" or "#main-article". Ensures dynamic content is ready',
               },
               timeout: {
                 type: 'number',
@@ -114,7 +116,8 @@ class Crawl4AIServer {
         },
         {
           name: 'capture_screenshot',
-          description: 'Capture a screenshot of a webpage',
+          description:
+            'Capture webpage screenshots as PNG. Use when: documenting visual bugs, archiving page state, or needing visual confirmation. Returns base64-encoded image. For PDF use generate_pdf instead',
           inputSchema: {
             type: 'object',
             properties: {
@@ -142,7 +145,8 @@ class Crawl4AIServer {
         },
         {
           name: 'generate_pdf',
-          description: 'Generate a PDF from a webpage',
+          description:
+            'Convert webpages to PDF format. Use when: creating printable documents, archiving with exact layout, or generating reports. Returns base64-encoded PDF. Preserves CSS styling better than screenshots',
           inputSchema: {
             type: 'object',
             properties: {
@@ -165,7 +169,8 @@ class Crawl4AIServer {
         },
         {
           name: 'execute_js',
-          description: 'Execute JavaScript on a webpage before crawling',
+          description:
+            'Run JavaScript before extracting content. Use when: clicking "Load More" buttons, dismissing popups, scrolling to reveal content, or extracting from JS variables. Example: document.querySelector(".load-more").click()',
           inputSchema: {
             type: 'object',
             properties: {
@@ -175,7 +180,8 @@ class Crawl4AIServer {
               },
               js_code: {
                 type: 'string',
-                description: 'JavaScript code to execute',
+                description:
+                  'JavaScript to run after page loads. Examples: "document.querySelector(\'.cookie-accept\').click()", "window.scrollTo(0, document.body.scrollHeight)"',
               },
               wait_after_js: {
                 type: 'number',
@@ -193,7 +199,8 @@ class Crawl4AIServer {
         },
         {
           name: 'batch_crawl',
-          description: 'Crawl multiple URLs in parallel',
+          description:
+            'Crawl multiple URLs concurrently for efficiency. Use when: processing URL lists, comparing multiple pages, or bulk data extraction. Faster than sequential crawling. Max 5 concurrent by default',
           inputSchema: {
             type: 'object',
             properties: {
@@ -204,7 +211,8 @@ class Crawl4AIServer {
               },
               max_concurrent: {
                 type: 'number',
-                description: 'Maximum concurrent requests',
+                description:
+                  'Parallel request limit. Higher = faster but more resource intensive. Adjust based on server capacity and rate limits',
                 default: 5,
               },
               remove_images: {
@@ -223,7 +231,8 @@ class Crawl4AIServer {
         },
         {
           name: 'smart_crawl',
-          description: 'Intelligently crawl a URL with automatic detection of content type (sitemap, RSS, text, HTML)',
+          description:
+            'Auto-detect and handle different content types (HTML, sitemap, RSS, text). Use when: URL type is unknown, crawling feeds/sitemaps, or want automatic format handling. Adapts strategy based on content',
           inputSchema: {
             type: 'object',
             properties: {
@@ -252,7 +261,8 @@ class Crawl4AIServer {
         },
         {
           name: 'get_html',
-          description: 'Extract raw HTML content from a webpage',
+          description:
+            'Get raw HTML without processing. Use when: need full HTML structure, doing custom parsing, or debugging page issues. Returns complete HTML including scripts/styles',
           inputSchema: {
             type: 'object',
             properties: {
@@ -262,7 +272,7 @@ class Crawl4AIServer {
               },
               wait_for: {
                 type: 'string',
-                description: 'CSS selector to wait for',
+                description: 'CSS selector to wait for before extraction. Example: ".article-content" or "#data-table"',
               },
               bypass_cache: {
                 type: 'boolean',
@@ -275,7 +285,8 @@ class Crawl4AIServer {
         },
         {
           name: 'extract_links',
-          description: 'Extract and analyze all links from a webpage',
+          description:
+            'Extract and categorize all page links. Use when: building sitemaps, analyzing site structure, finding broken links, or discovering resources. Groups by internal/external/social/documents',
           inputSchema: {
             type: 'object',
             properties: {
@@ -285,7 +296,8 @@ class Crawl4AIServer {
               },
               categorize: {
                 type: 'boolean',
-                description: 'Categorize links (internal/external/social/etc)',
+                description:
+                  'Group links by type: internal (same domain), external, social media, documents (PDF/DOC), images. Helpful for link analysis',
                 default: true,
               },
             },
@@ -294,7 +306,8 @@ class Crawl4AIServer {
         },
         {
           name: 'crawl_recursive',
-          description: 'Recursively crawl a website following internal links up to a specified depth',
+          description:
+            'Deep crawl a website following internal links. Use when: mapping entire sites, finding all pages, building comprehensive indexes. Control with max_depth (default 3) and max_pages (default 50)',
           inputSchema: {
             type: 'object',
             properties: {
@@ -314,11 +327,13 @@ class Crawl4AIServer {
               },
               include_pattern: {
                 type: 'string',
-                description: 'Regex pattern for URLs to include',
+                description:
+                  'Regex to match URLs to crawl. Example: ".*\\/blog\\/.*" for blog posts only, ".*\\.html$" for HTML pages',
               },
               exclude_pattern: {
                 type: 'string',
-                description: 'Regex pattern for URLs to exclude',
+                description:
+                  'Regex to skip URLs. Example: ".*\\/(login|admin).*" to avoid auth pages, ".*\\.pdf$" to skip PDFs',
               },
             },
             required: ['url'],
@@ -326,7 +341,8 @@ class Crawl4AIServer {
         },
         {
           name: 'parse_sitemap',
-          description: 'Parse a sitemap.xml file and extract all URLs',
+          description:
+            'Extract URLs from XML sitemaps. Use when: discovering all site pages, planning crawl strategies, or checking sitemap validity. Supports regex filtering. Try sitemap.xml or robots.txt first',
           inputSchema: {
             type: 'object',
             properties: {
@@ -345,7 +361,7 @@ class Crawl4AIServer {
         {
           name: 'crawl_with_config',
           description:
-            'Advanced web crawling with full browser and crawler configuration options. Supports JavaScript execution, session management, content filtering, and multiple extraction strategies',
+            'Advanced crawling with full control. Use when: sites need JavaScript, handling logins/sessions, extracting structured data with LLM, dealing with anti-bot measures, or need precise browser control. Most powerful tool for complex scenarios',
           inputSchema: {
             type: 'object',
             properties: {
@@ -375,7 +391,7 @@ class Crawl4AIServer {
               user_agent: {
                 type: 'string',
                 description:
-                  'Custom browser identification string. Use to bypass bot detection or access mobile-specific content',
+                  'Custom browser identity. Use for: mobile sites (include "Mobile"), avoiding bot detection, or specific browser requirements. Example: "Mozilla/5.0 (iPhone...)"',
               },
               proxy_server: {
                 type: 'string',
@@ -411,13 +427,15 @@ class Crawl4AIServer {
               // Crawler Configuration
               word_count_threshold: {
                 type: 'number',
-                description: 'Minimum words per text block to include. Filters out navigation and sparse content',
+                description:
+                  'Min words per text block. Filters out menus, footers, and short snippets. Lower = more content but more noise. Higher = only substantial paragraphs',
                 default: 200,
               },
               excluded_tags: {
                 type: 'array',
                 items: { type: 'string' },
-                description: 'HTML tags to exclude from extraction (e.g., ["nav", "footer", "aside"])',
+                description:
+                  'HTML tags to remove completely. Common: ["nav", "footer", "aside", "script", "style"]. Cleans up content before extraction',
               },
               remove_overlay_elements: {
                 type: 'boolean',
@@ -428,12 +446,12 @@ class Crawl4AIServer {
                 type: ['string', 'array'],
                 items: { type: 'string' },
                 description:
-                  'JavaScript to execute after page loads. String or array of scripts for clicking, scrolling, or data extraction',
+                  'JavaScript to run after page loads. Single string or array for multiple scripts. Examples: "document.querySelector(\'.more\').click()", ["acceptCookies()", "loadAllComments()"]',
               },
               wait_for: {
                 type: 'string',
                 description:
-                  'Wait condition: CSS selector (e.g., ".loaded"), JS expression returning boolean, or "domcontentloaded"/"networkidle"',
+                  'Wait condition before extraction. Options: CSS selector ".content", JS expression "() => document.querySelector(\'.data\').children.length > 10", or "networkidle"',
               },
               wait_for_timeout: {
                 type: 'number',
@@ -472,23 +490,26 @@ class Crawl4AIServer {
               },
               session_id: {
                 type: 'string',
-                description: 'Reuse browser session for multi-step workflows. Maintains cookies and auth state',
+                description:
+                  'Browser session ID from create_session. Maintains login state, cookies, and JavaScript context. Required for js_only mode. Essential for multi-page auth flows',
               },
               cache_mode: {
                 type: 'string',
                 enum: ['ENABLED', 'BYPASS', 'DISABLED'],
                 description:
-                  'ENABLED: Use cache if available, BYPASS: Fetch fresh but update cache, DISABLED: No caching',
+                  'Cache strategy. ENABLED: Use cached content if available (fast). BYPASS: Always fetch fresh but save to cache. DISABLED: No cache read or write',
                 default: 'BYPASS',
               },
               extraction_type: {
                 type: 'string',
                 enum: ['llm', 'css', 'xpath', 'json_css'],
-                description: 'Extraction strategy type. LLM for semantic extraction, CSS/XPath for precise selectors',
+                description:
+                  'How to extract structured data. "llm": AI understands content, "css": precise selectors, "xpath": complex paths, "json_css": structured JSON output',
               },
               llm_provider: {
                 type: 'string',
-                description: 'LLM provider for extraction (e.g., "openai/gpt-4o-mini")',
+                description:
+                  'AI model for extraction. Format: "provider/model". Examples: "openai/gpt-4o-mini", "anthropic/claude-3-haiku". Requires extraction_type="llm"',
               },
               llm_api_key: {
                 type: 'string',
@@ -500,11 +521,13 @@ class Crawl4AIServer {
               },
               extraction_instruction: {
                 type: 'string',
-                description: 'Natural language instruction for LLM extraction',
+                description:
+                  'Tell AI what to extract in plain English. Example: "Extract all product names, prices, and availability. Format prices as numbers without currency symbols"',
               },
               css_selectors: {
                 type: 'object',
-                description: 'Mapping of field names to CSS selectors for extraction',
+                description:
+                  'Map fields to CSS selectors. Example: {"title": "h1", "price": ".price-tag", "description": ".product-info p"}. For extraction_type="css"',
               },
               timeout: {
                 type: 'number',
@@ -541,7 +564,8 @@ class Crawl4AIServer {
               },
               scan_full_page: {
                 type: 'boolean',
-                description: 'Auto-scroll to load all dynamic content (infinite scroll)',
+                description:
+                  'Auto-scroll entire page to trigger lazy loading. Use for: infinite scroll, lazy-loaded images, or content that appears on scroll. Slower but complete',
                 default: false,
               },
               remove_forms: {
@@ -556,7 +580,8 @@ class Crawl4AIServer {
               },
               excluded_selector: {
                 type: 'string',
-                description: 'CSS selector for elements to exclude (e.g., "#ads, .tracker")',
+                description:
+                  'CSS selector for elements to remove. Examples: "#cookie-banner, .advertisement, .social-share". Comma-separate multiple selectors',
               },
               only_text: {
                 type: 'boolean',
@@ -600,12 +625,14 @@ class Crawl4AIServer {
               // Page Interaction
               js_only: {
                 type: 'boolean',
-                description: 'Only execute JS without reloading page (requires session_id)',
+                description:
+                  'Execute JS on existing page without navigation. Requires active session_id. Use for: multi-step interactions, updating dynamic content, or SPA navigation',
                 default: false,
               },
               simulate_user: {
                 type: 'boolean',
-                description: 'Simulate human-like mouse movements to avoid bot detection',
+                description:
+                  'Mimic human behavior with random mouse movements and delays. Helps bypass bot detection on protected sites. Slows crawling but improves success rate',
                 default: false,
               },
               override_navigator: {
@@ -615,27 +642,32 @@ class Crawl4AIServer {
               },
               magic: {
                 type: 'boolean',
-                description: 'Experimental: Auto-handle popups and consent banners',
+                description:
+                  'Auto-detect and dismiss popups, cookie banners, and overlays. Experimental but handles common annoyances. May not work on all sites',
                 default: false,
               },
 
               // Virtual Scroll Configuration
               virtual_scroll_config: {
                 type: 'object',
-                description: 'Configuration for sites with virtual scrolling (Twitter, Instagram)',
+                description:
+                  'Handle infinite feeds that replace content while scrolling (Twitter, Instagram, TikTok). Different from scan_full_page which handles appending content',
                 properties: {
                   container_selector: {
                     type: 'string',
-                    description: 'CSS selector for the scrollable container',
+                    description:
+                      'CSS selector for scrollable feed container. Examples: "[role=\'feed\']", ".timeline", "#posts-container"',
                   },
                   scroll_count: {
                     type: 'number',
-                    description: 'Number of scroll iterations',
+                    description:
+                      'How many times to scroll. Each scroll loads new content batch. More = more posts but slower',
                     default: 10,
                   },
                   scroll_by: {
                     type: ['string', 'number'],
-                    description: 'Scroll amount: "container_height", "page_height", or pixels',
+                    description:
+                      'Distance per scroll. "container_height": one viewport, "page_height": full page, or pixels like 500',
                     default: 'container_height',
                   },
                   wait_after_scroll: {
@@ -660,7 +692,7 @@ class Crawl4AIServer {
         {
           name: 'create_session',
           description:
-            'Create a new browser session reference for stateful crawling. Sessions persist on the Crawl4AI server and maintain cookies, login state, and JavaScript context across requests',
+            'Start a persistent browser session for stateful crawling. Use when: handling login flows, maintaining cookies across requests, or multi-step interactions. Session persists until timeout. Use session_id in crawl_with_config to reuse',
           inputSchema: {
             type: 'object',
             properties: {
@@ -670,7 +702,8 @@ class Crawl4AIServer {
               },
               initial_url: {
                 type: 'string',
-                description: 'Optional URL to pre-warm the session by making an initial crawl',
+                description:
+                  'URL to load when creating session. Useful for: setting cookies, logging in, or reaching a starting point before actual crawling',
               },
               browser_type: {
                 type: 'string',
@@ -684,7 +717,8 @@ class Crawl4AIServer {
         },
         {
           name: 'clear_session',
-          description: 'Remove session from local tracking (actual browser session on server persists until timeout)',
+          description:
+            'Stop tracking a browser session locally. Use when: done with multi-step crawling, cleaning up after login flows. Note: actual browser on server persists until timeout',
           inputSchema: {
             type: 'object',
             properties: {
@@ -699,7 +733,7 @@ class Crawl4AIServer {
         {
           name: 'list_sessions',
           description:
-            'List all locally tracked browser sessions. Note: These are session references - actual server state may differ',
+            'Show all active browser sessions with age and usage info. Use when: checking available sessions, debugging session issues, or before creating new sessions. Shows local tracking only',
           inputSchema: {
             type: 'object',
             properties: {},
@@ -1212,7 +1246,10 @@ class Crawl4AIServer {
       if (options.remove_overlay_elements) crawler_config.remove_overlay_elements = options.remove_overlay_elements;
 
       // JavaScript execution
-      if (options.js_code) crawler_config.js_code = options.js_code;
+      if (options.js_code) {
+        // If js_code is an array, join it with newlines for the server
+        crawler_config.js_code = Array.isArray(options.js_code) ? options.js_code.join('\n') : options.js_code;
+      }
       if (options.wait_for) crawler_config.wait_for = options.wait_for;
       if (options.wait_for_timeout) crawler_config.wait_for_timeout = options.wait_for_timeout;
 
@@ -1237,24 +1274,42 @@ class Crawl4AIServer {
           session.last_used = new Date();
         }
       }
-      if (options.cache_mode) crawler_config.cache_mode = options.cache_mode;
+      if (options.cache_mode) crawler_config.cache_mode = options.cache_mode.toLowerCase();
 
-      // Extraction strategy
+      // Extraction strategy - prepare for root level passing
+      let extraction_strategy: string | undefined;
+      let extraction_strategy_args: any | undefined;
+
       if (options.extraction_type) {
-        crawler_config.extraction_strategy = { type: options.extraction_type };
+        // Map extraction type to strategy name
+        const strategyMap: Record<string, string> = {
+          llm: 'LLMExtractionStrategy',
+          css: 'JsonCssExtractionStrategy',
+          xpath: 'JsonXPathExtractionStrategy',
+          json_css: 'JsonCssExtractionStrategy',
+          regex: 'RegexExtractionStrategy',
+          cosine: 'CosineStrategy',
+        };
+
+        extraction_strategy = strategyMap[options.extraction_type] || options.extraction_type;
+        extraction_strategy_args = {};
 
         if (options.extraction_type === 'llm') {
-          if (options.llm_provider) {
-            crawler_config.extraction_strategy.llm_config = {
-              provider: options.llm_provider,
-              api_key: options.llm_api_key,
-            };
-          }
-          if (options.extraction_schema) crawler_config.extraction_strategy.schema = options.extraction_schema;
-          if (options.extraction_instruction)
-            crawler_config.extraction_strategy.instruction = options.extraction_instruction;
-        } else if (options.css_selectors) {
-          crawler_config.extraction_strategy.selectors = options.css_selectors;
+          if (options.llm_provider) extraction_strategy_args.provider = options.llm_provider;
+          if (options.llm_api_key) extraction_strategy_args.api_token = options.llm_api_key; // Note: API expects 'api_token'
+          if (options.llm_base_url) extraction_strategy_args.base_url = options.llm_base_url;
+          if (options.extraction_schema) extraction_strategy_args.schema = options.extraction_schema;
+          if (options.extraction_instruction) extraction_strategy_args.instruction = options.extraction_instruction;
+        } else if (options.extraction_type === 'css' && options.css_selectors) {
+          extraction_strategy_args.schema = {
+            name: 'CSS Extraction',
+            baseSelector: 'body',
+            fields: Object.entries(options.css_selectors).map(([name, selector]) => ({
+              name,
+              selector,
+              type: 'text',
+            })),
+          };
         }
       }
 
@@ -1298,12 +1353,23 @@ class Crawl4AIServer {
       // Other
       if (options.log_console) crawler_config.log_console = options.log_console;
 
-      // Call /crawl endpoint
-      const response = await this.axiosClient.post('/crawl', {
+      // Build request body
+      const requestBody: any = {
         urls: [options.url],
         browser_config,
         crawler_config,
-      });
+      };
+
+      // Add extraction strategy at root level if provided
+      if (extraction_strategy) {
+        requestBody.extraction_strategy = extraction_strategy;
+        if (extraction_strategy_args && Object.keys(extraction_strategy_args).length > 0) {
+          requestBody.extraction_strategy_args = extraction_strategy_args;
+        }
+      }
+
+      // Call /crawl endpoint
+      const response = await this.axiosClient.post('/crawl', requestBody);
 
       const results = response.data.results || [];
       const result = results[0] || response.data;

@@ -55,7 +55,7 @@ export default [
     },
   },
   {
-    files: ['src/**/*.test.ts'],
+    files: ['src/**/*.test.ts', 'src/**/*.integration.test.ts', 'src/**/test-utils.ts'],
     languageOptions: {
       globals: {
         describe: 'readonly',
@@ -63,6 +63,8 @@ export default [
         expect: 'readonly',
         beforeEach: 'readonly',
         afterEach: 'readonly',
+        beforeAll: 'readonly',
+        afterAll: 'readonly',
         jest: 'readonly',
       },
     },

@@ -101,11 +101,21 @@ export class Crawl4AIService {
   }
 
   async crawlWithConfig(options: AdvancedCrawlConfig) {
-    const response = await this.axiosClient.post('/crawl', {
+    const requestBody: any = {
       urls: options.url ? [options.url] : options.urls,
       browser_config: options.browser_config,
       crawler_config: options.crawler_config,
-    });
+    };
+
+    // Add extraction strategy at root level if provided
+    if (options.extraction_strategy) {
+      requestBody.extraction_strategy = options.extraction_strategy;
+    }
+    if (options.extraction_strategy_args) {
+      requestBody.extraction_strategy_args = options.extraction_strategy_args;
+    }
+
+    const response = await this.axiosClient.post('/crawl', requestBody);
     return response.data;
   }
 }

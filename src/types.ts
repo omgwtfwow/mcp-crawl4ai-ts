@@ -123,18 +123,6 @@ export interface CrawlerConfig {
   // Cache control
   cache_mode?: 'ENABLED' | 'BYPASS' | 'DISABLED';
 
-  // Extraction configuration
-  extraction_strategy?: {
-    type: 'llm' | 'css' | 'xpath' | 'json_css';
-    llm_config?: {
-      provider: string;
-      api_key?: string;
-    };
-    schema?: any;
-    instruction?: string;
-    selectors?: Record<string, string>;
-  };
-
   // Performance options
   timeout?: number;
   verbose?: boolean;
@@ -150,6 +138,8 @@ export interface AdvancedCrawlConfig {
   browser_config?: BrowserConfig;
   crawler_config?: CrawlerConfig;
   priority?: number;
+  extraction_strategy?: string; // e.g., 'LLMExtractionStrategy', 'JsonCssExtractionStrategy'
+  extraction_strategy_args?: Record<string, any>; // Strategy-specific arguments
 }
 
 // Session management types (used internally by MCP server)
