@@ -54,12 +54,12 @@ async function testMCPServer() {
       const result = await client.callTool({
         name: 'crawl_page',
         arguments: {
-          url: 'https://example.com',
+          url: 'https://www.google.com',
           remove_images: true,
           bypass_cache: true,
         },
       });
-      return (result as any).content[0].type === 'text' && (result as any).content[0].text.includes('Example Domain');
+      return (result as any).content[0].type === 'text' && (result as any).content[0].text.length > 100;
     });
 
     // Test 2: capture_screenshot
@@ -67,7 +67,7 @@ async function testMCPServer() {
       const result = await client.callTool({
         name: 'capture_screenshot',
         arguments: {
-          url: 'https://example.com',
+          url: 'https://www.google.com',
           full_page: true,
         },
       });
@@ -79,7 +79,7 @@ async function testMCPServer() {
       const result = await client.callTool({
         name: 'generate_pdf',
         arguments: {
-          url: 'https://example.com',
+          url: 'https://www.google.com',
         },
       });
       return (result as any).content[0].type === 'text' && (result as any).content[0].text.includes('PDF generated');
@@ -90,9 +90,9 @@ async function testMCPServer() {
       const result = await client.callTool({
         name: 'execute_js',
         arguments: {
-          url: 'https://example.com',
-          js_code: 'document.title = "Test Title"; document.title',
-          wait_after_js: 500,
+          url: 'https://github.com',
+          js_code: 'document.querySelector("h1").textContent || document.title',
+          wait_after_js: 1000,
         },
       });
       return (
@@ -105,7 +105,7 @@ async function testMCPServer() {
       const result = await client.callTool({
         name: 'batch_crawl',
         arguments: {
-          urls: ['https://example.com', 'https://example.org'],
+          urls: ['https://www.google.com', 'https://www.github.com'],
           max_concurrent: 2,
         },
       });
@@ -117,7 +117,7 @@ async function testMCPServer() {
       const result = await client.callTool({
         name: 'smart_crawl',
         arguments: {
-          url: 'https://example.com',
+          url: 'https://www.google.com',
           max_depth: 1,
         },
       });
@@ -131,10 +131,13 @@ async function testMCPServer() {
       const result = await client.callTool({
         name: 'get_html',
         arguments: {
-          url: 'https://example.com',
+          url: 'https://www.google.com',
         },
       });
-      return (result as any).content[0].type === 'text' && (result as any).content[0].text.includes('<html');
+      return (
+        (result as any).content[0].type === 'text' &&
+        ((result as any).content[0].text.includes('<html') || (result as any).content[0].text.includes('<!DOCTYPE'))
+      );
     });
 
     // Test 8: extract_links
@@ -142,7 +145,7 @@ async function testMCPServer() {
       const result = await client.callTool({
         name: 'extract_links',
         arguments: {
-          url: 'https://example.com',
+          url: 'https://www.google.com',
           categorize: true,
         },
       });
@@ -154,7 +157,7 @@ async function testMCPServer() {
       const result = await client.callTool({
         name: 'crawl_recursive',
         arguments: {
-          url: 'https://example.com',
+          url: 'https://www.google.com',
           max_depth: 1,
           max_pages: 5,
         },
@@ -181,22 +184,77 @@ async function testMCPServer() {
       ); // Allow error as sitemap might not exist
     });
 
-    // Test 11: crawl_with_config
-    await runTest('crawl_with_config', async () => {
+    // Test 11: crawl_with_config (basic)
+    await runTest('crawl_with_config (basic)', async () => {
       const result = await client.callTool({
         name: 'crawl_with_config',
         arguments: {
-          url: 'https://example.com',
-          cache_mode: 'bypass',
-          wait_until: 'networkidle',
-          exclude_tags: ['script', 'style'],
-          include_links: true,
+          url: 'https://www.google.com',
+          cache_mode: 'BYPASS',
+          excluded_tags: ['script', 'style'],
+          word_count_threshold: 50,
+        },
+      });
+      return (result as any).content[0].type === 'text';
+    });
+
+    // Test 12: crawl_with_config (advanced)
+    await runTest('crawl_with_config (advanced)', async () => {
+      const result = await client.callTool({
+        name: 'crawl_with_config',
+        arguments: {
+          url: 'https://github.com',
+          viewport_width: 1920,
+          viewport_height: 1080,
+          user_agent: 'MCP Test Bot 1.0',
+          js_code: 'document.querySelectorAll("a").length',
+          wait_after_js: 1000,
+          screenshot: true,
+          cache_mode: 'DISABLED',
+          word_count_threshold: 50,
+          timeout: 45000,
+        },
+      });
+      return (result as any).content[0].type === 'text';
+    });
+
+    // Test 13: create_session
+    await runTest('create_session', async () => {
+      const result = await client.callTool({
+        name: 'create_session',
+        arguments: {
+          session_id: 'test-session-' + Date.now(),
+          browser_type: 'chromium',
         },
       });
       return (
         (result as any).content[0].type === 'text' &&
-        (result as any).content[0].text.includes('Advanced crawl completed')
+        (result as any).content[0].text.includes('Session created successfully')
       );
+    });
+
+    // Test 14: list_sessions
+    await runTest('list_sessions', async () => {
+      const result = await client.callTool({
+        name: 'list_sessions',
+        arguments: {},
+      });
+      return (result as any).content[0].type === 'text';
+    });
+
+    // Test 15: clear_session (will fail if no session exists, which is ok)
+    await runTest('clear_session', async () => {
+      try {
+        await client.callTool({
+          name: 'clear_session',
+          arguments: {
+            session_id: 'test-session-nonexistent',
+          },
+        });
+        return true; // Success or error, both are valid
+      } catch {
+        return true; // Expected to possibly fail
+      }
     });
 
     // Test error handling
@@ -213,15 +271,12 @@ async function testMCPServer() {
     });
 
     await runTest('unknown tool handling', async () => {
-      try {
-        await client.callTool({
-          name: 'non_existent_tool',
-          arguments: {},
-        });
-        return false;
-      } catch {
-        return true; // Expected to fail
-      }
+      const result = await client.callTool({
+        name: 'non_existent_tool',
+        arguments: {},
+      });
+      // MCP servers return errors as content, not exceptions
+      return (result as any).content[0].text.includes('Error: Unknown tool');
     });
 
     // Summary

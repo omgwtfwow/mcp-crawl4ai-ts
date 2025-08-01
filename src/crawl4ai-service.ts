@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
-import { CrawlOptions, CrawlResult, JSExecuteOptions, BatchCrawlOptions } from './types.js';
+import { CrawlOptions, CrawlResult, JSExecuteOptions, BatchCrawlOptions, AdvancedCrawlConfig } from './types.js';
 
 export class Crawl4AIService {
   private axiosClient: AxiosInstance;
@@ -52,9 +52,12 @@ export class Crawl4AIService {
   }
 
   async executeJS(options: JSExecuteOptions & { url: string }) {
+    // Ensure scripts is always an array
+    const scripts = Array.isArray(options.js_code) ? options.js_code : [options.js_code];
+
     const response = await this.axiosClient.post('/execute_js', {
       url: options.url,
-      js_code: options.js_code,
+      scripts: scripts,
       wait_after_js: options.wait_after_js,
       screenshot: options.screenshot,
     });
@@ -95,5 +98,14 @@ export class Crawl4AIService {
     } catch {
       return '';
     }
+  }
+
+  async crawlWithConfig(options: AdvancedCrawlConfig) {
+    const response = await this.axiosClient.post('/crawl', {
+      urls: options.url ? [options.url] : options.urls,
+      browser_config: options.browser_config,
+      crawler_config: options.crawler_config,
+    });
+    return response.data;
   }
 }

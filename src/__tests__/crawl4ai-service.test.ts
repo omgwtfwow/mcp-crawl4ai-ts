@@ -118,7 +118,7 @@ describe('Crawl4AIService', () => {
 
       expect(mockAxiosInstance.post).toHaveBeenCalledWith('/execute_js', {
         url: 'https://example.com',
-        js_code: 'document.title = "New Title"',
+        scripts: ['document.title = "New Title"'],
         wait_after_js: 1000,
         screenshot: undefined,
       });
@@ -201,6 +201,73 @@ describe('Crawl4AIService', () => {
       const result = await service.detectContentType('https://example.com');
 
       expect(result).toBe('');
+    });
+  });
+
+  // Note: Session management tests removed as sessions are now handled client-side in the MCP server
+
+  describe('crawlWithConfig', () => {
+    it('should crawl with advanced config successfully', async () => {
+      const mockResponse = {
+        data: {
+          results: [{ markdown: 'Content', metadata: { title: 'Test' } }],
+        },
+      };
+      mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
+
+      const result = await service.crawlWithConfig({
+        url: 'https://example.com',
+        browser_config: {
+          viewport_width: 1920,
+          viewport_height: 1080,
+        },
+        crawler_config: {
+          word_count_threshold: 100,
+          js_code: 'console.log("test")',
+          session_id: 'test-session',
+        },
+      });
+
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/crawl', {
+        urls: ['https://example.com'],
+        browser_config: {
+          viewport_width: 1920,
+          viewport_height: 1080,
+        },
+        crawler_config: {
+          word_count_threshold: 100,
+          js_code: 'console.log("test")',
+          session_id: 'test-session',
+        },
+      });
+
+      expect(result).toEqual(mockResponse.data);
+    });
+
+    it('should handle multiple URLs', async () => {
+      const mockResponse = {
+        data: {
+          results: [
+            { markdown: 'Content1', metadata: { title: 'Test1' } },
+            { markdown: 'Content2', metadata: { title: 'Test2' } },
+          ],
+        },
+      };
+      mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
+
+      const result = await service.crawlWithConfig({
+        urls: ['https://example.com', 'https://example.org'],
+        browser_config: { headless: true },
+        crawler_config: { cache_mode: 'BYPASS' },
+      });
+
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/crawl', {
+        urls: ['https://example.com', 'https://example.org'],
+        browser_config: { headless: true },
+        crawler_config: { cache_mode: 'BYPASS' },
+      });
+
+      expect(result).toEqual(mockResponse.data);
     });
   });
 

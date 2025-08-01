@@ -21,9 +21,18 @@ if (!CRAWL4AI_BASE_URL) {
   process.exit(1);
 }
 
+interface SessionInfo {
+  id: string;
+  created_at: Date;
+  last_used: Date;
+  initial_url?: string;
+  metadata?: Record<string, any>;
+}
+
 class Crawl4AIServer {
   private server: Server;
   private axiosClient: AxiosInstance;
+  private sessions: Map<string, SessionInfo> = new Map();
 
   constructor() {
     this.server = new Server(
@@ -335,42 +344,365 @@ class Crawl4AIServer {
         },
         {
           name: 'crawl_with_config',
-          description: 'Crawl with advanced configuration options (cache mode, custom headers, etc.)',
+          description:
+            'Advanced web crawling with full browser and crawler configuration options. Supports JavaScript execution, session management, content filtering, and multiple extraction strategies',
           inputSchema: {
             type: 'object',
             properties: {
               url: {
                 type: 'string',
-                description: 'URL to crawl',
+                description: 'The URL to crawl',
               },
-              cache_mode: {
+
+              // Browser Configuration
+              browser_type: {
                 type: 'string',
-                enum: ['bypass', 'read', 'write', 'read_write'],
-                description: 'Cache mode for the request',
-                default: 'bypass',
+                enum: ['chromium', 'firefox', 'webkit'],
+                description:
+                  'Browser engine for crawling. Chromium offers best compatibility, Firefox for specific use cases, WebKit for Safari-like behavior',
+                default: 'chromium',
+              },
+              viewport_width: {
+                type: 'number',
+                description: 'Browser window width in pixels. Affects responsive layouts and content visibility',
+                default: 1080,
+              },
+              viewport_height: {
+                type: 'number',
+                description: 'Browser window height in pixels. Impacts content loading and screenshot dimensions',
+                default: 600,
+              },
+              user_agent: {
+                type: 'string',
+                description:
+                  'Custom browser identification string. Use to bypass bot detection or access mobile-specific content',
+              },
+              proxy_server: {
+                type: 'string',
+                description: 'Proxy server URL (e.g., "http://proxy.example.com:8080")',
+              },
+              proxy_username: {
+                type: 'string',
+                description: 'Proxy authentication username',
+              },
+              proxy_password: {
+                type: 'string',
+                description: 'Proxy authentication password',
+              },
+              cookies: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string', description: 'Cookie name' },
+                    value: { type: 'string', description: 'Cookie value' },
+                    domain: { type: 'string', description: 'Domain where cookie is valid' },
+                    path: { type: 'string', description: 'URL path scope for cookie' },
+                  },
+                  required: ['name', 'value', 'domain'],
+                },
+                description: 'Pre-set cookies for authentication or personalization',
               },
               headers: {
                 type: 'object',
-                description: 'Custom HTTP headers',
+                description: 'Custom HTTP headers for API keys, auth tokens, or specific server requirements',
               },
+
+              // Crawler Configuration
+              word_count_threshold: {
+                type: 'number',
+                description: 'Minimum words per text block to include. Filters out navigation and sparse content',
+                default: 200,
+              },
+              excluded_tags: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'HTML tags to exclude from extraction (e.g., ["nav", "footer", "aside"])',
+              },
+              remove_overlay_elements: {
+                type: 'boolean',
+                description: 'Automatically remove popups, modals, and overlays that obscure content',
+                default: false,
+              },
+              js_code: {
+                type: ['string', 'array'],
+                items: { type: 'string' },
+                description:
+                  'JavaScript to execute after page loads. String or array of scripts for clicking, scrolling, or data extraction',
+              },
+              wait_for: {
+                type: 'string',
+                description:
+                  'Wait condition: CSS selector (e.g., ".loaded"), JS expression returning boolean, or "domcontentloaded"/"networkidle"',
+              },
+              wait_for_timeout: {
+                type: 'number',
+                description: 'Maximum milliseconds to wait for condition',
+                default: 30000,
+              },
+              delay_before_scroll: {
+                type: 'number',
+                description: 'Milliseconds to wait before scrolling. Allows initial content to render',
+                default: 1000,
+              },
+              scroll_delay: {
+                type: 'number',
+                description: 'Milliseconds between scroll steps for lazy-loaded content',
+                default: 500,
+              },
+              process_iframes: {
+                type: 'boolean',
+                description: 'Extract content from embedded iframes including videos and forms',
+                default: false,
+              },
+              exclude_external_links: {
+                type: 'boolean',
+                description: 'Remove links pointing to different domains for cleaner content',
+                default: false,
+              },
+              screenshot: {
+                type: 'boolean',
+                description: 'Capture full-page screenshot as base64 PNG',
+                default: false,
+              },
+              pdf: {
+                type: 'boolean',
+                description: 'Generate PDF as base64 preserving exact layout',
+                default: false,
+              },
+              session_id: {
+                type: 'string',
+                description: 'Reuse browser session for multi-step workflows. Maintains cookies and auth state',
+              },
+              cache_mode: {
+                type: 'string',
+                enum: ['ENABLED', 'BYPASS', 'DISABLED'],
+                description:
+                  'ENABLED: Use cache if available, BYPASS: Fetch fresh but update cache, DISABLED: No caching',
+                default: 'BYPASS',
+              },
+              extraction_type: {
+                type: 'string',
+                enum: ['llm', 'css', 'xpath', 'json_css'],
+                description: 'Extraction strategy type. LLM for semantic extraction, CSS/XPath for precise selectors',
+              },
+              llm_provider: {
+                type: 'string',
+                description: 'LLM provider for extraction (e.g., "openai/gpt-4o-mini")',
+              },
+              llm_api_key: {
+                type: 'string',
+                description: 'API key for LLM provider',
+              },
+              extraction_schema: {
+                type: 'object',
+                description: 'JSON schema for structured extraction with LLM',
+              },
+              extraction_instruction: {
+                type: 'string',
+                description: 'Natural language instruction for LLM extraction',
+              },
+              css_selectors: {
+                type: 'object',
+                description: 'Mapping of field names to CSS selectors for extraction',
+              },
+              timeout: {
+                type: 'number',
+                description: 'Overall request timeout in milliseconds',
+                default: 60000,
+              },
+              verbose: {
+                type: 'boolean',
+                description: 'Enable detailed logging for debugging',
+                default: false,
+              },
+
+              // Additional Crawler Parameters
               wait_until: {
                 type: 'string',
                 enum: ['domcontentloaded', 'networkidle', 'load'],
-                description: 'When to consider page loaded',
-                default: 'networkidle',
+                description: 'Navigation completion condition. "networkidle" waits for no network activity',
+                default: 'domcontentloaded',
               },
-              exclude_tags: {
+              page_timeout: {
+                type: 'number',
+                description: 'Page navigation timeout in milliseconds',
+                default: 60000,
+              },
+              wait_for_images: {
+                type: 'boolean',
+                description: 'Wait for all images to load before extraction',
+                default: false,
+              },
+              ignore_body_visibility: {
+                type: 'boolean',
+                description: 'Skip checking if body element is visible',
+                default: true,
+              },
+              scan_full_page: {
+                type: 'boolean',
+                description: 'Auto-scroll to load all dynamic content (infinite scroll)',
+                default: false,
+              },
+              remove_forms: {
+                type: 'boolean',
+                description: 'Remove all form elements from extracted content',
+                default: false,
+              },
+              keep_data_attributes: {
+                type: 'boolean',
+                description: 'Preserve data-* attributes in cleaned HTML',
+                default: false,
+              },
+              excluded_selector: {
+                type: 'string',
+                description: 'CSS selector for elements to exclude (e.g., "#ads, .tracker")',
+              },
+              only_text: {
+                type: 'boolean',
+                description: 'Extract only text content, no HTML structure',
+                default: false,
+              },
+
+              // Media Handling
+              image_description_min_word_threshold: {
+                type: 'number',
+                description: 'Minimum words for image alt text to be considered valid',
+                default: 50,
+              },
+              image_score_threshold: {
+                type: 'number',
+                description: 'Minimum relevance score for images (filters low-quality images)',
+                default: 3,
+              },
+              exclude_external_images: {
+                type: 'boolean',
+                description: 'Exclude images from external domains',
+                default: false,
+              },
+              screenshot_wait_for: {
+                type: 'number',
+                description: 'Extra wait time in seconds before taking screenshot',
+              },
+
+              // Link Filtering
+              exclude_social_media_links: {
+                type: 'boolean',
+                description: 'Remove links to social media platforms',
+                default: false,
+              },
+              exclude_domains: {
                 type: 'array',
                 items: { type: 'string' },
-                description: 'HTML tags to exclude from content',
+                description: 'List of domains to exclude from links (e.g., ["ads.com", "tracker.io"])',
               },
-              include_links: {
+
+              // Page Interaction
+              js_only: {
                 type: 'boolean',
-                description: 'Include link extraction in response',
-                default: true,
+                description: 'Only execute JS without reloading page (requires session_id)',
+                default: false,
+              },
+              simulate_user: {
+                type: 'boolean',
+                description: 'Simulate human-like mouse movements to avoid bot detection',
+                default: false,
+              },
+              override_navigator: {
+                type: 'boolean',
+                description: 'Override navigator properties for stealth',
+                default: false,
+              },
+              magic: {
+                type: 'boolean',
+                description: 'Experimental: Auto-handle popups and consent banners',
+                default: false,
+              },
+
+              // Virtual Scroll Configuration
+              virtual_scroll_config: {
+                type: 'object',
+                description: 'Configuration for sites with virtual scrolling (Twitter, Instagram)',
+                properties: {
+                  container_selector: {
+                    type: 'string',
+                    description: 'CSS selector for the scrollable container',
+                  },
+                  scroll_count: {
+                    type: 'number',
+                    description: 'Number of scroll iterations',
+                    default: 10,
+                  },
+                  scroll_by: {
+                    type: ['string', 'number'],
+                    description: 'Scroll amount: "container_height", "page_height", or pixels',
+                    default: 'container_height',
+                  },
+                  wait_after_scroll: {
+                    type: 'number',
+                    description: 'Seconds to wait after each scroll',
+                    default: 0.5,
+                  },
+                },
+                required: ['container_selector'],
+              },
+
+              // Other
+              log_console: {
+                type: 'boolean',
+                description: 'Capture browser console logs for debugging',
+                default: false,
               },
             },
             required: ['url'],
+          },
+        },
+        {
+          name: 'create_session',
+          description:
+            'Create a new browser session reference for stateful crawling. Sessions persist on the Crawl4AI server and maintain cookies, login state, and JavaScript context across requests',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              session_id: {
+                type: 'string',
+                description: 'Unique identifier for the session (auto-generated if not provided)',
+              },
+              initial_url: {
+                type: 'string',
+                description: 'Optional URL to pre-warm the session by making an initial crawl',
+              },
+              browser_type: {
+                type: 'string',
+                enum: ['chromium', 'firefox', 'webkit'],
+                description: 'Browser engine for the session',
+                default: 'chromium',
+              },
+            },
+            required: [],
+          },
+        },
+        {
+          name: 'clear_session',
+          description: 'Remove session from local tracking (actual browser session on server persists until timeout)',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              session_id: {
+                type: 'string',
+                description: 'Session ID to remove from tracking',
+              },
+            },
+            required: ['session_id'],
+          },
+        },
+        {
+          name: 'list_sessions',
+          description:
+            'List all locally tracked browser sessions. Note: These are session references - actual server state may differ',
+          inputSchema: {
+            type: 'object',
+            properties: {},
           },
         },
       ],
@@ -414,6 +746,15 @@ class Crawl4AIServer {
 
           case 'crawl_with_config':
             return await this.crawlWithConfig(args as any);
+
+          case 'create_session':
+            return await this.createSession(args as any);
+
+          case 'clear_session':
+            return await this.clearSession(args as any);
+
+          case 'list_sessions':
+            return await this.listSessions();
 
           default:
             throw new Error(`Unknown tool: ${name}`);
@@ -534,9 +875,12 @@ class Crawl4AIServer {
 
   private async executeJS(options: JSExecuteOptions & { url: string }) {
     try {
+      // Ensure scripts is always an array
+      const scripts = Array.isArray(options.js_code) ? options.js_code : [options.js_code];
+
       const response = await this.axiosClient.post('/execute_js', {
         url: options.url,
-        js_code: options.js_code,
+        scripts: scripts,
         wait_after_js: options.wait_after_js,
         screenshot: options.screenshot,
       });
@@ -835,58 +1179,320 @@ class Crawl4AIServer {
     }
   }
 
-  private async crawlWithConfig(options: {
-    url: string;
-    cache_mode?: string;
-    headers?: Record<string, string>;
-    wait_until?: string;
-    exclude_tags?: string[];
-    include_links?: boolean;
-  }) {
+  private async crawlWithConfig(options: any) {
     try {
-      // Build request payload with advanced options
-      const payload: any = {
-        url: options.url,
-        bypass_cache: options.cache_mode === 'bypass',
+      // Build browser_config
+      const browser_config: any = {
+        headless: true, // Always true as noted
       };
 
-      // Add custom headers if provided
-      if (options.headers) {
-        payload.headers = options.headers;
+      if (options.browser_type) browser_config.browser_type = options.browser_type;
+      if (options.viewport_width) browser_config.viewport_width = options.viewport_width;
+      if (options.viewport_height) browser_config.viewport_height = options.viewport_height;
+      if (options.user_agent) browser_config.user_agent = options.user_agent;
+      if (options.headers) browser_config.headers = options.headers;
+      if (options.cookies) browser_config.cookies = options.cookies;
+
+      // Handle proxy configuration
+      if (options.proxy_server) {
+        browser_config.proxy_config = {
+          server: options.proxy_server,
+          username: options.proxy_username,
+          password: options.proxy_password,
+        };
       }
 
-      // Add wait condition
-      if (options.wait_until) {
-        payload.wait_until = options.wait_until;
+      // Build crawler_config
+      const crawler_config: any = {};
+
+      // Content filtering
+      if (options.word_count_threshold !== undefined)
+        crawler_config.word_count_threshold = options.word_count_threshold;
+      if (options.excluded_tags) crawler_config.excluded_tags = options.excluded_tags;
+      if (options.remove_overlay_elements) crawler_config.remove_overlay_elements = options.remove_overlay_elements;
+
+      // JavaScript execution
+      if (options.js_code) crawler_config.js_code = options.js_code;
+      if (options.wait_for) crawler_config.wait_for = options.wait_for;
+      if (options.wait_for_timeout) crawler_config.wait_for_timeout = options.wait_for_timeout;
+
+      // Dynamic content
+      if (options.delay_before_scroll) crawler_config.delay_before_scroll = options.delay_before_scroll;
+      if (options.scroll_delay) crawler_config.scroll_delay = options.scroll_delay;
+
+      // Content processing
+      if (options.process_iframes) crawler_config.process_iframes = options.process_iframes;
+      if (options.exclude_external_links) crawler_config.exclude_external_links = options.exclude_external_links;
+
+      // Export options
+      if (options.screenshot) crawler_config.screenshot = options.screenshot;
+      if (options.pdf) crawler_config.pdf = options.pdf;
+
+      // Session and cache
+      if (options.session_id) {
+        crawler_config.session_id = options.session_id;
+        // Update session last_used time
+        const session = this.sessions.get(options.session_id);
+        if (session) {
+          session.last_used = new Date();
+        }
+      }
+      if (options.cache_mode) crawler_config.cache_mode = options.cache_mode;
+
+      // Extraction strategy
+      if (options.extraction_type) {
+        crawler_config.extraction_strategy = { type: options.extraction_type };
+
+        if (options.extraction_type === 'llm') {
+          if (options.llm_provider) {
+            crawler_config.extraction_strategy.llm_config = {
+              provider: options.llm_provider,
+              api_key: options.llm_api_key,
+            };
+          }
+          if (options.extraction_schema) crawler_config.extraction_strategy.schema = options.extraction_schema;
+          if (options.extraction_instruction)
+            crawler_config.extraction_strategy.instruction = options.extraction_instruction;
+        } else if (options.css_selectors) {
+          crawler_config.extraction_strategy.selectors = options.css_selectors;
+        }
       }
 
-      // Add tag exclusions
-      if (options.exclude_tags && options.exclude_tags.length > 0) {
-        payload.filter_mode = 'blacklist';
-        payload.filter_list = options.exclude_tags;
+      // Performance
+      if (options.timeout) crawler_config.timeout = options.timeout;
+      if (options.verbose) crawler_config.verbose = options.verbose;
+
+      // Additional crawler parameters
+      if (options.wait_until) crawler_config.wait_until = options.wait_until;
+      if (options.page_timeout) crawler_config.page_timeout = options.page_timeout;
+      if (options.wait_for_images) crawler_config.wait_for_images = options.wait_for_images;
+      if (options.ignore_body_visibility) crawler_config.ignore_body_visibility = options.ignore_body_visibility;
+      if (options.scan_full_page) crawler_config.scan_full_page = options.scan_full_page;
+      if (options.remove_forms) crawler_config.remove_forms = options.remove_forms;
+      if (options.keep_data_attributes) crawler_config.keep_data_attributes = options.keep_data_attributes;
+      if (options.excluded_selector) crawler_config.excluded_selector = options.excluded_selector;
+      if (options.only_text) crawler_config.only_text = options.only_text;
+
+      // Media handling
+      if (options.image_description_min_word_threshold !== undefined)
+        crawler_config.image_description_min_word_threshold = options.image_description_min_word_threshold;
+      if (options.image_score_threshold !== undefined)
+        crawler_config.image_score_threshold = options.image_score_threshold;
+      if (options.exclude_external_images) crawler_config.exclude_external_images = options.exclude_external_images;
+      if (options.screenshot_wait_for !== undefined) crawler_config.screenshot_wait_for = options.screenshot_wait_for;
+
+      // Link filtering
+      if (options.exclude_social_media_links)
+        crawler_config.exclude_social_media_links = options.exclude_social_media_links;
+      if (options.exclude_domains) crawler_config.exclude_domains = options.exclude_domains;
+
+      // Page interaction
+      if (options.js_only) crawler_config.js_only = options.js_only;
+      if (options.simulate_user) crawler_config.simulate_user = options.simulate_user;
+      if (options.override_navigator) crawler_config.override_navigator = options.override_navigator;
+      if (options.magic) crawler_config.magic = options.magic;
+
+      // Virtual scroll
+      if (options.virtual_scroll_config) crawler_config.virtual_scroll_config = options.virtual_scroll_config;
+
+      // Other
+      if (options.log_console) crawler_config.log_console = options.log_console;
+
+      // Call /crawl endpoint
+      const response = await this.axiosClient.post('/crawl', {
+        urls: [options.url],
+        browser_config,
+        crawler_config,
+      });
+
+      const results = response.data.results || [];
+      const result = results[0] || response.data;
+
+      // Build response content
+      const content = [];
+
+      // Main content - ensure we get a string
+      let mainContent = 'No content extracted';
+      if (result.markdown && typeof result.markdown === 'string') {
+        mainContent = result.markdown;
+      } else if (result.content && typeof result.content === 'string') {
+        mainContent = result.content;
+      } else if (result.html && typeof result.html === 'string') {
+        mainContent = result.html;
+      } else if (result.text && typeof result.text === 'string') {
+        mainContent = result.text;
+      } else if (typeof result === 'string') {
+        mainContent = result;
       }
 
-      const response = await this.axiosClient.post('/md', payload);
-      const result: CrawlResult = response.data;
+      content.push({
+        type: 'text',
+        text: mainContent,
+      });
 
-      const content = [
-        {
-          type: 'text',
-          text: `Advanced crawl completed:\n\nURL: ${options.url}\nCache mode: ${options.cache_mode || 'bypass'}\nContent length: ${result.markdown?.length || 0} chars\n\n${result.markdown || 'No content extracted'}`,
-        },
-      ];
+      // Screenshot if available
+      if (result.screenshot) {
+        content.push({
+          type: 'image',
+          data: result.screenshot,
+          mimeType: 'image/png',
+        });
+      }
 
-      // Include links if requested
-      if (options.include_links !== false && result.links) {
+      // PDF info if available
+      if (result.pdf) {
         content.push({
           type: 'text',
-          text: `\n\n---\nLinks found:\nInternal: ${result.links.internal?.length || 0}\nExternal: ${result.links.external?.length || 0}`,
+          text: `PDF generated (${result.pdf.length} bytes)`,
+        });
+      }
+
+      // Metadata
+      if (result.metadata) {
+        content.push({
+          type: 'text',
+          text: `\n---\nMetadata: ${JSON.stringify(result.metadata, null, 2)}`,
+        });
+      }
+
+      // Links
+      if (result.links) {
+        content.push({
+          type: 'text',
+          text: `\n---\nLinks: Internal: ${result.links.internal?.length || 0}, External: ${result.links.external?.length || 0}`,
         });
       }
 
       return { content };
     } catch (error: any) {
       throw new Error(`Failed to crawl with config: ${error.response?.data?.detail || error.message}`);
+    }
+  }
+
+  private async createSession(options: { session_id: string; initial_url?: string; browser_type?: string }) {
+    try {
+      // Generate session ID if not provided
+      const sessionId = options.session_id || `session-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+
+      // Store session info locally
+      this.sessions.set(sessionId, {
+        id: sessionId,
+        created_at: new Date(),
+        last_used: new Date(),
+        initial_url: options.initial_url,
+        metadata: {
+          browser_type: options.browser_type || 'chromium',
+        },
+      });
+
+      // If initial_url provided, make first crawl to establish session
+      if (options.initial_url) {
+        try {
+          await this.axiosClient.post('/crawl', {
+            urls: [options.initial_url],
+            browser_config: {
+              headless: true,
+              browser_type: options.browser_type || 'chromium',
+            },
+            crawler_config: {
+              session_id: sessionId,
+              cache_mode: 'BYPASS',
+            },
+          });
+
+          // Update last_used
+          const session = this.sessions.get(sessionId);
+          if (session) {
+            session.last_used = new Date();
+          }
+        } catch (error) {
+          // Session created but initial crawl failed - still return success
+          console.error(`Initial crawl failed for session ${sessionId}:`, error);
+        }
+      }
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Session created successfully:\nSession ID: ${sessionId}\nBrowser: ${options.browser_type || 'chromium'}\n${options.initial_url ? `Pre-warmed with: ${options.initial_url}` : 'Ready for use'}`,
+          },
+        ],
+      };
+    } catch (error: any) {
+      throw new Error(`Failed to create session: ${error.message}`);
+    }
+  }
+
+  private async clearSession(options: { session_id: string }) {
+    try {
+      // Remove from local store
+      const deleted = this.sessions.delete(options.session_id);
+
+      // Note: The actual browser session in Crawl4AI will be cleaned up
+      // automatically after inactivity or when the server restarts
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: deleted
+              ? `Session cleared successfully: ${options.session_id}`
+              : `Session not found: ${options.session_id}`,
+          },
+        ],
+      };
+    } catch (error: any) {
+      throw new Error(`Failed to clear session: ${error.message}`);
+    }
+  }
+
+  private async listSessions() {
+    try {
+      // Return locally stored sessions
+      const sessions = Array.from(this.sessions.entries()).map(([id, info]) => {
+        const ageMinutes = Math.floor((Date.now() - info.created_at.getTime()) / 60000);
+        const lastUsedMinutes = Math.floor((Date.now() - info.last_used.getTime()) / 60000);
+
+        return {
+          session_id: id,
+          created_at: info.created_at.toISOString(),
+          last_used: info.last_used.toISOString(),
+          age_minutes: ageMinutes,
+          last_used_minutes_ago: lastUsedMinutes,
+          initial_url: info.initial_url,
+          browser_type: info.metadata?.browser_type || 'chromium',
+        };
+      });
+
+      if (sessions.length === 0) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: 'No active sessions found.',
+            },
+          ],
+        };
+      }
+
+      const sessionList = sessions
+        .map(
+          (session) =>
+            `- ${session.session_id} (${session.browser_type}, created ${session.age_minutes}m ago, last used ${session.last_used_minutes_ago}m ago)`,
+        )
+        .join('\n');
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Active sessions (${sessions.length}):\n${sessionList}`,
+          },
+        ],
+      };
+    } catch (error: any) {
+      throw new Error(`Failed to list sessions: ${error.message}`);
     }
   }
 

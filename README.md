@@ -180,11 +180,170 @@ Consult your client's documentation for MCP server configuration. The key detail
 { url: string, filter_pattern?: string }
 ```
 
-### 11. `crawl_with_config` - Advanced options
+### 11. `crawl_with_config` - Advanced web crawling with full configuration
 ```typescript
-{ url: string, cache_mode?: string, headers?: Record<string,string>,
-  wait_until?: string, exclude_tags?: string[], include_links?: boolean }
+{
+  url: string,                              // URL to crawl
+  // Browser Configuration
+  browser_type?: 'chromium'|'firefox'|'webkit',  // Browser engine
+  viewport_width?: number,                  // Browser width (default: 1080)
+  viewport_height?: number,                 // Browser height (default: 600)
+  user_agent?: string,                      // Custom user agent
+  proxy_server?: string,                    // Proxy URL
+  proxy_username?: string,                  // Proxy auth
+  proxy_password?: string,                  // Proxy password
+  cookies?: Array<{name, value, domain}>,   // Pre-set cookies
+  headers?: Record<string,string>,          // Custom headers
+  
+  // Crawler Configuration
+  word_count_threshold?: number,            // Min words per block (default: 200)
+  excluded_tags?: string[],                 // HTML tags to exclude
+  remove_overlay_elements?: boolean,        // Remove popups/modals
+  js_code?: string | string[],              // JavaScript to execute
+  wait_for?: string,                        // Wait condition (selector or JS)
+  wait_for_timeout?: number,                // Wait timeout (default: 30000)
+  delay_before_scroll?: number,             // Pre-scroll delay
+  scroll_delay?: number,                    // Between-scroll delay
+  process_iframes?: boolean,                // Include iframe content
+  exclude_external_links?: boolean,         // Remove external links
+  screenshot?: boolean,                     // Capture screenshot
+  pdf?: boolean,                           // Generate PDF
+  session_id?: string,                      // Reuse browser session
+  cache_mode?: 'ENABLED'|'BYPASS'|'DISABLED',  // Cache control
+  extraction_type?: 'llm'|'css'|'xpath'|'json_css',  // Extraction strategy
+  llm_provider?: string,                    // LLM provider (e.g., "openai/gpt-4o-mini")
+  llm_api_key?: string,                     // LLM API key
+  extraction_schema?: object,               // Schema for structured extraction
+  extraction_instruction?: string,          // Natural language extraction prompt
+  css_selectors?: object,                   // CSS selector mapping
+  timeout?: number,                         // Overall timeout (default: 60000)
+  verbose?: boolean                         // Detailed logging
+}
 ```
+
+### 12. `create_session` - Create browser session for stateful crawling
+```typescript
+{ 
+  session_id?: string,      // Optional - auto-generated if not provided
+  initial_url?: string,     // Optional - URL to pre-warm the session
+  browser_type?: string     // Browser engine (default: 'chromium')
+}
+```
+Creates a session reference for maintaining browser state across multiple requests. Sessions persist on the Crawl4AI server and maintain cookies, login state, and JavaScript context.
+
+### 13. `clear_session` - Remove session from tracking
+```typescript
+{ session_id: string }
+```
+Removes session from local tracking. Note: The actual browser session on the server persists until timeout.
+
+### 14. `list_sessions` - List tracked browser sessions
+```typescript
+{}  // No parameters required
+```
+Returns all locally tracked sessions with creation time, last used time, and initial URL. Note: These are session references - actual server state may differ.
+
+## Advanced Configuration
+
+For detailed information about all available configuration options, extraction strategies, and advanced features, please refer to the official Crawl4AI documentation:
+
+- [Crawl4AI Documentation](https://docs.crawl4ai.com/)
+- [Crawl4AI GitHub Repository](https://github.com/unclecode/crawl4ai)
+
+### Quick Examples
+
+1. **JavaScript Execution**:
+   ```typescript
+   await crawl_with_config({
+     url: "https://example.com",
+     js_code: "document.querySelector('.load-more').click()",
+     wait_for: ".content-loaded"
+   })
+   ```
+
+2. **Session-Based Crawling**:
+   ```typescript
+   // Create a session
+   const { session_id } = await create_session({ 
+     session_id: "login-session",
+     initial_url: "https://example.com"
+   });
+   
+   // First crawl - perform login
+   await crawl_with_config({
+     url: "https://example.com/login",
+     session_id: "login-session",
+     js_code: [
+       'document.querySelector("#username").value = "user@example.com"',
+       'document.querySelector("#password").value = "password"',
+       'document.querySelector("#login-button").click()'
+     ],
+     wait_for: ".dashboard"
+   });
+   
+   // Second crawl - access protected content (still logged in!)
+   await crawl_with_config({
+     url: "https://example.com/dashboard",
+     session_id: "login-session"
+   });
+   
+   // Clean up when done
+   await clear_session({ session_id: "login-session" });
+   ```
+
+3. **LLM Extraction**:
+   ```typescript
+   await crawl_with_config({
+     url: "https://example.com/products",
+     extraction_type: "llm",
+     llm_provider: "openai/gpt-4o-mini",
+     extraction_instruction: "Extract all product names and prices"
+   })
+   ```
+
+4. **Virtual Scrolling (Twitter/Instagram)**:
+   ```typescript
+   await crawl_with_config({
+     url: "https://example.com/feed",
+     virtual_scroll_config: {
+       container_selector: "#timeline",
+       scroll_count: 30,
+       scroll_by: "container_height",
+       wait_after_scroll: 0.5
+     }
+   })
+   ```
+   
+5. **Advanced Content Processing**:
+   ```typescript
+   await crawl_with_config({
+     url: "https://example.com",
+     // Content filtering
+     word_count_threshold: 50,
+     excluded_tags: ["nav", "footer", "script"],
+     excluded_selector: "#ads, .popup",
+     only_text: false,
+     
+     // Page behavior
+     wait_until: "networkidle",
+     wait_for_images: true,
+     scan_full_page: true,  // Auto-scroll for infinite scroll
+     
+     // Stealth & interaction
+     simulate_user: true,
+     override_navigator: true,
+     magic: true,  // Auto-handle popups
+     
+     // Media handling
+     image_score_threshold: 5,
+     exclude_external_images: true,
+     screenshot_wait_for: 2,
+     
+     // Link filtering  
+     exclude_social_media_links: true,
+     exclude_domains: ["ads.com", "tracker.io"]
+   })
+   ```
 
 ## Development
 
