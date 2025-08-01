@@ -12,7 +12,7 @@ TypeScript implementation of an MCP server for Crawl4AI. Provides tools for web 
 ### Option 1: Using npx (Recommended)
 
 ```bash
-# 1. Start the Crawl4AI server
+# 1. Start the Crawl4AI server (for example, local docker)
 docker run -d -p 11235:11235 --name crawl4ai --shm-size=1g unclecode/crawl4ai:latest
 
 # 2. Run the MCP server directly (no installation needed)
@@ -49,10 +49,15 @@ npm run build
 # Required
 CRAWL4AI_BASE_URL=http://localhost:11235
 
-# Optional
+# Optional - Server Configuration
 CRAWL4AI_API_KEY=          # If your server requires auth
-SERVER_NAME=crawl4ai-mcp   # Custom name
+SERVER_NAME=crawl4ai-mcp   # Custom name for the MCP server
 SERVER_VERSION=1.0.0       # Custom version
+
+# Optional - LLM Configuration (for extraction strategies)
+LLM_PROVIDER=              # e.g., openai/gpt-4o-mini, anthropic/claude-3
+LLM_API_TOKEN=             # Your LLM API key
+LLM_BASE_URL=              # Custom LLM endpoint (if not using default)
 ```
 
 ## Usage
@@ -102,7 +107,10 @@ This MCP server works with any MCP-compatible client (Claude Desktop, Claude Cod
         "CRAWL4AI_BASE_URL": "http://localhost:11235",
         "CRAWL4AI_API_KEY": "your-api-key",
         "SERVER_NAME": "custom-name",
-        "SERVER_VERSION": "1.0.0"
+        "SERVER_VERSION": "1.0.0",
+        "LLM_PROVIDER": "openai/gpt-4o-mini",
+        "LLM_API_TOKEN": "your-llm-api-key",
+        "LLM_BASE_URL": "https://api.openai.com/v1"
       }
     }
   }
@@ -123,7 +131,7 @@ claude mcp add crawl4ai -e CRAWL4AI_BASE_URL=http://localhost:11235 -- npx mcp-c
 Consult your client's documentation for MCP server configuration. The key details:
 - Command: `npx mcp-crawl4ai-ts` or `node /path/to/dist/index.js`
 - Required env: `CRAWL4AI_BASE_URL`
-- Optional env: `CRAWL4AI_API_KEY`, `SERVER_NAME`, `SERVER_VERSION`
+- Optional env: `CRAWL4AI_API_KEY`, `SERVER_NAME`, `SERVER_VERSION`, `LLM_PROVIDER`, `LLM_API_TOKEN`, `LLM_BASE_URL`
 
 ## Available Tools
 
