@@ -55,6 +55,7 @@ SERVER_NAME=crawl4ai-mcp   # Custom name for the MCP server
 SERVER_VERSION=1.0.0       # Custom version
 
 # Optional - LLM Configuration (for extraction strategies)
+# These will be passed to crawl_with_config when using extraction_type: 'llm'
 LLM_PROVIDER=              # e.g., openai/gpt-4o-mini, anthropic/claude-3
 LLM_API_TOKEN=             # Your LLM API key
 LLM_BASE_URL=              # Custom LLM endpoint (if not using default)
@@ -228,6 +229,14 @@ Consult your client's documentation for MCP server configuration. The key detail
   verbose?: boolean                         // Detailed logging
 }
 ```
+
+**LLM Configuration Options**:
+When using `extraction_type: 'llm'`, you have three ways to provide LLM credentials:
+1. **Per-request**: Pass `llm_provider` and `llm_api_key` directly in the tool parameters (highest priority)
+2. **MCP config**: Set `LLM_PROVIDER` and `LLM_API_TOKEN` in your MCP client configuration (as shown in examples above)
+3. **Server default**: The Crawl4AI server may have its own LLM environment variables configured as fallback
+
+The MCP server will pass through any provided credentials to the Crawl4AI server.
 
 ### 12. `create_session` - Create browser session for stateful crawling
 ```typescript
