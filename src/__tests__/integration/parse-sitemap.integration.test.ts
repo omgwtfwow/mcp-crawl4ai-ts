@@ -44,7 +44,7 @@ describe('parse_sitemap Integration Tests', () => {
         expect(textContent?.text).toContain('Sitemap parsed successfully');
         expect(textContent?.text).toContain('Total URLs found:');
         expect(textContent?.text).toContain('https://nodejs.org');
-        
+
         // Should find many URLs in the nodejs sitemap
         expect(textContent?.text).toMatch(/Total URLs found: [1-9][0-9]+/);
       },
@@ -58,7 +58,7 @@ describe('parse_sitemap Integration Tests', () => {
           name: 'parse_sitemap',
           arguments: {
             url: 'https://nodejs.org/sitemap.xml',
-            filter_pattern: '.*/learn/.*',  // Only URLs containing /learn/
+            filter_pattern: '.*/learn/.*', // Only URLs containing /learn/
           },
         });
 
@@ -66,15 +66,15 @@ describe('parse_sitemap Integration Tests', () => {
         const content = (result as ToolResult).content;
         const textContent = content.find((c) => c.type === 'text');
         expect(textContent).toBeDefined();
-        
+
         // Check that filtering worked
         expect(textContent?.text).toContain('Filtered URLs:');
-        
+
         // All URLs in the result should contain /learn/
         const urlsSection = textContent?.text?.split('URLs:\n')[1];
         if (urlsSection) {
-          const urls = urlsSection.split('\n').filter(url => url.trim());
-          urls.forEach(url => {
+          const urls = urlsSection.split('\n').filter((url) => url.trim());
+          urls.forEach((url) => {
             if (url && !url.includes('... and')) {
               expect(url).toContain('/learn/');
             }
@@ -111,7 +111,7 @@ describe('parse_sitemap Integration Tests', () => {
           name: 'parse_sitemap',
           arguments: {
             url: 'https://nodejs.org/sitemap.xml',
-            filter_pattern: '.*',  // Match all to test truncation
+            filter_pattern: '.*', // Match all to test truncation
           },
         });
 
@@ -119,7 +119,7 @@ describe('parse_sitemap Integration Tests', () => {
         const content = (result as ToolResult).content;
         const textContent = content.find((c) => c.type === 'text');
         expect(textContent).toBeDefined();
-        
+
         // Should show max 100 URLs and indicate there are more
         if (textContent?.text && textContent.text.includes('... and')) {
           expect(textContent.text).toMatch(/\.\.\. and \d+ more/);
@@ -176,7 +176,7 @@ describe('parse_sitemap Integration Tests', () => {
         const result = await client.callTool({
           name: 'parse_sitemap',
           arguments: {
-            url: 'https://example.com',  // HTML page, not XML
+            url: 'https://example.com', // HTML page, not XML
           },
         });
 
@@ -197,7 +197,7 @@ describe('parse_sitemap Integration Tests', () => {
           name: 'parse_sitemap',
           arguments: {
             url: 'https://nodejs.org/sitemap.xml',
-            filter_pattern: '[invalid(regex',  // Invalid regex
+            filter_pattern: '[invalid(regex', // Invalid regex
           },
         });
 

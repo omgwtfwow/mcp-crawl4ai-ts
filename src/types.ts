@@ -8,28 +8,6 @@ export interface CrawlOptions {
   timeout?: number;
 }
 
-export interface CrawlResult {
-  markdown?: string;
-  html?: string;
-  screenshot?: string;
-  pdf?: string;
-  metadata?: {
-    title?: string;
-    description?: string;
-    url?: string;
-    error?: string;
-  };
-  links?: {
-    internal: string[];
-    external: string[];
-  };
-  js_execution_result?: {
-    success: boolean;
-    results: any[];
-  };
-  success?: boolean;
-}
-
 export interface JSExecuteOptions {
   js_code: string | string[];
   // Only url and js_code (scripts) are supported by /execute_js endpoint

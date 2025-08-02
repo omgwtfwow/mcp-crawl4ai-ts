@@ -31,6 +31,7 @@ describe('Session Management Integration Tests', () => {
         });
       } catch (e) {
         // Ignore errors during cleanup
+        console.debug('Cleanup error:', e);
       }
     }
     createdSessions.length = 0;
@@ -55,18 +56,18 @@ describe('Session Management Integration Tests', () => {
         const typedResult = result as ToolResult;
         expect(typedResult.content).toBeDefined();
         expect(Array.isArray(typedResult.content)).toBe(true);
-        
+
         const textContent = typedResult.content.find((c) => c.type === 'text');
         expect(textContent).toBeDefined();
         expect(textContent?.text).toContain('Session created successfully');
-        
+
         // Check returned parameters
         expect(typedResult.session_id).toBeDefined();
         expect(typedResult.session_id).toMatch(/^session-/);
         expect(typedResult.browser_type).toBe('chromium');
         expect(typedResult.initial_url).toBeUndefined();
         expect(typedResult.created_at).toBeDefined();
-        
+
         // Track for cleanup
         createdSessions.push(typedResult.session_id!);
       },
@@ -87,7 +88,7 @@ describe('Session Management Integration Tests', () => {
         const typedResult = result as ToolResult;
         expect(typedResult.session_id).toBe(customId);
         expect(typedResult.browser_type).toBe('chromium');
-        
+
         // Track for cleanup
         createdSessions.push(customId);
       },
@@ -109,10 +110,10 @@ describe('Session Management Integration Tests', () => {
         expect(typedResult.session_id).toBeDefined();
         expect(typedResult.browser_type).toBe('firefox');
         expect(typedResult.initial_url).toBe('https://example.com');
-        
+
         const textContent = typedResult.content.find((c) => c.type === 'text');
         expect(textContent?.text).toContain('Pre-warmed with: https://example.com');
-        
+
         // Track for cleanup
         createdSessions.push(typedResult.session_id!);
       },
@@ -149,7 +150,7 @@ describe('Session Management Integration Tests', () => {
         expect(textContent?.text).toContain('Active sessions (2):');
         expect(textContent?.text).toContain((session1 as ToolResult).session_id!);
         expect(textContent?.text).toContain((session2 as ToolResult).session_id!);
-        
+
         // Track for cleanup
         createdSessions.push((session1 as ToolResult).session_id!);
         createdSessions.push((session2 as ToolResult).session_id!);
@@ -165,7 +166,7 @@ describe('Session Management Integration Tests', () => {
           name: 'list_sessions',
           arguments: {},
         });
-        
+
         // Parse existing sessions and clear them
         const listText = (listResult as ToolResult).content.find((c) => c.type === 'text')?.text || '';
         if (!listText.includes('No active sessions')) {

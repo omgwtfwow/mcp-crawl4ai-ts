@@ -7,7 +7,6 @@ import axios, { AxiosInstance } from 'axios';
 import dotenv from 'dotenv';
 import { z } from 'zod';
 import {
-  CrawlResult,
   BatchCrawlOptions,
   CrawlEndpointResponse,
   CrawlResultItem,
@@ -1382,9 +1381,11 @@ class Crawl4AIServer {
         content: [
           {
             type: 'resource',
-            uri: `data:application/pdf;base64,${result.pdf}`,
-            data: result.pdf,
-            mimeType: 'application/pdf',
+            resource: {
+              uri: `data:application/pdf;name=${encodeURIComponent(new URL(options.url).hostname)}.pdf;base64,${result.pdf}`,
+              mimeType: 'application/pdf',
+              blob: result.pdf,
+            },
           },
           {
             type: 'text',
@@ -1647,11 +1648,11 @@ class Crawl4AIServer {
         // Try to detect if this might be a JSON endpoint
         const markdownContent = result.markdown?.raw_markdown || result.markdown?.fit_markdown || '';
         const htmlContent = result.html || '';
-        
+
         // Check for JSON indicators
         if (
           // Check URL pattern
-          options.url.includes('/api/') || 
+          options.url.includes('/api/') ||
           options.url.includes('/api.') ||
           // Check content type (often shown in markdown conversion)
           markdownContent.includes('application/json') ||
@@ -1661,7 +1662,7 @@ class Crawl4AIServer {
           // Check HTML for JSON indicators
           htmlContent.includes('application/json') ||
           // Common JSON patterns
-          markdownContent.includes('"links"') || 
+          markdownContent.includes('"links"') ||
           markdownContent.includes('"url"') ||
           markdownContent.includes('"data"')
         ) {
@@ -1731,7 +1732,7 @@ class Crawl4AIServer {
           ],
         };
       }
-      
+
       // Categorize links
       const categorized: any = {
         internal: internalUrls,
@@ -1832,7 +1833,7 @@ class Crawl4AIServer {
 
           const crawlResults = response.data.results || [response.data];
           const result: CrawlResultItem = crawlResults[0];
-          
+
           if (result && result.success) {
             const markdownContent = result.markdown?.fit_markdown || result.markdown?.raw_markdown || '';
             const internalLinksCount = result.links?.internal?.length || 0;
@@ -1855,6 +1856,7 @@ class Crawl4AIServer {
                   }
                 } catch (e) {
                   // Skip invalid URLs
+                  console.debug('Invalid URL:', e);
                 }
               }
             }
@@ -1867,13 +1869,13 @@ class Crawl4AIServer {
 
       // Prepare the output text
       let outputText = `Recursive crawl completed:\n\nPages crawled: ${results.length}\nStarting URL: ${options.url}\n`;
-      
+
       if (results.length > 0) {
         outputText += `Max depth reached: ${maxDepthReached} (limit: ${options.max_depth || 3})\n\nNote: Only internal links (same domain) are followed during recursive crawling.\n\nPages found:\n${results.map((r) => `- [Depth ${r.depth}] ${r.url}\n  Content: ${r.content.length} chars\n  Internal links found: ${r.internal_links_found}`).join('\n')}`;
       } else {
         outputText += `\nNo pages could be crawled. This might be due to:\n- The starting URL returned an error\n- No internal links were found\n- All discovered links were filtered out by include/exclude patterns`;
       }
-      
+
       return {
         content: [
           {
@@ -2090,13 +2092,11 @@ class Crawl4AIServer {
       if (result.pdf) {
         content.push({
           type: 'resource',
-          uri: `data:application/pdf;base64,${result.pdf}`,
-          data: result.pdf,
-          mimeType: 'application/pdf',
-        });
-        content.push({
-          type: 'text',
-          text: `PDF generated for: ${options.url}`,
+          resource: {
+            uri: `data:application/pdf;name=${encodeURIComponent(new URL(options.url).hostname)}.pdf;base64,${result.pdf}`,
+            mimeType: 'application/pdf',
+            blob: result.pdf,
+          },
         });
       }
 

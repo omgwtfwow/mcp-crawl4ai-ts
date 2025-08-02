@@ -26,12 +26,12 @@ describe('extract_links Integration Tests', () => {
     it(
       'should extract links with categorization (default)',
       async () => {
-      const result = await client.callTool({
-        name: 'extract_links',
-        arguments: {
-          url: 'https://example.com',
-        },
-      });
+        const result = await client.callTool({
+          name: 'extract_links',
+          arguments: {
+            url: 'https://example.com',
+          },
+        });
 
         expect(result).toBeDefined();
         const content = (result as ToolResult).content;

@@ -6,8 +6,11 @@ interface ToolResult {
   content: Array<{
     type: string;
     text?: string;
-    data?: string;
-    mimeType?: string;
+    resource?: {
+      uri: string;
+      mimeType?: string;
+      blob?: string;
+    };
   }>;
 }
 
@@ -39,11 +42,13 @@ describe('generate_pdf Integration Tests', () => {
         const content = (result as ToolResult).content;
         expect(content).toHaveLength(2);
 
-        // First item should be the PDF
+        // First item should be the PDF as embedded resource
         expect(content[0].type).toBe('resource');
-        expect(content[0].mimeType).toBe('application/pdf');
-        expect(content[0].data).toBeTruthy();
-        expect(content[0].data?.length).toBeGreaterThan(1000); // Should be a substantial base64 string
+        expect(content[0].resource).toBeDefined();
+        expect(content[0].resource?.mimeType).toBe('application/pdf');
+        expect(content[0].resource?.blob).toBeTruthy();
+        expect(content[0].resource?.blob?.length).toBeGreaterThan(1000); // Should be a substantial base64 string
+        expect(content[0].resource?.uri).toContain('data:application/pdf');
 
         // Second item should be text description
         expect(content[1].type).toBe('text');

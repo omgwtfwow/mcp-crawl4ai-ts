@@ -84,7 +84,7 @@ describe('crawl_recursive Integration Tests', () => {
             url: 'https://httpbin.org/links/10/0',
             max_depth: 1,
             max_pages: 5,
-            include_pattern: '.*/links/[0-9]+/[0-4]$',  // Only include links ending with 0-4
+            include_pattern: '.*/links/[0-9]+/[0-4]$', // Only include links ending with 0-4
           },
         });
 
@@ -92,10 +92,10 @@ describe('crawl_recursive Integration Tests', () => {
         const content = (result as ToolResult).content;
         const textContent = content.find((c) => c.type === 'text');
         expect(textContent).toBeDefined();
-        
+
         // Check that we have some results
         expect(textContent?.text).toContain('Pages crawled:');
-        
+
         // If we crawled pages, they should match our pattern
         if (textContent?.text && textContent.text.includes('Pages found:')) {
           const pagesSection = textContent.text.split('Pages found:')[1];
@@ -127,7 +127,7 @@ describe('crawl_recursive Integration Tests', () => {
         const content = (result as ToolResult).content;
         const textContent = content.find((c) => c.type === 'text');
         expect(textContent).toBeDefined();
-        
+
         // Should not have crawled any PDF, ZIP, or EXE files
         expect(textContent?.text).not.toMatch(/\.(pdf|zip|exe)/i);
       },
