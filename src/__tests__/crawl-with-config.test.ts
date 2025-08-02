@@ -271,75 +271,8 @@ describe('crawlWithConfig parameter mapping', () => {
       });
     });
 
-    it('should map extraction strategy parameters', async () => {
-      const mockResponse = { data: { results: [{ markdown: 'test' }] } };
-      mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
-
-      await service.crawlWithConfig({
-        url: 'https://example.com',
-        extraction_strategy: 'LLMExtractionStrategy',
-        extraction_strategy_args: {
-          provider: 'openai/gpt-4o-mini',
-          api_token: 'sk-test-key',
-          instruction: 'Extract all product names and prices',
-          schema: {
-            type: 'object',
-            properties: {
-              products: { type: 'array' },
-            },
-          },
-        },
-      });
-
-      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/crawl', {
-        urls: ['https://example.com'],
-        browser_config: undefined,
-        crawler_config: undefined,
-        extraction_strategy: 'LLMExtractionStrategy',
-        extraction_strategy_args: {
-          provider: 'openai/gpt-4o-mini',
-          api_token: 'sk-test-key',
-          instruction: 'Extract all product names and prices',
-          schema: {
-            type: 'object',
-            properties: {
-              products: { type: 'array' },
-            },
-          },
-        },
-      });
-    });
-
-    it('should map CSS extraction strategy', async () => {
-      const mockResponse = { data: { results: [{ markdown: 'test' }] } };
-      mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
-
-      await service.crawlWithConfig({
-        url: 'https://example.com',
-        extraction_strategy: 'JsonCssExtractionStrategy',
-        extraction_strategy_args: {
-          schema: {
-            title: 'h1',
-            price: '.price-tag',
-            description: '.product-info p',
-          },
-        },
-      });
-
-      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/crawl', {
-        urls: ['https://example.com'],
-        browser_config: undefined,
-        crawler_config: undefined,
-        extraction_strategy: 'JsonCssExtractionStrategy',
-        extraction_strategy_args: {
-          schema: {
-            title: 'h1',
-            price: '.price-tag',
-            description: '.product-info p',
-          },
-        },
-      });
-    });
+    // Note: Extraction strategies removed - not supported via REST API
+    // Use extract_with_llm tool instead for structured data extraction
 
     it('should map session and cache parameters', async () => {
       const mockResponse = { data: { results: [{ markdown: 'test' }] } };

@@ -138,8 +138,6 @@ export interface AdvancedCrawlConfig {
   browser_config?: BrowserConfig;
   crawler_config?: CrawlerConfig;
   priority?: number;
-  extraction_strategy?: string; // e.g., 'LLMExtractionStrategy', 'JsonCssExtractionStrategy'
-  extraction_strategy_args?: Record<string, any>; // Strategy-specific arguments
 }
 
 // Session management types (used internally by MCP server)

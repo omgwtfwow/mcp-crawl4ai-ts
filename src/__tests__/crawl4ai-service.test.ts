@@ -204,7 +204,99 @@ describe('Crawl4AIService', () => {
     });
   });
 
-  // Note: Session management tests removed as sessions are now handled client-side in the MCP server
+  describe('extractWithLLM', () => {
+    it('should extract with LLM successfully', async () => {
+      const mockResponse = {
+        answer: 'Product A costs $10 and is in stock. Product B costs $20 and is out of stock.',
+      };
+      mockAxiosInstance.get.mockResolvedValueOnce({ data: mockResponse });
+
+      const result = await service.extractWithLLM({
+        url: 'https://example.com/products',
+        query: 'Extract product names and prices',
+      });
+
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
+        '/llm/https%3A%2F%2Fexample.com%2Fproducts?q=Extract%20product%20names%20and%20prices',
+      );
+      expect(result).toEqual(mockResponse);
+      expect(result.answer).toBe('Product A costs $10 and is in stock. Product B costs $20 and is out of stock.');
+    });
+
+    it('should handle timeout errors', async () => {
+      mockAxiosInstance.get.mockRejectedValueOnce({
+        code: 'ECONNABORTED',
+        message: 'timeout of 120000ms exceeded',
+      });
+
+      await expect(
+        service.extractWithLLM({
+          url: 'https://example.com',
+          query: 'Complex extraction query',
+        }),
+      ).rejects.toThrow('LLM extraction timed out. Try a simpler query or different URL.');
+    });
+
+    it('should handle 504 gateway timeout', async () => {
+      mockAxiosInstance.get.mockRejectedValueOnce({
+        response: { status: 504 },
+      });
+
+      await expect(
+        service.extractWithLLM({
+          url: 'https://example.com',
+          query: 'Extract data',
+        }),
+      ).rejects.toThrow('LLM extraction timed out. Try a simpler query or different URL.');
+    });
+
+    it('should handle authentication errors', async () => {
+      mockAxiosInstance.get.mockRejectedValueOnce({
+        response: {
+          status: 401,
+          data: { detail: 'Unauthorized' },
+        },
+      });
+
+      await expect(
+        service.extractWithLLM({
+          url: 'https://example.com',
+          query: 'Extract data',
+        }),
+      ).rejects.toThrow(
+        'LLM extraction failed: No LLM provider configured on server. Please ensure the server has an API key set.',
+      );
+    });
+
+    it('should handle generic errors', async () => {
+      mockAxiosInstance.get.mockRejectedValueOnce({
+        response: {
+          status: 500,
+          data: { detail: 'Internal server error' },
+        },
+      });
+
+      await expect(
+        service.extractWithLLM({
+          url: 'https://example.com',
+          query: 'Extract data',
+        }),
+      ).rejects.toThrow('LLM extraction failed: Internal server error');
+    });
+
+    it('should encode URL and query parameters correctly', async () => {
+      mockAxiosInstance.get.mockResolvedValueOnce({ data: { answer: 'Success' } });
+
+      await service.extractWithLLM({
+        url: 'https://example.com/page?param=value&other=test',
+        query: 'Extract items with "quotes" and special chars: @#$%',
+      });
+
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
+        '/llm/https%3A%2F%2Fexample.com%2Fpage%3Fparam%3Dvalue%26other%3Dtest?q=Extract%20items%20with%20%22quotes%22%20and%20special%20chars%3A%20%40%23%24%25',
+      );
+    });
+  });
 
   describe('crawlWithConfig', () => {
     it('should crawl with advanced config successfully', async () => {

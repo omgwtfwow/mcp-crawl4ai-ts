@@ -6,6 +6,7 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprot
 import axios, { AxiosInstance } from 'axios';
 import dotenv from 'dotenv';
 import { CrawlOptions, CrawlResult, JSExecuteOptions, BatchCrawlOptions } from './types.js';
+import { Crawl4AIService } from './crawl4ai-service.js';
 
 // Load environment variables
 dotenv.config();
@@ -32,6 +33,7 @@ interface SessionInfo {
 class Crawl4AIServer {
   private server: Server;
   private axiosClient: AxiosInstance;
+  private service: Crawl4AIService;
   private sessions: Map<string, SessionInfo> = new Map();
 
   constructor() {
@@ -56,6 +58,9 @@ class Crawl4AIServer {
       },
       timeout: 120000, // 2 minutes timeout
     });
+
+    // Initialize the service
+    this.service = new Crawl4AIService(CRAWL4AI_BASE_URL!, CRAWL4AI_API_KEY);
 
     this.setupHandlers();
   }
@@ -181,7 +186,7 @@ class Crawl4AIServer {
               js_code: {
                 type: 'string',
                 description:
-                  'JavaScript to run after page loads. Examples: "document.querySelector(\'.cookie-accept\').click()", "window.scrollTo(0, document.body.scrollHeight)"',
+                  'JavaScript code as a STRING (required, NOT null). Pass exactly like this: js_code: "document.querySelectorAll(\'a\').length" to count links. For multiple commands use array: js_code: ["command1", "command2"]',
               },
               wait_after_js: {
                 type: 'number',
@@ -361,7 +366,7 @@ class Crawl4AIServer {
         {
           name: 'crawl_with_config',
           description:
-            'Advanced crawling with full control. Use when: sites need JavaScript, handling logins/sessions, extracting structured data with LLM, dealing with anti-bot measures, or need precise browser control. Most powerful tool for complex scenarios',
+            'Advanced web crawling with browser control. Note: For structured data extraction, use extract_with_llm tool. Avoid combining scan_full_page+networkidle+magic (causes loops). Start simple, add params as needed',
           inputSchema: {
             type: 'object',
             properties: {
@@ -446,12 +451,12 @@ class Crawl4AIServer {
                 type: ['string', 'array'],
                 items: { type: 'string' },
                 description:
-                  'JavaScript to run after page loads. Single string or array for multiple scripts. Examples: "document.querySelector(\'.more\').click()", ["acceptCookies()", "loadAllComments()"]',
+                  'JavaScript code to execute (MUST be a string, not null). Examples: js_code: "document.querySelectorAll(\'a\').length" counts links, js_code: ["window.scrollTo(0, 1000)", "document.title"] runs multiple commands. For js_only mode, also set session_id.',
               },
               wait_for: {
                 type: 'string',
                 description:
-                  'Wait condition before extraction. Options: CSS selector ".content", JS expression "() => document.querySelector(\'.data\').children.length > 10", or "networkidle"',
+                  'Wait for element/condition. For CSS extraction: use specific selector like ".article-body" not generic "h1". For JS: "() => document.querySelector(\'.data\')?.children.length > 0". Avoid "networkidle" with extraction',
               },
               wait_for_timeout: {
                 type: 'number',
@@ -497,37 +502,8 @@ class Crawl4AIServer {
                 type: 'string',
                 enum: ['ENABLED', 'BYPASS', 'DISABLED'],
                 description:
-                  'Cache strategy. ENABLED: Use cached content if available (fast). BYPASS: Always fetch fresh but save to cache. DISABLED: No cache read or write',
+                  'Cache strategy. ENABLED: Use cache if available. BYPASS: Fetch fresh (recommended). DISABLED: No cache',
                 default: 'BYPASS',
-              },
-              extraction_type: {
-                type: 'string',
-                enum: ['llm', 'css', 'xpath', 'json_css'],
-                description:
-                  'How to extract structured data. "llm": AI understands content, "css": precise selectors, "xpath": complex paths, "json_css": structured JSON output',
-              },
-              llm_provider: {
-                type: 'string',
-                description:
-                  'AI model for extraction. Format: "provider/model". Examples: "openai/gpt-4o-mini", "anthropic/claude-3-haiku". Requires extraction_type="llm"',
-              },
-              llm_api_key: {
-                type: 'string',
-                description: 'API key for LLM provider',
-              },
-              extraction_schema: {
-                type: 'object',
-                description: 'JSON schema for structured extraction with LLM',
-              },
-              extraction_instruction: {
-                type: 'string',
-                description:
-                  'Tell AI what to extract in plain English. Example: "Extract all product names, prices, and availability. Format prices as numbers without currency symbols"',
-              },
-              css_selectors: {
-                type: 'object',
-                description:
-                  'Map fields to CSS selectors. Example: {"title": "h1", "price": ".price-tag", "description": ".product-info p"}. For extraction_type="css"',
               },
               timeout: {
                 type: 'number',
@@ -536,7 +512,8 @@ class Crawl4AIServer {
               },
               verbose: {
                 type: 'boolean',
-                description: 'Enable detailed logging for debugging',
+                description:
+                  'Enable server-side debug logging (not shown in output). Only for troubleshooting. Does not affect extraction results',
                 default: false,
               },
 
@@ -544,7 +521,8 @@ class Crawl4AIServer {
               wait_until: {
                 type: 'string',
                 enum: ['domcontentloaded', 'networkidle', 'load'],
-                description: 'Navigation completion condition. "networkidle" waits for no network activity',
+                description:
+                  'When to consider page loaded. "domcontentloaded": fast, HTML ready. "load": images loaded. "networkidle": all requests done (slowest, may timeout on dynamic sites). Default: "domcontentloaded"',
                 default: 'domcontentloaded',
               },
               page_timeout: {
@@ -565,7 +543,7 @@ class Crawl4AIServer {
               scan_full_page: {
                 type: 'boolean',
                 description:
-                  'Auto-scroll entire page to trigger lazy loading. Use for: infinite scroll, lazy-loaded images, or content that appears on scroll. Slower but complete',
+                  'Auto-scroll entire page to trigger lazy loading. WARNING: Can be slow on long pages. Avoid combining with wait_until:"networkidle" or CSS extraction on dynamic sites. Better to use virtual_scroll_config for infinite feeds',
                 default: false,
               },
               remove_forms: {
@@ -643,7 +621,7 @@ class Crawl4AIServer {
               magic: {
                 type: 'boolean',
                 description:
-                  'Auto-detect and dismiss popups, cookie banners, and overlays. Experimental but handles common annoyances. May not work on all sites',
+                  'EXPERIMENTAL: Auto-dismiss popups/banners. May conflict with wait_for or cause unexpected behavior. Try without this first if having issues. Not recommended with CSS extraction',
                 default: false,
               },
 
@@ -739,6 +717,26 @@ class Crawl4AIServer {
             properties: {},
           },
         },
+        {
+          name: 'extract_with_llm',
+          description:
+            'Extract structured data from webpages using AI. Direct extraction that returns results immediately. Use when: need specific data extraction, want AI to understand page content, or extracting complex patterns. This is the recommended alternative to CSS/XPath extraction.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              url: {
+                type: 'string',
+                description: 'The URL to extract data from',
+              },
+              query: {
+                type: 'string',
+                description:
+                  'Natural language extraction instructions. Be specific and clear. Example: "Extract all product names, prices, and availability status from the page"',
+              },
+            },
+            required: ['url', 'query'],
+          },
+        },
       ],
     }));
 
@@ -789,6 +787,9 @@ class Crawl4AIServer {
 
           case 'list_sessions':
             return await this.listSessions();
+
+          case 'extract_with_llm':
+            return await this.extractWithLLM(args as any);
 
           default:
             throw new Error(`Unknown tool: ${name}`);
@@ -909,6 +910,12 @@ class Crawl4AIServer {
 
   private async executeJS(options: JSExecuteOptions & { url: string }) {
     try {
+      // Check if js_code is provided
+      if (!options.js_code || options.js_code === null) {
+        throw new Error(
+          'js_code is required. Please provide a JavaScript string (e.g., "document.querySelectorAll(\'a\').length") or an array of strings (e.g., ["window.scrollTo(0, 1000)", "document.querySelector(\'.more\').click()"])',
+        );
+      }
       // Ensure scripts is always an array
       const scripts = Array.isArray(options.js_code) ? options.js_code : [options.js_code];
 
@@ -919,13 +926,30 @@ class Crawl4AIServer {
         screenshot: options.screenshot,
       });
 
-      const result: CrawlResult = response.data;
+      const result = response.data;
+
+      // Always stringify the entire response to see what we're getting
+      const fullResponse = JSON.stringify(result, null, 2);
+
+      // Try to extract meaningful content
+      let jsResult = fullResponse;
+
+      // If we can find specific fields, use them
+      if (result && typeof result === 'object') {
+        if (result.js_result !== undefined) {
+          jsResult = `JavaScript Result: ${JSON.stringify(result.js_result)}\n\nFull Response:\n${fullResponse}`;
+        } else if (result.result !== undefined) {
+          jsResult = `Result: ${JSON.stringify(result.result)}\n\nFull Response:\n${fullResponse}`;
+        } else if (result.extracted_content) {
+          jsResult = `Extracted: ${result.extracted_content}\n\nFull Response:\n${fullResponse}`;
+        }
+      }
 
       return {
         content: [
           {
             type: 'text',
-            text: `JavaScript executed successfully on: ${options.url}\n\nExtracted content:\n${result.markdown || result.html || 'No content'}`,
+            text: `JavaScript executed successfully on: ${options.url}\n\nResult:\n${jsResult}`,
           },
           ...(result.screenshot
             ? [
@@ -1215,6 +1239,11 @@ class Crawl4AIServer {
 
   private async crawlWithConfig(options: any) {
     try {
+      // Ensure options is an object
+      if (!options || typeof options !== 'object') {
+        throw new Error('crawl_with_config requires options object with at least a url parameter');
+      }
+
       // Build browser_config
       const browser_config: any = {
         headless: true, // Always true as noted
@@ -1246,9 +1275,14 @@ class Crawl4AIServer {
       if (options.remove_overlay_elements) crawler_config.remove_overlay_elements = options.remove_overlay_elements;
 
       // JavaScript execution
-      if (options.js_code) {
+      if (options.js_code !== undefined && options.js_code !== null) {
         // If js_code is an array, join it with newlines for the server
         crawler_config.js_code = Array.isArray(options.js_code) ? options.js_code.join('\n') : options.js_code;
+      } else if (options.js_code === null) {
+        // If js_code is explicitly null, throw a helpful error
+        throw new Error(
+          'js_code parameter is null. Please provide a JavaScript string (e.g., "document.querySelectorAll(\'a\').length") or an array of strings (e.g., ["window.scrollTo(0, 1000)", "document.querySelector(\'.more\').click()"])',
+        );
       }
       if (options.wait_for) crawler_config.wait_for = options.wait_for;
       if (options.wait_for_timeout) crawler_config.wait_for_timeout = options.wait_for_timeout;
@@ -1275,43 +1309,6 @@ class Crawl4AIServer {
         }
       }
       if (options.cache_mode) crawler_config.cache_mode = options.cache_mode.toLowerCase();
-
-      // Extraction strategy - prepare for root level passing
-      let extraction_strategy: string | undefined;
-      let extraction_strategy_args: any | undefined;
-
-      if (options.extraction_type) {
-        // Map extraction type to strategy name
-        const strategyMap: Record<string, string> = {
-          llm: 'LLMExtractionStrategy',
-          css: 'JsonCssExtractionStrategy',
-          xpath: 'JsonXPathExtractionStrategy',
-          json_css: 'JsonCssExtractionStrategy',
-          regex: 'RegexExtractionStrategy',
-          cosine: 'CosineStrategy',
-        };
-
-        extraction_strategy = strategyMap[options.extraction_type] || options.extraction_type;
-        extraction_strategy_args = {};
-
-        if (options.extraction_type === 'llm') {
-          if (options.llm_provider) extraction_strategy_args.provider = options.llm_provider;
-          if (options.llm_api_key) extraction_strategy_args.api_token = options.llm_api_key; // Note: API expects 'api_token'
-          if (options.llm_base_url) extraction_strategy_args.base_url = options.llm_base_url;
-          if (options.extraction_schema) extraction_strategy_args.schema = options.extraction_schema;
-          if (options.extraction_instruction) extraction_strategy_args.instruction = options.extraction_instruction;
-        } else if (options.extraction_type === 'css' && options.css_selectors) {
-          extraction_strategy_args.schema = {
-            name: 'CSS Extraction',
-            baseSelector: 'body',
-            fields: Object.entries(options.css_selectors).map(([name, selector]) => ({
-              name,
-              selector,
-              type: 'text',
-            })),
-          };
-        }
-      }
 
       // Performance
       if (options.timeout) crawler_config.timeout = options.timeout;
@@ -1360,14 +1357,6 @@ class Crawl4AIServer {
         crawler_config,
       };
 
-      // Add extraction strategy at root level if provided
-      if (extraction_strategy) {
-        requestBody.extraction_strategy = extraction_strategy;
-        if (extraction_strategy_args && Object.keys(extraction_strategy_args).length > 0) {
-          requestBody.extraction_strategy_args = extraction_strategy_args;
-        }
-      }
-
       // Call /crawl endpoint
       const response = await this.axiosClient.post('/crawl', requestBody);
 
@@ -1379,7 +1368,29 @@ class Crawl4AIServer {
 
       // Main content - ensure we get a string
       let mainContent = 'No content extracted';
-      if (result.markdown && typeof result.markdown === 'string') {
+
+      if (result.extracted_content) {
+        // Handle extraction results which might be objects or strings
+        if (typeof result.extracted_content === 'string') {
+          mainContent = result.extracted_content;
+        } else if (typeof result.extracted_content === 'object') {
+          mainContent = JSON.stringify(result.extracted_content, null, 2);
+        }
+      } else if (result.extraction_result) {
+        // Another possible field name for extraction results
+        if (typeof result.extraction_result === 'string') {
+          mainContent = result.extraction_result;
+        } else if (typeof result.extraction_result === 'object') {
+          mainContent = JSON.stringify(result.extraction_result, null, 2);
+        }
+      } else if (result.data && result.data.extracted_content) {
+        // Check nested data field
+        if (typeof result.data.extracted_content === 'string') {
+          mainContent = result.data.extracted_content;
+        } else if (typeof result.data.extracted_content === 'object') {
+          mainContent = JSON.stringify(result.data.extracted_content, null, 2);
+        }
+      } else if (result.markdown && typeof result.markdown === 'string') {
         mainContent = result.markdown;
       } else if (result.content && typeof result.content === 'string') {
         mainContent = result.content;
@@ -1389,6 +1400,9 @@ class Crawl4AIServer {
         mainContent = result.text;
       } else if (typeof result === 'string') {
         mainContent = result;
+      } else if (result && typeof result === 'object') {
+        // If all else fails, try to stringify the entire result
+        mainContent = JSON.stringify(result, null, 2);
       }
 
       content.push({
@@ -1559,6 +1573,23 @@ class Crawl4AIServer {
       };
     } catch (error: any) {
       throw new Error(`Failed to list sessions: ${error.message}`);
+    }
+  }
+
+  private async extractWithLLM(options: { url: string; query: string }) {
+    try {
+      const result = await this.service.extractWithLLM(options);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(result.data || result, null, 2),
+          },
+        ],
+      };
+    } catch (error: any) {
+      throw new Error(`Failed to extract with LLM: ${error.message}`);
     }
   }
 

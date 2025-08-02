@@ -107,15 +107,26 @@ export class Crawl4AIService {
       crawler_config: options.crawler_config,
     };
 
-    // Add extraction strategy at root level if provided
-    if (options.extraction_strategy) {
-      requestBody.extraction_strategy = options.extraction_strategy;
-    }
-    if (options.extraction_strategy_args) {
-      requestBody.extraction_strategy_args = options.extraction_strategy_args;
-    }
-
     const response = await this.axiosClient.post('/crawl', requestBody);
     return response.data;
+  }
+
+  async extractWithLLM(options: { url: string; query: string }) {
+    try {
+      const encodedUrl = encodeURIComponent(options.url);
+      const encodedQuery = encodeURIComponent(options.query);
+      const response = await this.axiosClient.get(`/llm/${encodedUrl}?q=${encodedQuery}`);
+      return response.data;
+    } catch (error: any) {
+      if (error.code === 'ECONNABORTED' || error.response?.status === 504) {
+        throw new Error('LLM extraction timed out. Try a simpler query or different URL.');
+      }
+      if (error.response?.status === 401) {
+        throw new Error(
+          'LLM extraction failed: No LLM provider configured on server. Please ensure the server has an API key set.',
+        );
+      }
+      throw new Error(`LLM extraction failed: ${error.response?.data?.detail || error.message}`);
+    }
   }
 }

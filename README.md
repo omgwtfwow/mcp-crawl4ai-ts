@@ -7,6 +7,21 @@ TypeScript implementation of an MCP server for Crawl4AI. Provides tools for web 
 - Node.js 16+ and npm
 - A running Crawl4AI server
 
+### Server Requirements for LLM Extraction
+
+The Crawl4AI server must have an LLM provider configured. The server supports various providers (OpenAI, Anthropic, Google, etc.) through their respective API key environment variables.
+
+Example:
+```yaml
+services:
+  crawl4ai:
+    image: unclecode/crawl4ai:latest
+    environment:
+      - OPENAI_API_KEY=your-key  # Or ANTHROPIC_API_KEY, GEMINI_API_KEY, etc.
+    ports:
+      - "11235:11235"
+```
+
 ## Quick Start
 
 ### Option 1: Using npx (Recommended)
@@ -54,11 +69,6 @@ CRAWL4AI_API_KEY=          # If your server requires auth
 SERVER_NAME=crawl4ai-mcp   # Custom name for the MCP server
 SERVER_VERSION=1.0.0       # Custom version
 
-# Optional - LLM Configuration (for extraction strategies)
-# These will be passed to crawl_with_config when using extraction_type: 'llm'
-LLM_PROVIDER=              # e.g., openai/gpt-4o-mini, anthropic/claude-3
-LLM_API_TOKEN=             # Your LLM API key
-LLM_BASE_URL=              # Custom LLM endpoint (if not using default)
 ```
 
 ## Usage
@@ -108,10 +118,7 @@ This MCP server works with any MCP-compatible client (Claude Desktop, Claude Cod
         "CRAWL4AI_BASE_URL": "http://localhost:11235",
         "CRAWL4AI_API_KEY": "your-api-key",
         "SERVER_NAME": "custom-name",
-        "SERVER_VERSION": "1.0.0",
-        "LLM_PROVIDER": "openai/gpt-4o-mini",
-        "LLM_API_TOKEN": "your-llm-api-key",
-        "LLM_BASE_URL": "https://api.openai.com/v1"
+        "SERVER_VERSION": "1.0.0"
       }
     }
   }
@@ -132,7 +139,7 @@ claude mcp add crawl4ai -e CRAWL4AI_BASE_URL=http://localhost:11235 -- npx mcp-c
 Consult your client's documentation for MCP server configuration. The key details:
 - Command: `npx mcp-crawl4ai-ts` or `node /path/to/dist/index.js`
 - Required env: `CRAWL4AI_BASE_URL`
-- Optional env: `CRAWL4AI_API_KEY`, `SERVER_NAME`, `SERVER_VERSION`, `LLM_PROVIDER`, `LLM_API_TOKEN`, `LLM_BASE_URL`
+- Optional env: `CRAWL4AI_API_KEY`, `SERVER_NAME`, `SERVER_VERSION`
 
 ## Available Tools
 
@@ -219,24 +226,20 @@ Consult your client's documentation for MCP server configuration. The key detail
   pdf?: boolean,                           // Generate PDF
   session_id?: string,                      // Reuse browser session
   cache_mode?: 'ENABLED'|'BYPASS'|'DISABLED',  // Cache control
-  extraction_type?: 'llm'|'css'|'xpath'|'json_css',  // Extraction strategy
+  extraction_type?: 'llm',                  // Only 'llm' extraction is supported via REST API
   llm_provider?: string,                    // LLM provider (e.g., "openai/gpt-4o-mini")
   llm_api_key?: string,                     // LLM API key
   extraction_schema?: object,               // Schema for structured extraction
   extraction_instruction?: string,          // Natural language extraction prompt
-  css_selectors?: object,                   // CSS selector mapping
   timeout?: number,                         // Overall timeout (default: 60000)
   verbose?: boolean                         // Detailed logging
 }
 ```
 
-**LLM Configuration Options**:
-When using `extraction_type: 'llm'`, you have three ways to provide LLM credentials:
-1. **Per-request**: Pass `llm_provider` and `llm_api_key` directly in the tool parameters (highest priority)
-2. **MCP config**: Set `LLM_PROVIDER` and `LLM_API_TOKEN` in your MCP client configuration (as shown in examples above)
-3. **Server default**: The Crawl4AI server may have its own LLM environment variables configured as fallback
-
-The MCP server will pass through any provided credentials to the Crawl4AI server.
+**Important Notes**:
+- **CSS/XPath extraction is NOT supported** via the REST API due to Python class serialization limitations
+- Use the `extract_with_llm` tool for structured data extraction instead
+- For simple content extraction, use `crawl_page` or `crawl_with_config` which return markdown
 
 ### 12. `create_session` - Create browser session for stateful crawling
 ```typescript
@@ -259,6 +262,29 @@ Removes session from local tracking. Note: The actual browser session on the ser
 {}  // No parameters required
 ```
 Returns all locally tracked sessions with creation time, last used time, and initial URL. Note: These are session references - actual server state may differ.
+
+### 15. `extract_with_llm` - Extract structured data using AI
+```typescript
+{ 
+  url: string,          // URL to extract data from
+  query: string         // Natural language extraction instructions
+}
+```
+Uses AI to extract structured data from webpages. Returns results immediately without any polling or job management. This is the recommended way to extract specific information since CSS/XPath extraction is not supported via the REST API.
+
+**Example usage:**
+```typescript
+const result = await client.callTool({
+  name: 'extract_with_llm',
+  arguments: {
+    url: 'https://example.com/products',
+    query: 'Extract all product names, prices, and availability status'
+  }
+});
+
+// Response format:
+// { "answer": "Product A costs $10 and is in stock. Product B costs $20 and is out of stock..." }
+```
 
 ## Advanced Configuration
 
@@ -297,12 +323,14 @@ npm run test:integration
 Integration tests cover:
 - Dynamic content and JavaScript execution
 - Session management and cookies
-- Content extraction (CSS selectors, LLM-based)
+- Content extraction (LLM-based only)
 - Media handling (screenshots, PDFs)
 - Performance and caching
 - Content filtering
 - Bot detection avoidance
 - Error handling
+
+Note: CSS/XPath extraction tests are skipped due to REST API limitations.
 
 ## License
 
