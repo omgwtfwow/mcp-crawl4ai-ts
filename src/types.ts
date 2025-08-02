@@ -23,12 +23,18 @@ export interface CrawlResult {
     internal: string[];
     external: string[];
   };
+  js_execution_result?: {
+    success: boolean;
+    results: any[];
+  };
+  success?: boolean;
 }
 
 export interface JSExecuteOptions {
   js_code: string | string[];
   wait_after_js?: number;
   screenshot?: boolean;
+  // session_id removed - server /execute_js endpoint doesn't support sessions
 }
 
 export interface BatchCrawlOptions extends CrawlOptions {

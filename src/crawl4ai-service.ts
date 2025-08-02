@@ -60,6 +60,7 @@ export class Crawl4AIService {
       scripts: scripts,
       wait_after_js: options.wait_after_js,
       screenshot: options.screenshot,
+      // session_id removed - server endpoint doesn't support it
     });
 
     return response.data as CrawlResult;

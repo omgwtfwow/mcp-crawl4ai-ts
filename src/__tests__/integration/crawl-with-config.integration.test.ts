@@ -78,7 +78,7 @@ describe('crawl_with_config Integration Tests', () => {
           name: 'crawl_with_config',
           arguments: {
             url: 'https://httpbin.org/html',
-            js_code: ['document.querySelectorAll("a").length', 'document.title'],
+            js_code: ['return document.querySelectorAll("a").length', 'return document.title'],
             wait_after_js: 1000,
             cache_mode: 'BYPASS',
             word_count_threshold: 10,
@@ -612,7 +612,7 @@ describe('crawl_with_config Integration Tests', () => {
             // Session
             session_id: sessionId,
             // JavaScript
-            js_code: 'document.querySelectorAll("h1").length',
+            js_code: 'return document.querySelectorAll("h1").length',
             wait_after_js: 1000,
             // Content filtering
             excluded_tags: ['script', 'style'],

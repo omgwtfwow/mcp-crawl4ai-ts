@@ -72,7 +72,7 @@ class Crawl4AIServer {
         {
           name: 'crawl_page',
           description:
-            'Basic webpage crawling for clean markdown extraction. Use when: you need simple content without JavaScript, want to filter specific HTML tags, or need quick markdown conversion. Prefer crawl_with_config for advanced needs',
+            'Basic webpage crawling - extracts content as markdown. Good for: simple content extraction, filtering HTML tags, quick conversions. ⚠️ STATELESS: Creates new browser each time, cannot maintain state between calls. For persistence use create_session + crawl_with_config.',
           inputSchema: {
             type: 'object',
             properties: {
@@ -122,7 +122,7 @@ class Crawl4AIServer {
         {
           name: 'capture_screenshot',
           description:
-            'Capture webpage screenshots as PNG. Use when: documenting visual bugs, archiving page state, or needing visual confirmation. Returns base64-encoded image. For PDF use generate_pdf instead',
+            'Capture webpage screenshot. ⚠️ STATELESS: Creates new browser each time. Cannot see form fills or JS changes from other calls. For persistent screenshots use create_session + crawl_with_config(session_id, screenshot:true).',
           inputSchema: {
             type: 'object',
             properties: {
@@ -144,6 +144,18 @@ class Crawl4AIServer {
                 description: 'Timeout in seconds',
                 default: 30,
               },
+              viewport_width: {
+                type: 'number',
+                description: '(Currently not working - server limitation)',
+              },
+              viewport_height: {
+                type: 'number',
+                description: '(Currently not working - server limitation)',
+              },
+              screenshot_wait_for: {
+                type: 'number',
+                description: 'Seconds to wait before taking screenshot (for animations/transitions)',
+              },
             },
             required: ['url'],
           },
@@ -151,7 +163,7 @@ class Crawl4AIServer {
         {
           name: 'generate_pdf',
           description:
-            'Convert webpages to PDF format. Use when: creating printable documents, archiving with exact layout, or generating reports. Returns base64-encoded PDF. Preserves CSS styling better than screenshots',
+            'Convert webpage to PDF. ⚠️ STATELESS: Creates new browser each time. Cannot capture form fills or JS changes. For persistent PDFs use create_session + crawl_with_config(session_id, pdf:true).',
           inputSchema: {
             type: 'object',
             properties: {
@@ -175,7 +187,7 @@ class Crawl4AIServer {
         {
           name: 'execute_js',
           description:
-            'Run JavaScript before extracting content. Use when: clicking "Load More" buttons, dismissing popups, scrolling to reveal content, or extracting from JS variables. Example: document.querySelector(".load-more").click()',
+            'Execute JavaScript on a webpage and get results. Good for: extracting data, checking page state. ⚠️ STATELESS: Each call creates new browser, losing all previous changes. For persistence (forms, clicks) use create_session + crawl_with_config with js_code.',
           inputSchema: {
             type: 'object',
             properties: {
@@ -184,18 +196,19 @@ class Crawl4AIServer {
                 description: 'The URL to load',
               },
               js_code: {
-                type: 'string',
+                type: ['string', 'array'],
+                items: { type: 'string' },
                 description:
-                  'JavaScript code as a STRING (required, NOT null). Pass exactly like this: js_code: "document.querySelectorAll(\'a\').length" to count links. For multiple commands use array: js_code: ["command1", "command2"]',
+                  '🔴 MUST START WITH "return"! Examples: "return document.title", "return document.querySelector(\'form\').action". Array: ["return document.title", "return document.body.style.backgroundColor = \'red\'"]',
               },
               wait_after_js: {
                 type: 'number',
-                description: 'Time to wait after JS execution (ms)',
+                description: 'Milliseconds to wait after JS runs',
                 default: 1000,
               },
               screenshot: {
                 type: 'boolean',
-                description: 'Take a screenshot after JS execution',
+                description: 'Include screenshot in response',
                 default: false,
               },
             },
@@ -267,7 +280,7 @@ class Crawl4AIServer {
         {
           name: 'get_html',
           description:
-            'Get raw HTML without processing. Use when: need full HTML structure, doing custom parsing, or debugging page issues. Returns complete HTML including scripts/styles',
+            'Get raw HTML from webpage. ⚠️ STATELESS: Creates new browser each time. Cannot see form fills or JS changes from other calls. For persistent HTML use create_session + crawl_with_config(session_id).',
           inputSchema: {
             type: 'object',
             properties: {
@@ -312,7 +325,7 @@ class Crawl4AIServer {
         {
           name: 'crawl_recursive',
           description:
-            'Deep crawl a website following internal links. Use when: mapping entire sites, finding all pages, building comprehensive indexes. Control with max_depth (default 3) and max_pages (default 50)',
+            'Deep crawl a website following internal links. Use when: mapping entire sites, finding all pages, building comprehensive indexes. Control with max_depth (default 3) and max_pages (default 50). Note: May need JS execution for dynamic sites',
           inputSchema: {
             type: 'object',
             properties: {
@@ -366,13 +379,18 @@ class Crawl4AIServer {
         {
           name: 'crawl_with_config',
           description:
-            'Advanced web crawling with browser control. Note: For structured data extraction, use extract_with_llm tool. Avoid combining scan_full_page+networkidle+magic (causes loops). Start simple, add params as needed',
+            'Most powerful crawling tool with full configuration. Features: custom browser settings, headers, cookies, proxies, JavaScript execution, screenshots, PDFs, content filtering, infinite scroll handling. UNIQUE: Supports persistent sessions via session_id for multi-step workflows. Use for complex sites, authentication, dynamic content.',
           inputSchema: {
             type: 'object',
             properties: {
               url: {
                 type: 'string',
                 description: 'The URL to crawl',
+              },
+              session_id: {
+                type: 'string',
+                description:
+                  'Browser session ID from create_session() or any unique string. CRITICAL: Use SAME ID across all related calls to maintain state. First use creates browser, subsequent uses reuse it. Without this, each call gets fresh browser.',
               },
 
               // Browser Configuration
@@ -451,7 +469,7 @@ class Crawl4AIServer {
                 type: ['string', 'array'],
                 items: { type: 'string' },
                 description:
-                  'JavaScript code to execute (MUST be a string, not null). Examples: js_code: "document.querySelectorAll(\'a\').length" counts links, js_code: ["window.scrollTo(0, 1000)", "document.title"] runs multiple commands. For js_only mode, also set session_id.',
+                  'JavaScript to execute. Works with session_id + js_only for interactions. Examples: ["document.querySelector(\'input\').value = \'text\'", "document.querySelector(\'button\').click()"]. No "return" needed. Executes in order.',
               },
               wait_for: {
                 type: 'string',
@@ -492,11 +510,6 @@ class Crawl4AIServer {
                 type: 'boolean',
                 description: 'Generate PDF as base64 preserving exact layout',
                 default: false,
-              },
-              session_id: {
-                type: 'string',
-                description:
-                  'Browser session ID from create_session. Maintains login state, cookies, and JavaScript context. Required for js_only mode. Essential for multi-page auth flows',
               },
               cache_mode: {
                 type: 'string',
@@ -604,7 +617,7 @@ class Crawl4AIServer {
               js_only: {
                 type: 'boolean',
                 description:
-                  'Execute JS on existing page without navigation. Requires active session_id. Use for: multi-step interactions, updating dynamic content, or SPA navigation',
+                  'Execute JS without navigating to URL. true = stay on current page (requires session_id). false = navigate to URL first. Use true for form interactions after initial page load.',
                 default: false,
               },
               simulate_user: {
@@ -629,7 +642,7 @@ class Crawl4AIServer {
               virtual_scroll_config: {
                 type: 'object',
                 description:
-                  'Handle infinite feeds that replace content while scrolling (Twitter, Instagram, TikTok). Different from scan_full_page which handles appending content',
+                  'For infinite scroll feeds that replace content (Twitter, Instagram). Requires container_selector. Example: {container_selector: "[role=\'feed\']", scroll_count: 5}',
                 properties: {
                   container_selector: {
                     type: 'string',
@@ -670,13 +683,14 @@ class Crawl4AIServer {
         {
           name: 'create_session',
           description:
-            'Start a persistent browser session for stateful crawling. Use when: handling login flows, maintaining cookies across requests, or multi-step interactions. Session persists until timeout. Use session_id in crawl_with_config to reuse',
+            '🔑 CREATES PERSISTENT BROWSER! Returns session_id for use with crawl_with_config. Browser stays alive across multiple calls, maintaining ALL state (cookies, localStorage, page). Other tools CANNOT use sessions - they create new browser each time. Essential for: forms, login flows, multi-step processes.',
           inputSchema: {
             type: 'object',
             properties: {
               session_id: {
                 type: 'string',
-                description: 'Unique identifier for the session (auto-generated if not provided)',
+                description:
+                  'Custom session identifier. Auto-generated if not provided. Use this EXACT ID in all subsequent crawl_with_config calls to reuse the browser.',
               },
               initial_url: {
                 type: 'string',
@@ -720,7 +734,7 @@ class Crawl4AIServer {
         {
           name: 'extract_with_llm',
           description:
-            'Extract structured data from webpages using AI. Direct extraction that returns results immediately. Use when: need specific data extraction, want AI to understand page content, or extracting complex patterns. This is the recommended alternative to CSS/XPath extraction.',
+            'Extract structured data from webpages using AI. ⚠️ STATELESS: Creates new browser each time. Cannot see form submissions or JS changes. For persistent extraction use create_session + crawl_with_config(session_id), then extract from response.',
           inputSchema: {
             type: 'object',
             properties: {
@@ -913,43 +927,45 @@ class Crawl4AIServer {
       // Check if js_code is provided
       if (!options.js_code || options.js_code === null) {
         throw new Error(
-          'js_code is required. Please provide a JavaScript string (e.g., "document.querySelectorAll(\'a\').length") or an array of strings (e.g., ["window.scrollTo(0, 1000)", "document.querySelector(\'.more\').click()"])',
+          'js_code is required. Please provide a JavaScript string with return statement (e.g., "return document.title") or an array of strings (e.g., ["return document.querySelectorAll(\'a\').length", "return window.location.href"])',
         );
       }
       // Ensure scripts is always an array
       const scripts = Array.isArray(options.js_code) ? options.js_code : [options.js_code];
 
+      // Note: Server's /execute_js endpoint doesn't support sessions
+      // Use crawl_with_config for session-based JavaScript execution
       const response = await this.axiosClient.post('/execute_js', {
         url: options.url,
         scripts: scripts,
         wait_after_js: options.wait_after_js,
         screenshot: options.screenshot,
+        // session_id not supported by server endpoint
       });
 
       const result = response.data;
 
-      // Always stringify the entire response to see what we're getting
-      const fullResponse = JSON.stringify(result, null, 2);
+      // Extract JavaScript execution results
+      const jsResults = result.js_execution_result?.results || [];
 
-      // Try to extract meaningful content
-      let jsResult = fullResponse;
-
-      // If we can find specific fields, use them
-      if (result && typeof result === 'object') {
-        if (result.js_result !== undefined) {
-          jsResult = `JavaScript Result: ${JSON.stringify(result.js_result)}\n\nFull Response:\n${fullResponse}`;
-        } else if (result.result !== undefined) {
-          jsResult = `Result: ${JSON.stringify(result.result)}\n\nFull Response:\n${fullResponse}`;
-        } else if (result.extracted_content) {
-          jsResult = `Extracted: ${result.extracted_content}\n\nFull Response:\n${fullResponse}`;
-        }
+      // Format results for display
+      let formattedResults = '';
+      if (jsResults.length > 0) {
+        formattedResults = jsResults
+          .map((res: any, idx: number) => {
+            const script = scripts[idx] || 'Script ' + (idx + 1);
+            return `Script: ${script}\nResult: ${JSON.stringify(res, null, 2)}`;
+          })
+          .join('\n\n');
+      } else {
+        formattedResults = 'No results returned';
       }
 
       return {
         content: [
           {
             type: 'text',
-            text: `JavaScript executed successfully on: ${options.url}\n\nResult:\n${jsResult}`,
+            text: `JavaScript executed successfully on: ${options.url}\n\nResults:\n${formattedResults}${result.markdown ? `\n\nPage Content:\n${typeof result.markdown === 'string' ? result.markdown : JSON.stringify(result.markdown, null, 2)}` : ''}`,
           },
           ...(result.screenshot
             ? [
@@ -1001,7 +1017,15 @@ class Crawl4AIServer {
   }) {
     try {
       // First, detect the content type
-      const headResponse = await this.axiosClient.head(options.url).catch(() => null);
+      const headResponse = await this.axiosClient.head(options.url).catch((error) => {
+        // If server returns 500, provide helpful message
+        if (error.response?.status === 500) {
+          throw new Error(
+            `Server error (500) at ${options.url}. The server may be experiencing temporary issues. Please try again later.`,
+          );
+        }
+        return null;
+      });
       const contentType = headResponse?.headers['content-type'] || '';
 
       let strategy = 'html';
@@ -1014,13 +1038,25 @@ class Crawl4AIServer {
       }
 
       // Use the smart crawl endpoint if available, otherwise fallback to regular crawl
-      const response = await this.axiosClient.post('/crawl', {
-        urls: [options.url],
-        strategy,
-        max_depth: options.max_depth,
-        follow_links: options.follow_links,
-        bypass_cache: options.bypass_cache,
-      });
+      const response = await this.axiosClient
+        .post('/crawl', {
+          urls: [options.url],
+          strategy,
+          max_depth: options.max_depth,
+          follow_links: options.follow_links,
+          bypass_cache: options.bypass_cache,
+        })
+        .catch((error) => {
+          if (error.response?.status === 500) {
+            // Fallback to basic crawl if smart features fail
+            console.error('Smart crawl failed with 500, falling back to basic crawl');
+            return this.axiosClient.post('/crawl', {
+              urls: [options.url],
+              bypass_cache: options.bypass_cache,
+            });
+          }
+          throw error;
+        });
 
       const results = response.data.results || [];
       const result = results[0] || {};
@@ -1069,13 +1105,64 @@ class Crawl4AIServer {
 
   private async extractLinks(options: { url: string; categorize?: boolean }) {
     try {
-      // First crawl the page to get content
-      const response = await this.axiosClient.post('/md', {
-        url: options.url,
-        bypass_cache: true,
+      // Use crawl endpoint instead of md to get full link data
+      const response = await this.axiosClient.post('/crawl', {
+        urls: [options.url],
+        crawler_config: {
+          cache_mode: 'bypass',
+        },
       });
 
-      const result: CrawlResult = response.data;
+      const results = response.data.results || [response.data];
+      const result: CrawlResult = results[0] || {};
+
+      // Check if the response is likely JSON or non-HTML content
+      if (!result.links || (result.links.internal.length === 0 && result.links.external.length === 0)) {
+        // Try to detect if this might be a JSON endpoint
+        if (result.markdown?.includes('"links"') || result.markdown?.includes('"url"')) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Note: ${options.url} appears to return JSON data rather than HTML. The extract_links tool is designed for HTML pages with <a> tags. To extract URLs from JSON, you would need to parse the JSON structure directly.`,
+              },
+            ],
+          };
+        }
+        // If no links found but it's HTML, let's check the markdown content for href patterns
+        if (result.markdown && result.markdown.includes('href=')) {
+          // Extract links manually from markdown if server didn't provide them
+          const hrefPattern = /href=["']([^"']+)["']/g;
+          const foundLinks: string[] = [];
+          let match;
+          while ((match = hrefPattern.exec(result.markdown)) !== null) {
+            foundLinks.push(match[1]);
+          }
+          if (foundLinks.length > 0) {
+            // Categorize found links
+            const currentDomain = new URL(options.url).hostname;
+            const internal: string[] = [];
+            const external: string[] = [];
+
+            foundLinks.forEach((link) => {
+              try {
+                const linkUrl = new URL(link, options.url);
+                if (linkUrl.hostname === currentDomain) {
+                  internal.push(linkUrl.href);
+                } else {
+                  external.push(linkUrl.href);
+                }
+              } catch {
+                // Relative link
+                internal.push(link);
+              }
+            });
+
+            result.links = { internal, external };
+          }
+        }
+      }
+
       const links = result.links || { internal: [], external: [] };
 
       if (!options.categorize) {

@@ -162,7 +162,7 @@ Consult your client's documentation for MCP server configuration. The key detail
 
 ### 4. `execute_js` - Run JS before crawling
 ```typescript
-{ url: string, js_code: string, wait_after_js?: number, screenshot?: boolean }
+{ url: string, js_code: string | string[], wait_after_js?: number, screenshot?: boolean }
 ```
 
 ### 5. `batch_crawl` - Parallel processing
@@ -224,7 +224,7 @@ Consult your client's documentation for MCP server configuration. The key detail
   exclude_external_links?: boolean,         // Remove external links
   screenshot?: boolean,                     // Capture screenshot
   pdf?: boolean,                           // Generate PDF
-  session_id?: string,                      // Reuse browser session
+  session_id?: string,                      // Reuse browser session (only works with crawl_with_config)
   cache_mode?: 'ENABLED'|'BYPASS'|'DISABLED',  // Cache control
   extraction_type?: 'llm',                  // Only 'llm' extraction is supported via REST API
   llm_provider?: string,                    // LLM provider (e.g., "openai/gpt-4o-mini")
@@ -250,6 +250,8 @@ Consult your client's documentation for MCP server configuration. The key detail
 }
 ```
 Creates a session reference for maintaining browser state across multiple requests. Sessions persist on the Crawl4AI server and maintain cookies, login state, and JavaScript context.
+
+**Important**: Only the `crawl_with_config` tool supports session_id. Other tools like `execute_js`, `capture_screenshot`, and `extract_with_llm` are stateless and run in isolated browser contexts.
 
 ### 13. `clear_session` - Remove session from tracking
 ```typescript

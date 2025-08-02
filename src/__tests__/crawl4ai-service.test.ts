@@ -107,23 +107,66 @@ describe('Crawl4AIService', () => {
 
   describe('executeJS', () => {
     it('should execute JavaScript successfully', async () => {
-      const mockResult = { markdown: 'Modified content' };
+      const mockResult = {
+        markdown: 'Modified content',
+        js_execution_result: {
+          success: true,
+          results: ['Example Domain'],
+        },
+      };
       mockAxiosInstance.post.mockResolvedValueOnce({ data: mockResult });
 
       const result = await service.executeJS({
         url: 'https://example.com',
-        js_code: 'document.title = "New Title"',
+        js_code: 'return document.title',
         wait_after_js: 1000,
       });
 
       expect(mockAxiosInstance.post).toHaveBeenCalledWith('/execute_js', {
         url: 'https://example.com',
-        scripts: ['document.title = "New Title"'],
+        scripts: ['return document.title'],
         wait_after_js: 1000,
         screenshot: undefined,
       });
 
       expect(result).toEqual(mockResult);
+      expect(result.js_execution_result?.results[0]).toBe('Example Domain');
+    });
+
+    it('should handle array of JavaScript scripts', async () => {
+      const mockResult = {
+        markdown: 'Content',
+        js_execution_result: {
+          success: true,
+          results: ['Example Domain', 10, ['https://link1.com', 'https://link2.com']],
+        },
+      };
+      mockAxiosInstance.post.mockResolvedValueOnce({ data: mockResult });
+
+      const result = await service.executeJS({
+        url: 'https://example.com',
+        js_code: [
+          'return document.title',
+          'return document.querySelectorAll("a").length',
+          'return Array.from(document.querySelectorAll("a")).map(a => a.href)',
+        ],
+      });
+
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/execute_js', {
+        url: 'https://example.com',
+        scripts: [
+          'return document.title',
+          'return document.querySelectorAll("a").length',
+          'return Array.from(document.querySelectorAll("a")).map(a => a.href)',
+        ],
+        wait_after_js: undefined,
+        screenshot: undefined,
+      });
+
+      expect(result.js_execution_result?.results).toHaveLength(3);
+      expect(result.js_execution_result?.results[0]).toBe('Example Domain');
+      expect(result.js_execution_result?.results[1]).toBe(10);
+      expect(result.js_execution_result?.results[2]).toEqual(['https://link1.com', 'https://link2.com']);
     });
   });
 
