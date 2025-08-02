@@ -11,6 +11,8 @@
 - Fixed `crawl_recursive` implementation to use `/crawl` endpoint instead of `/md` for proper link extraction
 - Fixed `crawl_recursive` type issues and improved link handling for recursive crawling
 - Fixed `parse_sitemap` implementation to fetch sitemaps directly instead of through Crawl4AI server API
+- Fixed `create_session` schema to make `session_id` optional as documented
+- Enhanced `create_session` response to include all session parameters for programmatic access
 - Implemented proper handling for non-functional server parameters:
   - `batch_crawl`: `remove_images` now uses `exclude_tags` in crawler_config to actually remove images
   - `smart_crawl`: `follow_links` now crawls URLs found in sitemaps/RSS feeds (max 10 URLs)
@@ -26,6 +28,7 @@
 - Improved `crawl_recursive` output format to clearly show depth levels and internal link counts
 - Enhanced error handling in `crawl_recursive` to continue crawling even if individual pages fail
 - Added comprehensive integration tests for `parse_sitemap` tool with various test cases
+- Added comprehensive integration tests for session management tools (`create_session`, `clear_session`, `list_sessions`)
 
 ## Version 2.0.1 (2025-08-02)
 Update README

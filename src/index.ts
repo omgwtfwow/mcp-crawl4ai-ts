@@ -242,9 +242,9 @@ const ParseSitemapSchema = createStatelessSchema(
 
 // Session management tools don't need stateless schema
 const CreateSessionSchema = z.object({
-  session_id: z.string(),
-  initial_url: z.string().optional(),
-  browser_type: z.string().optional(),
+  session_id: z.string().optional(),
+  initial_url: z.string().url().optional(),
+  browser_type: z.enum(['chromium', 'firefox', 'webkit']).optional(),
 });
 
 const ClearSessionSchema = z.object({
@@ -2135,7 +2135,7 @@ class Crawl4AIServer {
     }
   }
 
-  private async createSession(options: { session_id: string; initial_url?: string; browser_type?: string }) {
+  private async createSession(options: { session_id?: string; initial_url?: string; browser_type?: string }) {
     try {
       // Generate session ID if not provided
       const sessionId = options.session_id || `session-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
@@ -2181,9 +2181,14 @@ class Crawl4AIServer {
         content: [
           {
             type: 'text',
-            text: `Session created successfully:\nSession ID: ${sessionId}\nBrowser: ${options.browser_type || 'chromium'}\n${options.initial_url ? `Pre-warmed with: ${options.initial_url}` : 'Ready for use'}`,
+            text: `Session created successfully:\nSession ID: ${sessionId}\nBrowser: ${options.browser_type || 'chromium'}\n${options.initial_url ? `Pre-warmed with: ${options.initial_url}` : 'Ready for use'}\n\nUse this session_id with the crawl tool to maintain state across requests.`,
           },
         ],
+        // Include all session parameters for easier programmatic access
+        session_id: sessionId,
+        browser_type: options.browser_type || 'chromium',
+        initial_url: options.initial_url,
+        created_at: this.sessions.get(sessionId)?.created_at.toISOString(),
       };
     } catch (error: any) {
       throw new Error(`Failed to create session: ${error.message}`);
