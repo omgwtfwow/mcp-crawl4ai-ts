@@ -1294,7 +1294,7 @@ class Crawl4AIServer {
           default:
             throw new Error(`Unknown tool: ${name}`);
         }
-      } catch (error: any) {
+      } catch (error) {
         return {
           content: [
             {
@@ -1336,8 +1336,10 @@ class Crawl4AIServer {
           },
         ],
       };
-    } catch (error: any) {
-      throw new Error(`Failed to get markdown: ${error.response?.data?.detail || error.message}`);
+    } catch (error) {
+      throw new Error(
+        `Failed to get markdown: ${(error as any).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
+      );
     }
   }
 
@@ -1363,8 +1365,10 @@ class Crawl4AIServer {
           },
         ],
       };
-    } catch (error: any) {
-      throw new Error(`Failed to capture screenshot: ${error.response?.data?.detail || error.message}`);
+    } catch (error) {
+      throw new Error(
+        `Failed to capture screenshot: ${(error as any).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
+      );
     }
   }
 
@@ -1393,8 +1397,10 @@ class Crawl4AIServer {
           },
         ],
       };
-    } catch (error: any) {
-      throw new Error(`Failed to generate PDF: ${error.response?.data?.detail || error.message}`);
+    } catch (error) {
+      throw new Error(
+        `Failed to generate PDF: ${(error as any).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
+      );
     }
   }
 
@@ -1418,7 +1424,7 @@ class Crawl4AIServer {
       let formattedResults = '';
       if (jsResults.length > 0) {
         formattedResults = jsResults
-          .map((res: any, idx: number) => {
+          .map((res: unknown, idx: number) => {
             const script = scripts[idx] || 'Script ' + (idx + 1);
             // Handle the actual return value or success/error status
             let resultStr = '';
@@ -1446,15 +1452,17 @@ class Crawl4AIServer {
           },
         ],
       };
-    } catch (error: any) {
-      throw new Error(`Failed to execute JavaScript: ${error.response?.data?.detail || error.message}`);
+    } catch (error) {
+      throw new Error(
+        `Failed to execute JavaScript: ${(error as any).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
+      );
     }
   }
 
   private async batchCrawl(options: BatchCrawlOptions) {
     try {
       // Build crawler config if needed
-      const crawler_config: any = {};
+      const crawler_config: Record<string, unknown> = {};
 
       // Handle remove_images by using exclude_tags
       if (options.remove_images) {
@@ -1478,13 +1486,17 @@ class Crawl4AIServer {
           {
             type: 'text',
             text: `Batch crawl completed. Processed ${results.length} URLs:\n\n${results
-              .map((r: any, i: number) => `${i + 1}. ${options.urls[i]}: ${r.success ? 'Success' : 'Failed'}`)
+              .map(
+                (r: CrawlResultItem, i: number) => `${i + 1}. ${options.urls[i]}: ${r.success ? 'Success' : 'Failed'}`,
+              )
               .join('\n')}`,
           },
         ],
       };
-    } catch (error: any) {
-      throw new Error(`Failed to batch crawl: ${error.response?.data?.detail || error.message}`);
+    } catch (error) {
+      throw new Error(
+        `Failed to batch crawl: ${(error as any).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
+      );
     }
   }
 
@@ -1602,8 +1614,10 @@ class Crawl4AIServer {
             : []),
         ],
       };
-    } catch (error: any) {
-      throw new Error(`Failed to smart crawl: ${error.response?.data?.detail || error.message}`);
+    } catch (error) {
+      throw new Error(
+        `Failed to smart crawl: ${(error as any).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
+      );
     }
   }
 
@@ -1620,8 +1634,10 @@ class Crawl4AIServer {
           },
         ],
       };
-    } catch (error: any) {
-      throw new Error(`Failed to get HTML: ${error.response?.data?.detail || error.message}`);
+    } catch (error) {
+      throw new Error(
+        `Failed to get HTML: ${(error as any).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
+      );
     }
   }
 
@@ -1712,8 +1728,8 @@ class Crawl4AIServer {
 
       if (result.links && (result.links.internal.length > 0 || result.links.external.length > 0)) {
         // Use API-provided links
-        internalUrls = result.links.internal.map((link: any) => link.href || link);
-        externalUrls = result.links.external.map((link: any) => link.href || link);
+        internalUrls = result.links.internal.map((link) => (typeof link === 'string' ? link : link.href));
+        externalUrls = result.links.external.map((link) => (typeof link === 'string' ? link : link.href));
       } else if (hasManuallyExtractedLinks) {
         // Use manually extracted links
         internalUrls = manuallyExtractedInternal;
@@ -1734,7 +1750,7 @@ class Crawl4AIServer {
       }
 
       // Categorize links
-      const categorized: any = {
+      const categorized: Record<string, string[]> = {
         internal: internalUrls,
         external: externalUrls,
         social: [],
@@ -1788,8 +1804,10 @@ class Crawl4AIServer {
           ],
         };
       }
-    } catch (error: any) {
-      throw new Error(`Failed to extract links: ${error.response?.data?.detail || error.message}`);
+    } catch (error) {
+      throw new Error(
+        `Failed to extract links: ${(error as any).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
+      );
     }
   }
 
@@ -1861,7 +1879,7 @@ class Crawl4AIServer {
               }
             }
           }
-        } catch (error: any) {
+        } catch (error) {
           // Log but continue crawling other pages
           console.error(`Failed to crawl ${current.url}:`, error.message || error);
         }
@@ -1884,7 +1902,7 @@ class Crawl4AIServer {
           },
         ],
       };
-    } catch (error: any) {
+    } catch (error) {
       throw new Error(`Failed to crawl recursively: ${error.message}`);
     }
   }
@@ -1920,12 +1938,14 @@ class Crawl4AIServer {
           },
         ],
       };
-    } catch (error: any) {
-      throw new Error(`Failed to parse sitemap: ${error.response?.data?.detail || error.message}`);
+    } catch (error) {
+      throw new Error(
+        `Failed to parse sitemap: ${(error as any).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
+      );
     }
   }
 
-  private async crawl(options: any) {
+  private async crawl(options: Record<string, unknown>) {
     try {
       // Ensure options is an object
       if (!options || typeof options !== 'object') {
@@ -1933,7 +1953,7 @@ class Crawl4AIServer {
       }
 
       // Build browser_config
-      const browser_config: any = {
+      const browser_config: Record<string, unknown> = {
         headless: true, // Always true as noted
       };
 
@@ -1954,7 +1974,7 @@ class Crawl4AIServer {
       }
 
       // Build crawler_config
-      const crawler_config: any = {};
+      const crawler_config: Record<string, unknown> = {};
 
       // Content filtering
       if (options.word_count_threshold !== undefined)
@@ -2119,7 +2139,7 @@ class Crawl4AIServer {
       // JS execution results if available
       if (result.js_execution_result && result.js_execution_result.results.length > 0) {
         const jsResults = result.js_execution_result.results
-          .map((res: any, idx: number) => {
+          .map((res: unknown, idx: number) => {
             return `Result ${idx + 1}: ${JSON.stringify(res, null, 2)}`;
           })
           .join('\n');
@@ -2130,8 +2150,10 @@ class Crawl4AIServer {
       }
 
       return { content };
-    } catch (error: any) {
-      throw new Error(`Failed to crawl: ${error.response?.data?.detail || error.message}`);
+    } catch (error) {
+      throw new Error(
+        `Failed to crawl: ${(error as any).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
+      );
     }
   }
 
@@ -2190,7 +2212,7 @@ class Crawl4AIServer {
         initial_url: options.initial_url,
         created_at: this.sessions.get(sessionId)?.created_at.toISOString(),
       };
-    } catch (error: any) {
+    } catch (error) {
       throw new Error(`Failed to create session: ${error.message}`);
     }
   }
@@ -2213,7 +2235,7 @@ class Crawl4AIServer {
           },
         ],
       };
-    } catch (error: any) {
+    } catch (error) {
       throw new Error(`Failed to clear session: ${error.message}`);
     }
   }
@@ -2262,7 +2284,7 @@ class Crawl4AIServer {
           },
         ],
       };
-    } catch (error: any) {
+    } catch (error) {
       throw new Error(`Failed to list sessions: ${error.message}`);
     }
   }
@@ -2279,7 +2301,7 @@ class Crawl4AIServer {
           },
         ],
       };
-    } catch (error: any) {
+    } catch (error) {
       throw new Error(`Failed to extract with LLM: ${error.message}`);
     }
   }

@@ -23,7 +23,7 @@ export interface JSExecuteEndpointResponse {
   success: boolean;
   js_execution_result: {
     success: boolean;
-    results: any[];
+    results: unknown[];
   };
   markdown?: string;
 }
@@ -202,7 +202,7 @@ export interface SessionInfo {
   created_at: Date;
   last_used: Date;
   initial_url?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 // Crawl endpoint types
@@ -256,31 +256,22 @@ export interface CrawlMediaResult {
   }>;
 }
 
+interface LinkItem {
+  href: string;
+  text: string;
+  title: string;
+  base_domain?: string | null;
+  head_data?: Record<string, unknown> | null;
+  head_extraction_status?: string | null;
+  head_extraction_error?: string | null;
+  intrinsic_score?: number;
+  contextual_score?: number | null;
+  total_score?: number | null;
+}
+
 export interface CrawlLinksResult {
-  internal: Array<{
-    href: string;
-    text: string;
-    title: string;
-    base_domain?: string | null;
-    head_data?: any | null;
-    head_extraction_status?: string | null;
-    head_extraction_error?: string | null;
-    intrinsic_score?: number;
-    contextual_score?: number | null;
-    total_score?: number | null;
-  }>;
-  external: Array<{
-    href: string;
-    text: string;
-    title: string;
-    base_domain?: string | null;
-    head_data?: any | null;
-    head_extraction_status?: string | null;
-    head_extraction_error?: string | null;
-    intrinsic_score?: number;
-    contextual_score?: number | null;
-    total_score?: number | null;
-  }>;
+  internal: LinkItem[];
+  external: LinkItem[];
 }
 
 export interface CrawlResultItem {
@@ -291,27 +282,27 @@ export interface CrawlResultItem {
   success: boolean;
   error_message?: string;
   status_code: number;
-  response_headers: Record<string, any>;
+  response_headers: Record<string, unknown>;
   redirected_url?: string;
   session_id: string | null;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   links: CrawlLinksResult;
   media: CrawlMediaResult;
   markdown: CrawlMarkdownResult;
-  tables: any[];
-  extracted_content: any | null;
+  tables: unknown[];
+  extracted_content: unknown | null;
   screenshot: string | null; // base64 PNG when screenshot: true
   pdf: string | null; // base64 PDF when pdf: true
   mhtml: string | null;
   js_execution_result: {
     success: boolean;
-    results: any[];
+    results: unknown[];
   } | null;
-  downloaded_files: any | null;
-  network_requests: any | null;
-  console_messages: any | null;
-  ssl_certificate: any | null;
-  dispatch_result: any | null;
+  downloaded_files: unknown | null;
+  network_requests: unknown | null;
+  console_messages: unknown | null;
+  ssl_certificate: unknown | null;
+  dispatch_result: unknown | null;
 }
 
 export interface CrawlEndpointResponse {

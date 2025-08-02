@@ -112,7 +112,7 @@ export class Crawl4AIService {
 
   async batchCrawl(options: BatchCrawlOptions) {
     // Build crawler config if needed
-    const crawler_config: any = {};
+    const crawler_config: Record<string, unknown> = {};
 
     // Handle remove_images by using exclude_tags
     if (options.remove_images) {
@@ -190,11 +190,12 @@ export class Crawl4AIService {
       const encodedQuery = encodeURIComponent(options.query);
       const response = await this.axiosClient.get(`/llm/${encodedUrl}?q=${encodedQuery}`);
       return response.data;
-    } catch (error: any) {
-      if (error.code === 'ECONNABORTED' || error.response?.status === 504) {
+    } catch (error) {
+      const axiosError = error as { code?: string; response?: { status?: number } };
+      if (axiosError.code === 'ECONNABORTED' || axiosError.response?.status === 504) {
         throw new Error('LLM extraction timed out. Try a simpler query or different URL.');
       }
-      if (error.response?.status === 401) {
+      if (axiosError.response?.status === 401) {
         throw new Error(
           'LLM extraction failed: No LLM provider configured on server. Please ensure the server has an API key set.',
         );

@@ -2,6 +2,15 @@
 
 ## Version 2.0.2 (2025-08-03)
 
+### Improvements
+- Installed nock library for future HTTP mocking in unit tests
+- Fixed TypeScript lint warnings by replacing `any` types with proper types:
+  - Changed error handling to use proper type assertions
+  - Updated `unknown[]` for JavaScript execution results
+  - Used `Record<string, unknown>` for generic objects
+  - Created `LinkItem` interface for better type safety
+  - Fixed all production code `any` types
+
 ### Bug Fixes
 - Fixed parameter mapping in `get_markdown` tool - now correctly maps schema properties (`filter`, `query`, `cache`) to API parameters (`f`, `q`, `c`)
 - Fixed `smart_crawl` schema to use `follow_links` parameter instead of `remove_images`
