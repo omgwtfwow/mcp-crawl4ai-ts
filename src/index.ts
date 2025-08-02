@@ -226,8 +226,8 @@ const CrawlRecursiveSchema = createStatelessSchema(
     url: z.string().url(),
     max_depth: z.number().optional(),
     max_pages: z.number().optional(),
-    filter_pattern: z.string().optional(),
-    bypass_cache: z.boolean().optional(),
+    include_pattern: z.string().optional(),
+    exclude_pattern: z.string().optional(),
   }),
   'crawl_recursive',
 );
@@ -1803,7 +1803,8 @@ class Crawl4AIServer {
       const startUrl = new URL(options.url);
       const visited = new Set<string>();
       const toVisit: Array<{ url: string; depth: number }> = [{ url: options.url, depth: 0 }];
-      const results: Array<{ url: string; content: string; links: string[] }> = [];
+      const results: Array<{ url: string; content: string; internal_links_found: number; depth: number }> = [];
+      let maxDepthReached = 0;
 
       const includeRegex = options.include_pattern ? new RegExp(options.include_pattern) : null;
       const excludeRegex = options.exclude_pattern ? new RegExp(options.exclude_pattern) : null;
@@ -1821,41 +1822,63 @@ class Crawl4AIServer {
           if (excludeRegex && excludeRegex.test(current.url)) continue;
           if (includeRegex && !includeRegex.test(current.url)) continue;
 
-          // Crawl the page
-          const response = await this.axiosClient.post('/md', {
-            url: current.url,
-            bypass_cache: true,
+          // Crawl the page using the crawl endpoint to get links
+          const response = await this.axiosClient.post('/crawl', {
+            urls: [current.url],
+            crawler_config: {
+              cache_mode: 'BYPASS',
+            },
           });
 
-          const result: CrawlResult = response.data;
-          if (result.markdown) {
+          const crawlResults = response.data.results || [response.data];
+          const result: CrawlResultItem = crawlResults[0];
+          
+          if (result && result.success) {
+            const markdownContent = result.markdown?.fit_markdown || result.markdown?.raw_markdown || '';
+            const internalLinksCount = result.links?.internal?.length || 0;
+            maxDepthReached = Math.max(maxDepthReached, current.depth);
             results.push({
               url: current.url,
-              content: result.markdown,
-              links: [...(result.links?.internal || [])],
+              content: markdownContent,
+              internal_links_found: internalLinksCount,
+              depth: current.depth,
             });
 
             // Add internal links to crawl queue
-            if (current.depth < (options.max_depth || 3)) {
-              const internalLinks = result.links?.internal || [];
-              for (const link of internalLinks) {
-                const linkUrl = new URL(link, current.url).toString();
-                if (!visited.has(linkUrl) && new URL(linkUrl).hostname === startUrl.hostname) {
-                  toVisit.push({ url: linkUrl, depth: current.depth + 1 });
+            if (current.depth < (options.max_depth || 3) && result.links?.internal) {
+              for (const linkObj of result.links.internal) {
+                const linkUrl = linkObj.href || linkObj;
+                try {
+                  const absoluteUrl = new URL(linkUrl, current.url).toString();
+                  if (!visited.has(absoluteUrl) && new URL(absoluteUrl).hostname === startUrl.hostname) {
+                    toVisit.push({ url: absoluteUrl, depth: current.depth + 1 });
+                  }
+                } catch (e) {
+                  // Skip invalid URLs
                 }
               }
             }
           }
-        } catch (error) {
-          console.error(`Failed to crawl ${current.url}:`, error);
+        } catch (error: any) {
+          // Log but continue crawling other pages
+          console.error(`Failed to crawl ${current.url}:`, error.message || error);
         }
       }
 
+      // Prepare the output text
+      let outputText = `Recursive crawl completed:\n\nPages crawled: ${results.length}\nStarting URL: ${options.url}\n`;
+      
+      if (results.length > 0) {
+        outputText += `Max depth reached: ${maxDepthReached} (limit: ${options.max_depth || 3})\n\nNote: Only internal links (same domain) are followed during recursive crawling.\n\nPages found:\n${results.map((r) => `- [Depth ${r.depth}] ${r.url}\n  Content: ${r.content.length} chars\n  Internal links found: ${r.internal_links_found}`).join('\n')}`;
+      } else {
+        outputText += `\nNo pages could be crawled. This might be due to:\n- The starting URL returned an error\n- No internal links were found\n- All discovered links were filtered out by include/exclude patterns`;
+      }
+      
       return {
         content: [
           {
             type: 'text',
-            text: `Recursive crawl completed:\n\nPages crawled: ${results.length}\nStarting URL: ${options.url}\nMax depth reached: ${Math.max(...results.map((_, i) => Math.floor(i / 10)))}\n\nPages found:\n${results.map((r) => `- ${r.url} (${r.content.length} chars, ${r.links.length} links)`).join('\n')}`,
+            text: outputText,
           },
         ],
       };

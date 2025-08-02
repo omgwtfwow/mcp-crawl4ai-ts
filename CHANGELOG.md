@@ -7,6 +7,9 @@
 - Fixed `smart_crawl` schema to use `follow_links` parameter instead of `remove_images`
 - Fixed `extract_links` schema mismatch - corrected schema to use `categorize` parameter as defined in tool
 - Fixed `extract_links` implementation to properly handle link objects returned by API
+- Fixed `crawl_recursive` schema mismatch - corrected schema to use `include_pattern` and `exclude_pattern` instead of `filter_pattern` and `bypass_cache`
+- Fixed `crawl_recursive` implementation to use `/crawl` endpoint instead of `/md` for proper link extraction
+- Fixed `crawl_recursive` type issues and improved link handling for recursive crawling
 - Implemented proper handling for non-functional server parameters:
   - `batch_crawl`: `remove_images` now uses `exclude_tags` in crawler_config to actually remove images
   - `smart_crawl`: `follow_links` now crawls URLs found in sitemaps/RSS feeds (max 10 URLs)
@@ -18,6 +21,9 @@
 - Added comprehensive unit and integration tests for `extract_links` tool
 - Improved JSON endpoint detection in `extract_links` tool
 - Better error handling for `extract_links` with graceful error messages
+- Added comprehensive integration tests for `crawl_recursive` tool
+- Improved `crawl_recursive` output format to clearly show depth levels and internal link counts
+- Enhanced error handling in `crawl_recursive` to continue crawling even if individual pages fail
 
 ## Version 2.0.1 (2025-08-02)
 Update README
