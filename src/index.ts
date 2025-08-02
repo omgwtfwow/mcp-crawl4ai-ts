@@ -21,6 +21,7 @@ import {
   PDFEndpointResponse,
   MarkdownEndpointOptions,
   MarkdownEndpointResponse,
+  FilterType,
 } from './types.js';
 import { Crawl4AIService } from './crawl4ai-service.js';
 
@@ -215,8 +216,7 @@ const SmartCrawlSchema = createStatelessSchema(
 const ExtractLinksSchema = createStatelessSchema(
   z.object({
     url: z.string().url(),
-    wait_for: z.string().optional(),
-    bypass_cache: z.boolean().optional(),
+    categorize: z.boolean().optional().default(true),
   }),
   'extract_links',
 );
@@ -1315,7 +1315,7 @@ class Crawl4AIServer {
       // Map from schema property names to API parameter names
       const result: MarkdownEndpointResponse = await this.service.getMarkdown({
         url: options.url,
-        f: options.filter, // Schema provides 'filter', API expects 'f'
+        f: options.filter as FilterType | undefined, // Schema provides 'filter', API expects 'f'
         q: options.query, // Schema provides 'query', API expects 'q'
         c: options.cache, // Schema provides 'cache', API expects 'c'
       });
@@ -1558,7 +1558,7 @@ class Crawl4AIServer {
           const urlsToFollow = foundUrls.slice(0, Math.min(10, options.max_depth || 10));
 
           // Crawl the found URLs
-          const followResponse = await this.axiosClient.post('/crawl', {
+          await this.axiosClient.post('/crawl', {
             urls: urlsToFollow,
             max_concurrent: 3,
             bypass_cache: options.bypass_cache,
@@ -1635,12 +1635,36 @@ class Crawl4AIServer {
       });
 
       const results = response.data.results || [response.data];
-      const result: CrawlResult = results[0] || {};
+      const result: CrawlResultItem = results[0] || {};
+
+      // Variables for manually extracted links
+      let manuallyExtractedInternal: string[] = [];
+      let manuallyExtractedExternal: string[] = [];
+      let hasManuallyExtractedLinks = false;
 
       // Check if the response is likely JSON or non-HTML content
       if (!result.links || (result.links.internal.length === 0 && result.links.external.length === 0)) {
         // Try to detect if this might be a JSON endpoint
-        if (result.markdown?.includes('"links"') || result.markdown?.includes('"url"')) {
+        const markdownContent = result.markdown?.raw_markdown || result.markdown?.fit_markdown || '';
+        const htmlContent = result.html || '';
+        
+        // Check for JSON indicators
+        if (
+          // Check URL pattern
+          options.url.includes('/api/') || 
+          options.url.includes('/api.') ||
+          // Check content type (often shown in markdown conversion)
+          markdownContent.includes('application/json') ||
+          // Check for JSON structure patterns
+          (markdownContent.startsWith('{') && markdownContent.endsWith('}')) ||
+          (markdownContent.startsWith('[') && markdownContent.endsWith(']')) ||
+          // Check HTML for JSON indicators
+          htmlContent.includes('application/json') ||
+          // Common JSON patterns
+          markdownContent.includes('"links"') || 
+          markdownContent.includes('"url"') ||
+          markdownContent.includes('"data"')
+        ) {
           return {
             content: [
               {
@@ -1651,56 +1675,67 @@ class Crawl4AIServer {
           };
         }
         // If no links found but it's HTML, let's check the markdown content for href patterns
-        if (result.markdown && result.markdown.includes('href=')) {
+        if (markdownContent && markdownContent.includes('href=')) {
           // Extract links manually from markdown if server didn't provide them
           const hrefPattern = /href=["']([^"']+)["']/g;
           const foundLinks: string[] = [];
           let match;
-          while ((match = hrefPattern.exec(result.markdown)) !== null) {
+          while ((match = hrefPattern.exec(markdownContent)) !== null) {
             foundLinks.push(match[1]);
           }
           if (foundLinks.length > 0) {
+            hasManuallyExtractedLinks = true;
             // Categorize found links
             const currentDomain = new URL(options.url).hostname;
-            const internal: string[] = [];
-            const external: string[] = [];
 
             foundLinks.forEach((link) => {
               try {
                 const linkUrl = new URL(link, options.url);
                 if (linkUrl.hostname === currentDomain) {
-                  internal.push(linkUrl.href);
+                  manuallyExtractedInternal.push(linkUrl.href);
                 } else {
-                  external.push(linkUrl.href);
+                  manuallyExtractedExternal.push(linkUrl.href);
                 }
               } catch {
                 // Relative link
-                internal.push(link);
+                manuallyExtractedInternal.push(link);
               }
             });
-
-            result.links = { internal, external };
           }
         }
       }
 
-      const links = result.links || { internal: [], external: [] };
+      // Handle both cases: API-provided links and manually extracted links
+      let internalUrls: string[] = [];
+      let externalUrls: string[] = [];
+
+      if (result.links && (result.links.internal.length > 0 || result.links.external.length > 0)) {
+        // Use API-provided links
+        internalUrls = result.links.internal.map((link: any) => link.href || link);
+        externalUrls = result.links.external.map((link: any) => link.href || link);
+      } else if (hasManuallyExtractedLinks) {
+        // Use manually extracted links
+        internalUrls = manuallyExtractedInternal;
+        externalUrls = manuallyExtractedExternal;
+      }
+
+      const allUrls = [...internalUrls, ...externalUrls];
 
       if (!options.categorize) {
         return {
           content: [
             {
               type: 'text',
-              text: `All links from ${options.url}:\n${[...links.internal, ...links.external].join('\n')}`,
+              text: `All links from ${options.url}:\n${allUrls.join('\n')}`,
             },
           ],
         };
       }
-
+      
       // Categorize links
       const categorized: any = {
-        internal: links.internal,
-        external: links.external,
+        internal: internalUrls,
+        external: externalUrls,
         social: [],
         documents: [],
         images: [],
@@ -1713,31 +1748,45 @@ class Crawl4AIServer {
       const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp'];
       const scriptExtensions = ['.js', '.css'];
 
-      links.external.forEach((link: string) => {
-        if (socialDomains.some((domain) => link.includes(domain))) {
-          categorized.social.push(link);
-        } else if (docExtensions.some((ext) => link.toLowerCase().endsWith(ext))) {
-          categorized.documents.push(link);
-        } else if (imageExtensions.some((ext) => link.toLowerCase().endsWith(ext))) {
-          categorized.images.push(link);
-        } else if (scriptExtensions.some((ext) => link.toLowerCase().endsWith(ext))) {
-          categorized.scripts.push(link);
+      externalUrls.forEach((href: string) => {
+        if (socialDomains.some((domain) => href.includes(domain))) {
+          categorized.social.push(href);
+        } else if (docExtensions.some((ext) => href.toLowerCase().endsWith(ext))) {
+          categorized.documents.push(href);
+        } else if (imageExtensions.some((ext) => href.toLowerCase().endsWith(ext))) {
+          categorized.images.push(href);
+        } else if (scriptExtensions.some((ext) => href.toLowerCase().endsWith(ext))) {
+          categorized.scripts.push(href);
         }
       });
 
-      return {
-        content: [
-          {
-            type: 'text',
-            text: `Link analysis for ${options.url}:\n\n${Object.entries(categorized)
-              .map(
-                ([category, links]: [string, any]) =>
-                  `${category} (${links.length}):\n${links.slice(0, 10).join('\n')}${links.length > 10 ? '\n...' : ''}`,
-              )
-              .join('\n\n')}`,
-          },
-        ],
-      };
+      // Return based on categorize option (defaults to true)
+      if (options.categorize) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Link analysis for ${options.url}:\n\n${Object.entries(categorized)
+                .map(
+                  ([category, links]: [string, any]) =>
+                    `${category} (${links.length}):\n${links.slice(0, 10).join('\n')}${links.length > 10 ? '\n...' : ''}`,
+                )
+                .join('\n\n')}`,
+            },
+          ],
+        };
+      } else {
+        // Return simple list without categorization
+        const allLinks = [...internalUrls, ...externalUrls];
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `All links from ${options.url} (${allLinks.length} total):\n\n${allLinks.slice(0, 50).join('\n')}${allLinks.length > 50 ? '\n...' : ''}`,
+            },
+          ],
+        };
+      }
     } catch (error: any) {
       throw new Error(`Failed to extract links: ${error.response?.data?.detail || error.message}`);
     }

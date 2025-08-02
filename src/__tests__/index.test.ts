@@ -171,6 +171,35 @@ describe('MCP Server Validation', () => {
     });
   });
 
+  describe('Extract links tool', () => {
+    it('should validate extract_links parameters', () => {
+      const ExtractLinksSchema = z.object({
+        url: z.string().url(),
+        categorize: z.boolean().optional().default(true),
+      });
+
+      // Valid input with categorize true
+      const result1 = ExtractLinksSchema.parse({
+        url: 'https://example.com',
+        categorize: true,
+      });
+      expect(result1.categorize).toBe(true);
+
+      // Valid input with categorize false
+      const result2 = ExtractLinksSchema.parse({
+        url: 'https://example.com',
+        categorize: false,
+      });
+      expect(result2.categorize).toBe(false);
+
+      // Default categorize should be true
+      const result3 = ExtractLinksSchema.parse({
+        url: 'https://example.com',
+      });
+      expect(result3.categorize).toBe(true);
+    });
+  });
+
   describe('Session management tools', () => {
     it('should validate create_session parameters', () => {
       const CreateSessionSchema = z.object({

@@ -1,10 +1,12 @@
 # Changelog
 
-## Version 2.0.1 (2025-08-02)
+## Version 2.0.2 (2025-08-03)
 
 ### Bug Fixes
 - Fixed parameter mapping in `get_markdown` tool - now correctly maps schema properties (`filter`, `query`, `cache`) to API parameters (`f`, `q`, `c`)
 - Fixed `smart_crawl` schema to use `follow_links` parameter instead of `remove_images`
+- Fixed `extract_links` schema mismatch - corrected schema to use `categorize` parameter as defined in tool
+- Fixed `extract_links` implementation to properly handle link objects returned by API
 - Implemented proper handling for non-functional server parameters:
   - `batch_crawl`: `remove_images` now uses `exclude_tags` in crawler_config to actually remove images
   - `smart_crawl`: `follow_links` now crawls URLs found in sitemaps/RSS feeds (max 10 URLs)
@@ -13,6 +15,12 @@
 - Updated tool descriptions to accurately reflect actual behavior
 - Added proper TypeScript types for getMarkdown function
 - Enhanced test coverage for batch_crawl parameter handling
+- Added comprehensive unit and integration tests for `extract_links` tool
+- Improved JSON endpoint detection in `extract_links` tool
+- Better error handling for `extract_links` with graceful error messages
+
+## Version 2.0.1 (2025-08-02)
+Update README
 
 ## Version 2.0.0 (2025-08-02)
 
