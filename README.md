@@ -264,8 +264,6 @@ Extracts all URLs from XML sitemaps. Supports regex filtering for specific URL p
   session_id?: string,                      // Reuse browser session (only works with crawl tool)
   cache_mode?: 'ENABLED'|'BYPASS'|'DISABLED',  // Cache control
   extraction_type?: 'llm',                  // Only 'llm' extraction is supported via REST API
-  llm_provider?: string,                    // LLM provider (e.g., "openai/gpt-4o-mini")
-  llm_api_key?: string,                     // LLM API key
   extraction_schema?: object,               // Schema for structured extraction
   extraction_instruction?: string,          // Natural language extraction prompt
   timeout?: number,                         // Overall timeout (default: 60000)
