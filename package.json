@@ -1,6 +1,6 @@
 {
   "name": "mcp-crawl4ai-ts",
-  "version": "1.0.2",
+  "version": "2.0.0",
   "description": "TypeScript MCP server for Crawl4AI - web crawling and content extraction",
   "main": "dist/index.js",
   "bin": {
@@ -47,7 +47,8 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.4",
     "axios": "^1.7.9",
-    "dotenv": "^16.4.7"
+    "dotenv": "^16.4.7",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",

@@ -17,14 +17,50 @@ export const fixtures = {
         'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
     },
   },
+  getMarkdown: {
+    success: {
+      url: 'https://example.com',
+      filter: 'fit',
+      query: null,
+      cache: '0',
+      markdown: '# Example Domain\n\nThis domain is for use in illustrative examples in documents.',
+      success: true,
+    },
+    rawFilter: {
+      url: 'https://example.com',
+      filter: 'raw',
+      query: null,
+      cache: '0',
+      markdown: '# Example Domain\n\nRaw markdown content including all elements.',
+      success: true,
+    },
+    bm25Filter: {
+      url: 'https://example.com',
+      filter: 'bm25',
+      query: 'example domain',
+      cache: '0',
+      markdown: '# Example Domain\n\nFiltered content based on BM25 search.',
+      success: true,
+    },
+    llmFilter: {
+      url: 'https://example.com',
+      filter: 'llm',
+      query: 'What is this page about?',
+      cache: '0',
+      markdown: 'This page is about Example Domain, used for illustrative examples.',
+      success: true,
+    },
+  },
   screenshot: {
     success: {
+      success: true,
       screenshot:
         'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
     },
   },
   pdf: {
     success: {
+      success: true,
       pdf: 'JVBERi0xLjQKJcOkw7zDtsOfCjIgMCBvYmoKPDwvTGVuZ3RoIDMgMCBSL0ZpbHRlci9GbGF0ZURlY29kZT4+CnN0cmVhbQp4nGVOuwoCMRBF',
     },
   },

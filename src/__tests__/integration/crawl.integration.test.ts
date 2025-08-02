@@ -19,7 +19,7 @@ interface ToolResult {
   }>;
 }
 
-describe('crawl_with_config Integration Tests', () => {
+describe('crawl Integration Tests', () => {
   let client: Client;
 
   beforeAll(async () => {
@@ -37,7 +37,7 @@ describe('crawl_with_config Integration Tests', () => {
       'should crawl a simple page with basic configuration',
       async () => {
         const result = await client.callTool({
-          name: 'crawl_with_config',
+          name: 'crawl',
           arguments: {
             url: 'https://httpbin.org/html',
             cache_mode: 'BYPASS',
@@ -54,7 +54,7 @@ describe('crawl_with_config Integration Tests', () => {
       'should handle browser configuration',
       async () => {
         const result = await client.callTool({
-          name: 'crawl_with_config',
+          name: 'crawl',
           arguments: {
             url: 'https://httpbin.org/user-agent',
             viewport_width: 1920,
@@ -75,7 +75,7 @@ describe('crawl_with_config Integration Tests', () => {
       'should execute JavaScript on page',
       async () => {
         const result = await client.callTool({
-          name: 'crawl_with_config',
+          name: 'crawl',
           arguments: {
             url: 'https://httpbin.org/html',
             js_code: ['return document.querySelectorAll("a").length', 'return document.title'],
@@ -98,7 +98,7 @@ describe('crawl_with_config Integration Tests', () => {
       'should wait for specific elements',
       async () => {
         const result = await client.callTool({
-          name: 'crawl_with_config',
+          name: 'crawl',
           arguments: {
             url: 'https://httpbin.org/delay/2',
             wait_for: 'body',
@@ -116,7 +116,7 @@ describe('crawl_with_config Integration Tests', () => {
       'should handle virtual scrolling for infinite feeds',
       async () => {
         const result = await client.callTool({
-          name: 'crawl_with_config',
+          name: 'crawl',
           arguments: {
             url: 'https://github.com/trending',
             virtual_scroll_config: {
@@ -149,7 +149,7 @@ describe('crawl_with_config Integration Tests', () => {
 
         // First crawl with session
         const result1 = await client.callTool({
-          name: 'crawl_with_config',
+          name: 'crawl',
           arguments: {
             url: 'https://github.com',
             session_id: sessionId,
@@ -161,7 +161,7 @@ describe('crawl_with_config Integration Tests', () => {
 
         // Second crawl reusing session
         const result2 = await client.callTool({
-          name: 'crawl_with_config',
+          name: 'crawl',
           arguments: {
             url: 'https://github.com/features',
             session_id: sessionId,
@@ -180,7 +180,7 @@ describe('crawl_with_config Integration Tests', () => {
         const sessionId = generateSessionId();
 
         const result = await client.callTool({
-          name: 'crawl_with_config',
+          name: 'crawl',
           arguments: {
             url: 'https://github.com',
             session_id: sessionId,
@@ -209,7 +209,7 @@ describe('crawl_with_config Integration Tests', () => {
         // CSS extraction is not supported via the REST API due to Python class serialization limitations
         // This test is kept for documentation purposes but skipped
         const result = await client.callTool({
-          name: 'crawl_with_config',
+          name: 'crawl',
           arguments: {
             url: 'https://www.google.com',
             extraction_type: 'css',
@@ -275,7 +275,7 @@ describe('crawl_with_config Integration Tests', () => {
       'should capture screenshots',
       async () => {
         const result = await client.callTool({
-          name: 'crawl_with_config',
+          name: 'crawl',
           arguments: {
             url: 'https://httpbin.org/html',
             screenshot: true,
@@ -294,7 +294,7 @@ describe('crawl_with_config Integration Tests', () => {
       'should generate PDF',
       async () => {
         const result = await client.callTool({
-          name: 'crawl_with_config',
+          name: 'crawl',
           arguments: {
             url: 'https://httpbin.org/html',
             pdf: true,
@@ -316,7 +316,7 @@ describe('crawl_with_config Integration Tests', () => {
       'should handle image filtering',
       async () => {
         const result = await client.callTool({
-          name: 'crawl_with_config',
+          name: 'crawl',
           arguments: {
             url: 'https://github.com',
             exclude_external_images: true,
@@ -340,7 +340,7 @@ describe('crawl_with_config Integration Tests', () => {
 
         // First request - populate cache with ENABLED mode
         const result1 = await client.callTool({
-          name: 'crawl_with_config',
+          name: 'crawl',
           arguments: {
             url,
             cache_mode: 'ENABLED',
@@ -356,7 +356,7 @@ describe('crawl_with_config Integration Tests', () => {
         // Second request - should use cache (ENABLED mode)
         const startTime = Date.now();
         const result2 = await client.callTool({
-          name: 'crawl_with_config',
+          name: 'crawl',
           arguments: {
             url,
             cache_mode: 'ENABLED',
@@ -373,7 +373,7 @@ describe('crawl_with_config Integration Tests', () => {
         // Third request - bypass cache
         const bypassStartTime = Date.now();
         const result3 = await client.callTool({
-          name: 'crawl_with_config',
+          name: 'crawl',
           arguments: {
             url,
             cache_mode: 'BYPASS',
@@ -390,7 +390,7 @@ describe('crawl_with_config Integration Tests', () => {
 
         // Fourth request - DISABLED mode should not use cache
         const result4 = await client.callTool({
-          name: 'crawl_with_config',
+          name: 'crawl',
           arguments: {
             url,
             cache_mode: 'DISABLED',
@@ -406,7 +406,7 @@ describe('crawl_with_config Integration Tests', () => {
       'should handle timeout configuration',
       async () => {
         const result = await client.callTool({
-          name: 'crawl_with_config',
+          name: 'crawl',
           arguments: {
             url: 'https://httpbin.org/delay/1',
             timeout: 20000,
@@ -426,7 +426,7 @@ describe('crawl_with_config Integration Tests', () => {
       'should filter content by tags',
       async () => {
         const result = await client.callTool({
-          name: 'crawl_with_config',
+          name: 'crawl',
           arguments: {
             url: 'https://httpbin.org/html', // Simpler page for testing
             excluded_tags: ['script', 'style', 'nav', 'footer', 'header'],
@@ -454,7 +454,7 @@ describe('crawl_with_config Integration Tests', () => {
       'should filter content by selectors',
       async () => {
         const result = await client.callTool({
-          name: 'crawl_with_config',
+          name: 'crawl',
           arguments: {
             url: 'https://github.com',
             excluded_selector: '.footer, .header-nav, [aria-label="Advertisement"]',
@@ -472,7 +472,7 @@ describe('crawl_with_config Integration Tests', () => {
       'should handle link filtering',
       async () => {
         const result = await client.callTool({
-          name: 'crawl_with_config',
+          name: 'crawl',
           arguments: {
             url: 'https://github.com',
             exclude_external_links: true,
@@ -496,7 +496,7 @@ describe('crawl_with_config Integration Tests', () => {
       'should simulate user behavior',
       async () => {
         const result = await client.callTool({
-          name: 'crawl_with_config',
+          name: 'crawl',
           arguments: {
             url: 'https://github.com',
             simulate_user: true,
@@ -517,7 +517,7 @@ describe('crawl_with_config Integration Tests', () => {
       'should use custom headers and user agent',
       async () => {
         const result = await client.callTool({
-          name: 'crawl_with_config',
+          name: 'crawl',
           arguments: {
             url: 'https://httpbin.org/headers',
             user_agent: 'Mozilla/5.0 (compatible; MCP Test Bot)',
@@ -545,7 +545,7 @@ describe('crawl_with_config Integration Tests', () => {
       'should handle invalid URLs gracefully',
       async () => {
         const result = await client.callTool({
-          name: 'crawl_with_config',
+          name: 'crawl',
           arguments: {
             url: 'not-a-valid-url',
             cache_mode: 'BYPASS',
@@ -562,7 +562,7 @@ describe('crawl_with_config Integration Tests', () => {
       'should handle non-existent domains',
       async () => {
         const result = await client.callTool({
-          name: 'crawl_with_config',
+          name: 'crawl',
           arguments: {
             url: 'https://this-domain-definitely-does-not-exist-123456789.com',
             cache_mode: 'BYPASS',
@@ -579,7 +579,7 @@ describe('crawl_with_config Integration Tests', () => {
       'should handle JavaScript errors gracefully',
       async () => {
         const result = await client.callTool({
-          name: 'crawl_with_config',
+          name: 'crawl',
           arguments: {
             url: 'https://httpbin.org/html',
             js_code: 'throw new Error("Test error")',
@@ -602,7 +602,7 @@ describe('crawl_with_config Integration Tests', () => {
         const sessionId = generateSessionId();
 
         const result = await client.callTool({
-          name: 'crawl_with_config',
+          name: 'crawl',
           arguments: {
             url: 'https://httpbin.org/html',
             // Browser config
@@ -644,7 +644,7 @@ describe('crawl_with_config Integration Tests', () => {
       async () => {
         // Test that proxy configuration is accepted, even without a real proxy
         const result = await client.callTool({
-          name: 'crawl_with_config',
+          name: 'crawl',
           arguments: {
             url: 'https://httpbin.org/ip',
             proxy_server: 'http://example-proxy.com:8080',
@@ -667,7 +667,7 @@ describe('crawl_with_config Integration Tests', () => {
       'should process iframes',
       async () => {
         const result = await client.callTool({
-          name: 'crawl_with_config',
+          name: 'crawl',
           arguments: {
             url: 'https://www.w3schools.com/html/html_iframe.asp',
             process_iframes: true,

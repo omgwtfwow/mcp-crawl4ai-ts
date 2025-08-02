@@ -5,7 +5,23 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import axios, { AxiosInstance } from 'axios';
 import dotenv from 'dotenv';
-import { CrawlOptions, CrawlResult, JSExecuteOptions, BatchCrawlOptions } from './types.js';
+import { z } from 'zod';
+import {
+  CrawlResult,
+  BatchCrawlOptions,
+  CrawlEndpointResponse,
+  CrawlResultItem,
+  HTMLEndpointOptions,
+  HTMLEndpointResponse,
+  JSExecuteEndpointOptions,
+  JSExecuteEndpointResponse,
+  ScreenshotEndpointOptions,
+  ScreenshotEndpointResponse,
+  PDFEndpointOptions,
+  PDFEndpointResponse,
+  MarkdownEndpointOptions,
+  MarkdownEndpointResponse,
+} from './types.js';
 import { Crawl4AIService } from './crawl4ai-service.js';
 
 // Load environment variables
@@ -29,6 +45,326 @@ interface SessionInfo {
   initial_url?: string;
   metadata?: Record<string, any>;
 }
+
+// Validation schemas
+// Helper to validate JavaScript code
+const validateJavaScriptCode = (code: string): boolean => {
+  // Check for common HTML entities that shouldn't be in JS
+  if (/&quot;|&amp;|&lt;|&gt;|&#\d+;|&\w+;/.test(code)) {
+    return false;
+  }
+
+  // Basic check to ensure it's not HTML
+  if (/<(!DOCTYPE|html|body|head|script|style)\b/i.test(code)) {
+    return false;
+  }
+
+  // Check for literal \n, \t, \r outside of strings (common LLM mistake)
+  // This is tricky - we'll check if the code has these patterns in a way that suggests
+  // they're meant to be actual newlines/tabs rather than escape sequences in strings
+  // Look for patterns like: ;\n or }\n or )\n which suggest literal newlines
+  if (/[;})]\s*\\n|\\n\s*[{(/]/.test(code)) {
+    return false;
+  }
+
+  // Check for obvious cases of literal \n between statements
+  if (/[;})]\s*\\n\s*\w/.test(code)) {
+    return false;
+  }
+
+  return true;
+};
+
+const JsCodeSchema = z
+  .union([
+    z.string().refine(validateJavaScriptCode, {
+      message:
+        'Invalid JavaScript: Contains HTML entities (&quot;), literal \\n outside strings, or HTML tags. Use proper JS syntax with real quotes and newlines.',
+    }),
+    z.array(
+      z.string().refine(validateJavaScriptCode, {
+        message:
+          'Invalid JavaScript: Contains HTML entities (&quot;), literal \\n outside strings, or HTML tags. Use proper JS syntax with real quotes and newlines.',
+      }),
+    ),
+  ])
+  .describe('JavaScript code as string or array of strings');
+
+// Helper to create schema that rejects session_id
+const createStatelessSchema = <T extends z.ZodTypeAny>(schema: T, toolName: string) => {
+  // Tool-specific guidance for common scenarios
+  const toolGuidance: Record<string, string> = {
+    capture_screenshot: 'To capture screenshots with sessions, use crawl(session_id, screenshot: true)',
+    generate_pdf: 'To generate PDFs with sessions, use crawl(session_id, pdf: true)',
+    execute_js: 'To run JavaScript with sessions, use crawl(session_id, js_code: [...])',
+    get_html: 'To get HTML with sessions, use crawl(session_id)',
+    extract_with_llm: 'To extract data with sessions, first use crawl(session_id) then extract from the response',
+  };
+
+  const message = `${toolName} does not support session_id. This tool is stateless - each call creates a new browser. ${
+    toolGuidance[toolName] || 'For persistent operations, use crawlg with session_id.'
+  }`;
+
+  return z
+    .object({
+      session_id: z.never({ message }).optional(),
+    })
+    .passthrough()
+    .and(schema)
+    .transform((data) => {
+      const { session_id, ...rest } = data as any;
+      if (session_id !== undefined) {
+        throw new Error(message);
+      }
+      return rest;
+    });
+};
+
+const ExecuteJsSchema = createStatelessSchema(
+  z.object({
+    url: z.string().url(),
+    scripts: JsCodeSchema,
+  }),
+  'execute_js',
+);
+
+const GetMarkdownSchema = createStatelessSchema(
+  z
+    .object({
+      url: z.string().url(),
+      filter: z.enum(['raw', 'fit', 'bm25', 'llm']).optional().default('fit'),
+      query: z.string().optional(),
+      cache: z.string().optional().default('0'),
+    })
+    .refine(
+      (data) => {
+        // If filter is bm25 or llm, query is required
+        if ((data.filter === 'bm25' || data.filter === 'llm') && !data.query) {
+          return false;
+        }
+        return true;
+      },
+      {
+        message: 'Query parameter is required when using bm25 or llm filter',
+        path: ['query'],
+      },
+    ),
+  'get_markdown',
+);
+
+const VirtualScrollConfigSchema = z.object({
+  container_selector: z.string(),
+  scroll_count: z.number().optional(),
+  scroll_by: z.union([z.string(), z.number()]).optional(),
+  wait_after_scroll: z.number().optional(),
+});
+
+// Add schemas for other stateless tools
+const GetHtmlSchema = createStatelessSchema(
+  z.object({
+    url: z.string().url(),
+  }),
+  'get_html',
+);
+
+const CaptureScreenshotSchema = createStatelessSchema(
+  z.object({
+    url: z.string().url(),
+    screenshot_wait_for: z.number().optional(),
+    // output_path not exposed as MCP needs base64 data
+  }),
+  'capture_screenshot',
+);
+
+const GeneratePdfSchema = createStatelessSchema(
+  z.object({
+    url: z.string().url(),
+    // Only url is supported - output_path not exposed as MCP needs base64 data
+  }),
+  'generate_pdf',
+);
+
+const ExtractWithLlmSchema = createStatelessSchema(
+  z.object({
+    url: z.string().url(),
+    query: z.string(),
+  }),
+  'extract_with_llm',
+);
+
+const BatchCrawlSchema = createStatelessSchema(
+  z.object({
+    urls: z.array(z.string().url()),
+    max_concurrent: z.number().optional(),
+    remove_images: z.boolean().optional(),
+    bypass_cache: z.boolean().optional(),
+  }),
+  'batch_crawl',
+);
+
+const SmartCrawlSchema = createStatelessSchema(
+  z.object({
+    url: z.string().url(),
+    max_depth: z.number().optional(),
+    remove_images: z.boolean().optional(),
+    bypass_cache: z.boolean().optional(),
+  }),
+  'smart_crawl',
+);
+
+const ExtractLinksSchema = createStatelessSchema(
+  z.object({
+    url: z.string().url(),
+    wait_for: z.string().optional(),
+    bypass_cache: z.boolean().optional(),
+  }),
+  'extract_links',
+);
+
+const CrawlRecursiveSchema = createStatelessSchema(
+  z.object({
+    url: z.string().url(),
+    max_depth: z.number().optional(),
+    max_pages: z.number().optional(),
+    filter_pattern: z.string().optional(),
+    bypass_cache: z.boolean().optional(),
+  }),
+  'crawl_recursive',
+);
+
+const ParseSitemapSchema = createStatelessSchema(
+  z.object({
+    url: z.string().url(),
+    filter_pattern: z.string().optional(),
+  }),
+  'parse_sitemap',
+);
+
+// Session management tools don't need stateless schema
+const CreateSessionSchema = z.object({
+  session_id: z.string(),
+  initial_url: z.string().optional(),
+  browser_type: z.string().optional(),
+});
+
+const ClearSessionSchema = z.object({
+  session_id: z.string(),
+});
+
+const CrawlSchema = z
+  .object({
+    url: z.string().url(),
+
+    // Browser configuration
+    browser_type: z.enum(['chromium', 'firefox', 'webkit']).optional(),
+    viewport_width: z.number().optional(),
+    viewport_height: z.number().optional(),
+    user_agent: z.string().optional(),
+    proxy_server: z.string().optional(),
+    proxy_username: z.string().optional(),
+    proxy_password: z.string().optional(),
+    cookies: z
+      .array(
+        z.object({
+          name: z.string(),
+          value: z.string(),
+          domain: z.string(),
+          path: z.string().optional(),
+        }),
+      )
+      .optional(),
+    headers: z.record(z.string()).optional(),
+    extra_args: z.array(z.string()).optional(),
+
+    // Content filtering
+    word_count_threshold: z.number().optional(),
+    excluded_tags: z.array(z.string()).optional(),
+    excluded_selector: z.string().optional(),
+    remove_overlay_elements: z.boolean().optional(),
+    only_text: z.boolean().optional(),
+    remove_forms: z.boolean().optional(),
+    keep_data_attributes: z.boolean().optional(),
+
+    // JavaScript execution
+    js_code: JsCodeSchema.optional(),
+    js_only: z.boolean().optional(),
+    wait_for: z.string().optional(),
+    wait_for_timeout: z.number().optional(),
+
+    // Page navigation & timing
+    wait_until: z.enum(['domcontentloaded', 'networkidle', 'load']).optional(),
+    page_timeout: z.number().optional(),
+    wait_for_images: z.boolean().optional(),
+    ignore_body_visibility: z.boolean().optional(),
+
+    // Dynamic content
+    delay_before_scroll: z.number().optional(),
+    scroll_delay: z.number().optional(),
+    scan_full_page: z.boolean().optional(),
+    virtual_scroll_config: VirtualScrollConfigSchema.optional(),
+
+    // Content processing
+    process_iframes: z.boolean().optional(),
+    exclude_external_links: z.boolean().optional(),
+
+    // Media handling
+    screenshot: z.boolean().optional(),
+    screenshot_wait_for: z.number().optional(),
+    pdf: z.boolean().optional(),
+    capture_mhtml: z.boolean().optional(),
+    image_description_min_word_threshold: z.number().optional(),
+    image_score_threshold: z.number().optional(),
+    exclude_external_images: z.boolean().optional(),
+
+    // Link filtering
+    exclude_social_media_links: z.boolean().optional(),
+    exclude_domains: z.array(z.string()).optional(),
+
+    // Page interaction
+    simulate_user: z.boolean().optional(),
+    override_navigator: z.boolean().optional(),
+    magic: z.boolean().optional(),
+
+    // Session and cache
+    session_id: z.string().optional(),
+    cache_mode: z.enum(['ENABLED', 'BYPASS', 'DISABLED']).optional(),
+
+    // Performance options
+    timeout: z.number().optional(),
+    verbose: z.boolean().optional(),
+
+    // Debug
+    log_console: z.boolean().optional(),
+  })
+  .refine(
+    (data) => {
+      // js_only is for subsequent calls in same session, not first call
+      // Using it incorrectly causes server errors
+      if (data.js_only && !data.session_id) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message:
+        "Error: js_only requires session_id (it's for continuing existing sessions).\n" +
+        'For first call with js_code, use: {js_code: [...], screenshot: true}\n' +
+        'For multi-step: First {js_code: [...], session_id: "x"}, then {js_only: true, session_id: "x"}',
+    },
+  )
+  .refine(
+    (data) => {
+      // Empty js_code array is not allowed
+      if (Array.isArray(data.js_code) && data.js_code.length === 0) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message:
+        'Error: js_code array cannot be empty. Either provide JavaScript code to execute or remove the js_code parameter entirely.',
+    },
+  );
 
 class Crawl4AIServer {
   private server: Server;
@@ -70,50 +406,30 @@ class Crawl4AIServer {
     this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
       tools: [
         {
-          name: 'crawl_page',
+          name: 'get_markdown',
           description:
-            'Basic webpage crawling - extracts content as markdown. Good for: simple content extraction, filtering HTML tags, quick conversions. ⚠️ STATELESS: Creates new browser each time, cannot maintain state between calls. For persistence use create_session + crawl_with_config.',
+            'Extract content as markdown with filtering options. Supports: raw (full content), fit (optimized, default), bm25 (keyword search), llm (AI-powered extraction). Use bm25/llm with query for specific content. STATELESS: Creates new browser each time. For persistence use create_session + crawl.',
           inputSchema: {
             type: 'object',
             properties: {
               url: {
                 type: 'string',
-                description: 'The URL to crawl',
+                description: 'The URL to extract markdown from',
               },
-              remove_images: {
-                type: 'boolean',
-                description: 'Remove images from the markdown output',
-                default: false,
-              },
-              bypass_cache: {
-                type: 'boolean',
-                description: 'Bypass the cache and force a fresh crawl',
-                default: false,
-              },
-              filter_mode: {
+              filter: {
                 type: 'string',
-                enum: ['blacklist', 'whitelist'],
-                description: 'Filter mode for tags',
+                enum: ['raw', 'fit', 'bm25', 'llm'],
+                description: 'Filter type: raw (full), fit (optimized), bm25 (search), llm (AI extraction)',
+                default: 'fit',
               },
-              filter_list: {
-                type: 'array',
-                items: { type: 'string' },
-                description: 'List of HTML tags to filter',
-              },
-              screenshot: {
-                type: 'boolean',
-                description: 'Include a screenshot',
-                default: false,
-              },
-              wait_for: {
+              query: {
                 type: 'string',
-                description:
-                  'Wait for element before extraction. Use CSS selector like ".content-loaded" or "#main-article". Ensures dynamic content is ready',
+                description: 'Query string for bm25/llm filters. Required when using bm25 or llm filter.',
               },
-              timeout: {
-                type: 'number',
-                description: 'Timeout in seconds',
-                default: 30,
+              cache: {
+                type: 'string',
+                description: 'Cache-bust parameter (use different values to force fresh extraction)',
+                default: '0',
               },
             },
             required: ['url'],
@@ -122,7 +438,7 @@ class Crawl4AIServer {
         {
           name: 'capture_screenshot',
           description:
-            'Capture webpage screenshot. ⚠️ STATELESS: Creates new browser each time. Cannot see form fills or JS changes from other calls. For persistent screenshots use create_session + crawl_with_config(session_id, screenshot:true).',
+            "Capture webpage screenshot. Returns base64-encoded PNG data. STATELESS: Creates new browser each time. IMPORTANT: Chained calls (execute_js then capture_screenshot) will NOT work - the screenshot won't see JS changes! For JS changes + screenshot use create_session + crawl(session_id, js_code, screenshot:true) in ONE call.",
           inputSchema: {
             type: 'object',
             properties: {
@@ -130,31 +446,10 @@ class Crawl4AIServer {
                 type: 'string',
                 description: 'The URL to capture',
               },
-              full_page: {
-                type: 'boolean',
-                description: 'Capture the full page',
-                default: true,
-              },
-              wait_for: {
-                type: 'string',
-                description: 'CSS selector to wait for before capturing',
-              },
-              timeout: {
-                type: 'number',
-                description: 'Timeout in seconds',
-                default: 30,
-              },
-              viewport_width: {
-                type: 'number',
-                description: '(Currently not working - server limitation)',
-              },
-              viewport_height: {
-                type: 'number',
-                description: '(Currently not working - server limitation)',
-              },
               screenshot_wait_for: {
                 type: 'number',
-                description: 'Seconds to wait before taking screenshot (for animations/transitions)',
+                description: 'Seconds to wait before taking screenshot (allows page loading/animations)',
+                default: 2,
               },
             },
             required: ['url'],
@@ -163,22 +458,13 @@ class Crawl4AIServer {
         {
           name: 'generate_pdf',
           description:
-            'Convert webpage to PDF. ⚠️ STATELESS: Creates new browser each time. Cannot capture form fills or JS changes. For persistent PDFs use create_session + crawl_with_config(session_id, pdf:true).',
+            'Convert webpage to PDF. Returns base64-encoded PDF data. STATELESS: Creates new browser each time. Cannot capture form fills or JS changes. For persistent PDFs use create_session + crawl(session_id, pdf:true).',
           inputSchema: {
             type: 'object',
             properties: {
               url: {
                 type: 'string',
                 description: 'The URL to convert to PDF',
-              },
-              wait_for: {
-                type: 'string',
-                description: 'CSS selector to wait for before generating PDF',
-              },
-              timeout: {
-                type: 'number',
-                description: 'Timeout in seconds',
-                default: 30,
               },
             },
             required: ['url'],
@@ -187,7 +473,7 @@ class Crawl4AIServer {
         {
           name: 'execute_js',
           description:
-            'Execute JavaScript on a webpage and get results. Good for: extracting data, checking page state. ⚠️ STATELESS: Each call creates new browser, losing all previous changes. For persistence (forms, clicks) use create_session + crawl_with_config with js_code.',
+            'Execute JavaScript and get return values + page content. STATELESS: Creates new browser each time. Use for: extracting data, triggering dynamic content, checking page state. Scripts with "return" statements return actual values (strings, numbers, objects, arrays). Note: null returns as {"success": true}. For persistent operations use create_session + crawl.',
           inputSchema: {
             type: 'object',
             properties: {
@@ -195,30 +481,20 @@ class Crawl4AIServer {
                 type: 'string',
                 description: 'The URL to load',
               },
-              js_code: {
+              scripts: {
                 type: ['string', 'array'],
                 items: { type: 'string' },
                 description:
-                  '🔴 MUST START WITH "return"! Examples: "return document.title", "return document.querySelector(\'form\').action". Array: ["return document.title", "return document.body.style.backgroundColor = \'red\'"]',
-              },
-              wait_after_js: {
-                type: 'number',
-                description: 'Milliseconds to wait after JS runs',
-                default: 1000,
-              },
-              screenshot: {
-                type: 'boolean',
-                description: 'Include screenshot in response',
-                default: false,
+                  'JavaScript to execute. Use "return" to get values back! Each string runs separately. Returns appear in results array. Examples: "return document.title", "return document.querySelectorAll(\'a\').length", "return {url: location.href, links: [...document.links].map(a => a.href)}". Use proper JS syntax: real quotes, no HTML entities.',
               },
             },
-            required: ['url', 'js_code'],
+            required: ['url', 'scripts'],
           },
         },
         {
           name: 'batch_crawl',
           description:
-            'Crawl multiple URLs concurrently for efficiency. Use when: processing URL lists, comparing multiple pages, or bulk data extraction. Faster than sequential crawling. Max 5 concurrent by default',
+            'Crawl multiple URLs concurrently for efficiency. Use when: processing URL lists, comparing multiple pages, or bulk data extraction. Faster than sequential crawling. Max 5 concurrent by default. STATELESS: Each URL gets a fresh browser. Cannot maintain state between URLs. For persistent operations use create_session + crawl.',
           inputSchema: {
             type: 'object',
             properties: {
@@ -250,7 +526,7 @@ class Crawl4AIServer {
         {
           name: 'smart_crawl',
           description:
-            'Auto-detect and handle different content types (HTML, sitemap, RSS, text). Use when: URL type is unknown, crawling feeds/sitemaps, or want automatic format handling. Adapts strategy based on content',
+            'Auto-detect and handle different content types (HTML, sitemap, RSS, text). Use when: URL type is unknown, crawling feeds/sitemaps, or want automatic format handling. Adapts strategy based on content. STATELESS: Creates new browser each time. For persistent operations use create_session + crawl.',
           inputSchema: {
             type: 'object',
             properties: {
@@ -280,22 +556,13 @@ class Crawl4AIServer {
         {
           name: 'get_html',
           description:
-            'Get raw HTML from webpage. ⚠️ STATELESS: Creates new browser each time. Cannot see form fills or JS changes from other calls. For persistent HTML use create_session + crawl_with_config(session_id).',
+            'Get sanitized/processed HTML optimized for schema extraction. Use when: building schemas, analyzing HTML structure, extracting patterns. Returns preprocessed HTML (not raw). For raw HTML or dynamic content use get_markdown or execute_js. STATELESS: Creates new browser each time.',
           inputSchema: {
             type: 'object',
             properties: {
               url: {
                 type: 'string',
                 description: 'The URL to extract HTML from',
-              },
-              wait_for: {
-                type: 'string',
-                description: 'CSS selector to wait for before extraction. Example: ".article-content" or "#data-table"',
-              },
-              bypass_cache: {
-                type: 'boolean',
-                description: 'Bypass cache',
-                default: false,
               },
             },
             required: ['url'],
@@ -304,7 +571,7 @@ class Crawl4AIServer {
         {
           name: 'extract_links',
           description:
-            'Extract and categorize all page links. Use when: building sitemaps, analyzing site structure, finding broken links, or discovering resources. Groups by internal/external/social/documents',
+            'Extract and categorize all page links. Use when: building sitemaps, analyzing site structure, finding broken links, or discovering resources. Groups by internal/external/social/documents. STATELESS: Creates new browser each time. For persistent operations use create_session + crawl.',
           inputSchema: {
             type: 'object',
             properties: {
@@ -325,7 +592,7 @@ class Crawl4AIServer {
         {
           name: 'crawl_recursive',
           description:
-            'Deep crawl a website following internal links. Use when: mapping entire sites, finding all pages, building comprehensive indexes. Control with max_depth (default 3) and max_pages (default 50). Note: May need JS execution for dynamic sites',
+            'Deep crawl a website following internal links. Use when: mapping entire sites, finding all pages, building comprehensive indexes. Control with max_depth (default 3) and max_pages (default 50). Note: May need JS execution for dynamic sites. STATELESS: Each page gets a fresh browser. For persistent operations use create_session + crawl.',
           inputSchema: {
             type: 'object',
             properties: {
@@ -360,7 +627,7 @@ class Crawl4AIServer {
         {
           name: 'parse_sitemap',
           description:
-            'Extract URLs from XML sitemaps. Use when: discovering all site pages, planning crawl strategies, or checking sitemap validity. Supports regex filtering. Try sitemap.xml or robots.txt first',
+            'Extract URLs from XML sitemaps. Use when: discovering all site pages, planning crawl strategies, or checking sitemap validity. Supports regex filtering. Try sitemap.xml or robots.txt first. STATELESS: Creates new browser each time.',
           inputSchema: {
             type: 'object',
             properties: {
@@ -377,9 +644,22 @@ class Crawl4AIServer {
           },
         },
         {
-          name: 'crawl_with_config',
+          name: 'crawl',
           description:
-            'Most powerful crawling tool with full configuration. Features: custom browser settings, headers, cookies, proxies, JavaScript execution, screenshots, PDFs, content filtering, infinite scroll handling. UNIQUE: Supports persistent sessions via session_id for multi-step workflows. Use for complex sites, authentication, dynamic content.',
+            'THE ONLY TOOL WITH BROWSER PERSISTENCE\n\n' +
+            'WITH session_id: Maintains browser state (cookies, localStorage, page) across calls\n' +
+            'WITHOUT session_id: Creates fresh browser each time (like other tools)\n\n' +
+            'CRITICAL FOR js_code:\n' +
+            'RECOMMENDED: Always use screenshot: true when running js_code\n' +
+            'This avoids server serialization errors and gives visual confirmation\n\n' +
+            'ADVANCED (js_only): Only for continuing existing sessions:\n' +
+            '1st call: {url, session_id: "s1", js_code: [...], screenshot: true}\n' +
+            '2nd call: {url, session_id: "s1", js_code: [...], js_only: true}\n\n' +
+            'COMMON USE CASES:\n' +
+            '• Form + screenshot: crawl({url, js_code: ["fill & submit"], screenshot: true})\n' +
+            '• Multi-step: 1) crawl({url, session_id: "s1", js_code: ["fill form"]})\n' +
+            '              2) crawl({url, session_id: "s1", js_code: ["submit"], js_only: true})\n' +
+            '• Reuse session: crawl({url: "/page2", session_id: "s1"}) // same browser',
           inputSchema: {
             type: 'object',
             properties: {
@@ -390,10 +670,14 @@ class Crawl4AIServer {
               session_id: {
                 type: 'string',
                 description:
-                  'Browser session ID from create_session() or any unique string. CRITICAL: Use SAME ID across all related calls to maintain state. First use creates browser, subsequent uses reuse it. Without this, each call gets fresh browser.',
+                  'ENABLES PERSISTENCE: Use SAME ID across all crawl calls to maintain browser state.\n' +
+                  '• First call with ID: Creates persistent browser\n' +
+                  '• Subsequent calls with SAME ID: Reuses browser with all state intact\n' +
+                  '• Different/no ID: Fresh browser (stateless)\n' +
+                  'WARNING: ONLY works with crawl tool - other tools ignore this parameter',
               },
 
-              // Browser Configuration
+              // === CORE CONFIGURATION ===
               browser_type: {
                 type: 'string',
                 enum: ['chromium', 'firefox', 'webkit'],
@@ -447,7 +731,7 @@ class Crawl4AIServer {
                 description: 'Custom HTTP headers for API keys, auth tokens, or specific server requirements',
               },
 
-              // Crawler Configuration
+              // === CONTENT PROCESSING ===
               word_count_threshold: {
                 type: 'number',
                 description:
@@ -469,12 +753,43 @@ class Crawl4AIServer {
                 type: ['string', 'array'],
                 items: { type: 'string' },
                 description:
-                  'JavaScript to execute. Works with session_id + js_only for interactions. Examples: ["document.querySelector(\'input\').value = \'text\'", "document.querySelector(\'button\').click()"]. No "return" needed. Executes in order.',
+                  'JavaScript to execute. Each string runs separately. Use return to get values.\n\n' +
+                  'USAGE PATTERNS:\n' +
+                  '1. WITH screenshot/pdf: {js_code: [...], screenshot: true} ✓\n' +
+                  '2. MULTI-STEP: First {js_code: [...], session_id: "x"}, then {js_only: true, session_id: "x"}\n' +
+                  '3. AVOID: {js_code: [...], js_only: true} on first call ✗\n\n' +
+                  'SELECTOR TIPS: Use get_html first to find:\n' +
+                  '  • name="..." (best for forms)\n' +
+                  '  • id="..." (if unique)\n' +
+                  '  • class="..." (careful, may repeat)\n\n' +
+                  'FORM EXAMPLE: [\n' +
+                  '  "document.querySelector(\'input[name=\\"email\\"]\').value = \'user@example.com\'",\n' +
+                  '  "document.querySelector(\'button[type=\\"submit\\"]\').click()"\n' +
+                  ']',
+              },
+              js_only: {
+                type: 'boolean',
+                description:
+                  'FOR SUBSEQUENT CALLS ONLY: Reuse existing session without navigation\n' +
+                  'First call: Use js_code WITHOUT js_only (or with screenshot/pdf)\n' +
+                  'Later calls: Use js_only=true to run more JS in same session\n' +
+                  'ERROR: Using js_only=true on first call causes server errors',
+                default: false,
               },
               wait_for: {
                 type: 'string',
                 description:
-                  'Wait for element/condition. For CSS extraction: use specific selector like ".article-body" not generic "h1". For JS: "() => document.querySelector(\'.data\')?.children.length > 0". Avoid "networkidle" with extraction',
+                  'Wait for element that loads AFTER initial page load. Format: "css:.selector" or "js:() => condition"\n\n' +
+                  'WHEN TO USE:\n' +
+                  '  • Dynamic content that loads after page (AJAX, lazy load)\n' +
+                  '  • Elements that appear after animations/transitions\n' +
+                  '  • Content loaded by JavaScript frameworks\n\n' +
+                  'WHEN NOT TO USE:\n' +
+                  '  • Elements already in initial HTML (forms, static content)\n' +
+                  '  • Standard page elements (just use wait_until: "load")\n' +
+                  '  • Can cause timeouts/errors if element already exists!\n\n' +
+                  'SELECTOR TIPS: Use get_html first to check if element exists\n' +
+                  'Examples: "css:.ajax-content", "js:() => document.querySelector(\'.lazy-loaded\')"',
               },
               wait_for_timeout: {
                 type: 'number',
@@ -530,12 +845,16 @@ class Crawl4AIServer {
                 default: false,
               },
 
-              // Additional Crawler Parameters
+              // === DYNAMIC CONTENT HANDLING ===
               wait_until: {
                 type: 'string',
                 enum: ['domcontentloaded', 'networkidle', 'load'],
                 description:
-                  'When to consider page loaded. "domcontentloaded": fast, HTML ready. "load": images loaded. "networkidle": all requests done (slowest, may timeout on dynamic sites). Default: "domcontentloaded"',
+                  'When to consider page loaded (use INSTEAD of wait_for for initial load):\n' +
+                  '• "domcontentloaded" (default): Fast, DOM ready, use for forms/static content\n' +
+                  '• "load": All resources loaded, use if you need images\n' +
+                  '• "networkidle": Wait for network quiet, use for heavy JS apps\n' +
+                  "WARNING: Don't use wait_for for elements in initial HTML!",
                 default: 'domcontentloaded',
               },
               page_timeout: {
@@ -572,7 +891,13 @@ class Crawl4AIServer {
               excluded_selector: {
                 type: 'string',
                 description:
-                  'CSS selector for elements to remove. Examples: "#cookie-banner, .advertisement, .social-share". Comma-separate multiple selectors',
+                  'CSS selector for elements to remove. Comma-separate multiple selectors.\n\n' +
+                  'SELECTOR STRATEGY: Use get_html first to inspect page structure. Look for:\n' +
+                  '  • id attributes (e.g., #cookie-banner)\n' +
+                  '  • CSS classes (e.g., .advertisement, .popup)\n' +
+                  '  • data-* attributes (e.g., [data-type="ad"])\n' +
+                  '  • Element type + attributes (e.g., div[role="banner"])\n\n' +
+                  'Examples: "#cookie-banner, .advertisement, .social-share"',
               },
               only_text: {
                 type: 'boolean',
@@ -580,7 +905,7 @@ class Crawl4AIServer {
                 default: false,
               },
 
-              // Media Handling
+              // === OUTPUT OPTIONS ===
               image_description_min_word_threshold: {
                 type: 'number',
                 description: 'Minimum words for image alt text to be considered valid',
@@ -601,7 +926,7 @@ class Crawl4AIServer {
                 description: 'Extra wait time in seconds before taking screenshot',
               },
 
-              // Link Filtering
+              // === LINK & DOMAIN FILTERING ===
               exclude_social_media_links: {
                 type: 'boolean',
                 description: 'Remove links to social media platforms',
@@ -613,13 +938,7 @@ class Crawl4AIServer {
                 description: 'List of domains to exclude from links (e.g., ["ads.com", "tracker.io"])',
               },
 
-              // Page Interaction
-              js_only: {
-                type: 'boolean',
-                description:
-                  'Execute JS without navigating to URL. true = stay on current page (requires session_id). false = navigate to URL first. Use true for form interactions after initial page load.',
-                default: false,
-              },
+              // === PERFORMANCE & ANTI-BOT ===
               simulate_user: {
                 type: 'boolean',
                 description:
@@ -634,7 +953,10 @@ class Crawl4AIServer {
               magic: {
                 type: 'boolean',
                 description:
-                  'EXPERIMENTAL: Auto-dismiss popups/banners. May conflict with wait_for or cause unexpected behavior. Try without this first if having issues. Not recommended with CSS extraction',
+                  'EXPERIMENTAL: Auto-handles popups, cookies, overlays.\n' +
+                  'Use as LAST RESORT - can conflict with wait_for & CSS extraction\n' +
+                  'Try first: remove_overlay_elements, excluded_selector\n' +
+                  'Avoid with: CSS extraction, precise timing needs',
                 default: false,
               },
 
@@ -642,12 +964,21 @@ class Crawl4AIServer {
               virtual_scroll_config: {
                 type: 'object',
                 description:
-                  'For infinite scroll feeds that replace content (Twitter, Instagram). Requires container_selector. Example: {container_selector: "[role=\'feed\']", scroll_count: 5}',
+                  'For infinite scroll sites that REPLACE content (Twitter/Instagram feeds).\n' +
+                  'USE when: Content disappears as you scroll (virtual scrolling)\n' +
+                  "DON'T USE when: Content appends (use scan_full_page instead)\n" +
+                  'Example: {container_selector: "#timeline", scroll_count: 10, wait_after_scroll: 1}',
                 properties: {
                   container_selector: {
                     type: 'string',
                     description:
-                      'CSS selector for scrollable feed container. Examples: "[role=\'feed\']", ".timeline", "#posts-container"',
+                      'CSS selector for the scrollable container.\n\n' +
+                      'SELECTOR STRATEGY: Use get_html first to inspect page structure. Look for:\n' +
+                      '  • id attributes (e.g., #timeline)\n' +
+                      '  • role attributes (e.g., [role="feed"])\n' +
+                      '  • CSS classes (e.g., .feed, .timeline)\n' +
+                      '  • data-* attributes (e.g., [data-testid="primaryColumn"])\n\n' +
+                      'Common: "#timeline" (Twitter), "[role=\'feed\']" (generic), ".feed" (Instagram)',
                   },
                   scroll_count: {
                     type: 'number',
@@ -683,14 +1014,14 @@ class Crawl4AIServer {
         {
           name: 'create_session',
           description:
-            '🔑 CREATES PERSISTENT BROWSER! Returns session_id for use with crawl_with_config. Browser stays alive across multiple calls, maintaining ALL state (cookies, localStorage, page). Other tools CANNOT use sessions - they create new browser each time. Essential for: forms, login flows, multi-step processes.',
+            'CREATES PERSISTENT BROWSER! Returns session_id for use with crawl. Browser stays alive across multiple calls, maintaining ALL state (cookies, localStorage, page). Other tools CANNOT use sessions - they create new browser each time. Essential for: forms, login flows, multi-step processes.',
           inputSchema: {
             type: 'object',
             properties: {
               session_id: {
                 type: 'string',
                 description:
-                  'Custom session identifier. Auto-generated if not provided. Use this EXACT ID in all subsequent crawl_with_config calls to reuse the browser.',
+                  'Custom session identifier. Auto-generated if not provided. Use this EXACT ID in all subsequent crawl calls to reuse the browser.',
               },
               initial_url: {
                 type: 'string',
@@ -734,7 +1065,8 @@ class Crawl4AIServer {
         {
           name: 'extract_with_llm',
           description:
-            'Extract structured data from webpages using AI. ⚠️ STATELESS: Creates new browser each time. Cannot see form submissions or JS changes. For persistent extraction use create_session + crawl_with_config(session_id), then extract from response.',
+            'Ask questions about webpage content using AI. Returns natural language answers. ' +
+            'STATELESS: Crawls fresh each time. For dynamic content or sessions, use crawl with session_id first.',
           inputSchema: {
             type: 'object',
             properties: {
@@ -745,7 +1077,8 @@ class Crawl4AIServer {
               query: {
                 type: 'string',
                 description:
-                  'Natural language extraction instructions. Be specific and clear. Example: "Extract all product names, prices, and availability status from the page"',
+                  'Your question about the webpage content. Examples: "What is the main topic?", ' +
+                  '"List all product prices", "Summarize the key points", "What contact information is available?"',
               },
             },
             required: ['url', 'query'],
@@ -760,50 +1093,204 @@ class Crawl4AIServer {
 
       try {
         switch (name) {
-          case 'crawl_page':
-            return await this.crawlPage(args as any);
+          case 'get_markdown':
+            try {
+              const validatedArgs = GetMarkdownSchema.parse(args);
+              return await this.getMarkdown(validatedArgs);
+            } catch (error) {
+              if (error instanceof z.ZodError) {
+                const details = error.errors
+                  .map((e) => (e.path.length > 0 ? `${e.path.join('.')}: ${e.message}` : e.message))
+                  .join(', ');
+                throw new Error(`Invalid parameters for get_markdown: ${details}`);
+              }
+              throw error;
+            }
 
           case 'capture_screenshot':
-            return await this.captureScreenshot(args as any);
+            try {
+              const validatedArgs = CaptureScreenshotSchema.parse(args);
+              return await this.captureScreenshot(validatedArgs);
+            } catch (error) {
+              if (error instanceof z.ZodError) {
+                const details = error.errors
+                  .map((e) => (e.path.length > 0 ? `${e.path.join('.')}: ${e.message}` : e.message))
+                  .join(', ');
+                throw new Error(`Invalid parameters for capture_screenshot: ${details}`);
+              }
+              throw error;
+            }
 
           case 'generate_pdf':
-            return await this.generatePDF(args as any);
+            try {
+              const validatedArgs = GeneratePdfSchema.parse(args);
+              return await this.generatePDF(validatedArgs);
+            } catch (error) {
+              if (error instanceof z.ZodError) {
+                const details = error.errors
+                  .map((e) => (e.path.length > 0 ? `${e.path.join('.')}: ${e.message}` : e.message))
+                  .join(', ');
+                throw new Error(`Invalid parameters for generate_pdf: ${details}`);
+              }
+              throw error;
+            }
 
           case 'execute_js':
-            return await this.executeJS(args as any);
+            try {
+              const validatedArgs = ExecuteJsSchema.parse(args);
+              return await this.executeJS(validatedArgs);
+            } catch (error) {
+              if (error instanceof z.ZodError) {
+                const details = error.errors
+                  .map((e) => (e.path.length > 0 ? `${e.path.join('.')}: ${e.message}` : e.message))
+                  .join(', ');
+                throw new Error(`Invalid parameters for execute_js: ${details}`);
+              }
+              throw error;
+            }
 
           case 'batch_crawl':
-            return await this.batchCrawl(args as any);
+            try {
+              const validatedArgs = BatchCrawlSchema.parse(args);
+              return await this.batchCrawl(validatedArgs);
+            } catch (error) {
+              if (error instanceof z.ZodError) {
+                const details = error.errors
+                  .map((e) => (e.path.length > 0 ? `${e.path.join('.')}: ${e.message}` : e.message))
+                  .join(', ');
+                throw new Error(`Invalid parameters for batch_crawl: ${details}`);
+              }
+              throw error;
+            }
 
           case 'smart_crawl':
-            return await this.smartCrawl(args as any);
+            try {
+              const validatedArgs = SmartCrawlSchema.parse(args);
+              return await this.smartCrawl(validatedArgs);
+            } catch (error) {
+              if (error instanceof z.ZodError) {
+                const details = error.errors
+                  .map((e) => (e.path.length > 0 ? `${e.path.join('.')}: ${e.message}` : e.message))
+                  .join(', ');
+                throw new Error(`Invalid parameters for smart_crawl: ${details}`);
+              }
+              throw error;
+            }
 
           case 'get_html':
-            return await this.getHTML(args as any);
+            try {
+              const validatedArgs = GetHtmlSchema.parse(args);
+              return await this.getHTML(validatedArgs);
+            } catch (error) {
+              if (error instanceof z.ZodError) {
+                const details = error.errors
+                  .map((e) => (e.path.length > 0 ? `${e.path.join('.')}: ${e.message}` : e.message))
+                  .join(', ');
+                throw new Error(`Invalid parameters for get_html: ${details}`);
+              }
+              throw error;
+            }
 
           case 'extract_links':
-            return await this.extractLinks(args as any);
+            try {
+              const validatedArgs = ExtractLinksSchema.parse(args);
+              return await this.extractLinks(validatedArgs);
+            } catch (error) {
+              if (error instanceof z.ZodError) {
+                const details = error.errors
+                  .map((e) => (e.path.length > 0 ? `${e.path.join('.')}: ${e.message}` : e.message))
+                  .join(', ');
+                throw new Error(`Invalid parameters for extract_links: ${details}`);
+              }
+              throw error;
+            }
 
           case 'crawl_recursive':
-            return await this.crawlRecursive(args as any);
+            try {
+              const validatedArgs = CrawlRecursiveSchema.parse(args);
+              return await this.crawlRecursive(validatedArgs);
+            } catch (error) {
+              if (error instanceof z.ZodError) {
+                const details = error.errors
+                  .map((e) => (e.path.length > 0 ? `${e.path.join('.')}: ${e.message}` : e.message))
+                  .join(', ');
+                throw new Error(`Invalid parameters for crawl_recursive: ${details}`);
+              }
+              throw error;
+            }
 
           case 'parse_sitemap':
-            return await this.parseSitemap(args as any);
+            try {
+              const validatedArgs = ParseSitemapSchema.parse(args);
+              return await this.parseSitemap(validatedArgs);
+            } catch (error) {
+              if (error instanceof z.ZodError) {
+                const details = error.errors
+                  .map((e) => (e.path.length > 0 ? `${e.path.join('.')}: ${e.message}` : e.message))
+                  .join(', ');
+                throw new Error(`Invalid parameters for parse_sitemap: ${details}`);
+              }
+              throw error;
+            }
 
-          case 'crawl_with_config':
-            return await this.crawlWithConfig(args as any);
+          case 'crawl':
+            try {
+              const validatedArgs = CrawlSchema.parse(args);
+              return await this.crawl(validatedArgs);
+            } catch (error) {
+              if (error instanceof z.ZodError) {
+                const details = error.errors
+                  .map((e) => (e.path.length > 0 ? `${e.path.join('.')}: ${e.message}` : e.message))
+                  .join(', ');
+                throw new Error(`Invalid parameters for crawl: ${details}`);
+              }
+              throw error;
+            }
 
           case 'create_session':
-            return await this.createSession(args as any);
+            try {
+              const validatedArgs = CreateSessionSchema.parse(args);
+              return await this.createSession(validatedArgs);
+            } catch (error) {
+              if (error instanceof z.ZodError) {
+                const details = error.errors
+                  .map((e) => (e.path.length > 0 ? `${e.path.join('.')}: ${e.message}` : e.message))
+                  .join(', ');
+                throw new Error(`Invalid parameters for create_session: ${details}`);
+              }
+              throw error;
+            }
 
           case 'clear_session':
-            return await this.clearSession(args as any);
+            try {
+              const validatedArgs = ClearSessionSchema.parse(args);
+              return await this.clearSession(validatedArgs);
+            } catch (error) {
+              if (error instanceof z.ZodError) {
+                const details = error.errors
+                  .map((e) => (e.path.length > 0 ? `${e.path.join('.')}: ${e.message}` : e.message))
+                  .join(', ');
+                throw new Error(`Invalid parameters for clear_session: ${details}`);
+              }
+              throw error;
+            }
 
           case 'list_sessions':
             return await this.listSessions();
 
           case 'extract_with_llm':
-            return await this.extractWithLLM(args as any);
+            try {
+              const validatedArgs = ExtractWithLlmSchema.parse(args);
+              return await this.extractWithLLM(validatedArgs);
+            } catch (error) {
+              if (error instanceof z.ZodError) {
+                const details = error.errors
+                  .map((e) => (e.path.length > 0 ? `${e.path.join('.')}: ${e.message}` : e.message))
+                  .join(', ');
+                throw new Error(`Invalid parameters for extract_with_llm: ${details}`);
+              }
+              throw error;
+            }
 
           default:
             throw new Error(`Unknown tool: ${name}`);
@@ -821,73 +1308,51 @@ class Crawl4AIServer {
     });
   }
 
-  private async crawlPage(options: CrawlOptions & { url: string }) {
+  private async getMarkdown(options: MarkdownEndpointOptions) {
     try {
-      const response = await this.axiosClient.post('/md', {
+      const result: MarkdownEndpointResponse = await this.service.getMarkdown({
         url: options.url,
-        remove_images: options.remove_images,
-        bypass_cache: options.bypass_cache,
-        filter_mode: options.filter_mode,
-        filter_list: options.filter_list,
-        screenshot: options.screenshot,
-        wait_for: options.wait_for,
-        timeout: options.timeout,
+        f: options.f,
+        q: options.q,
+        c: options.c,
       });
 
-      const result: CrawlResult = response.data;
+      // Format the response
+      let formattedText = `URL: ${result.url}\nFilter: ${result.filter}`;
+
+      if (result.query) {
+        formattedText += `\nQuery: ${result.query}`;
+      }
+
+      formattedText += `\nCache: ${result.cache}\n\nMarkdown:\n${result.markdown || 'No content found.'}`;
 
       return {
         content: [
           {
             type: 'text',
-            text: result.markdown || 'No content extracted',
+            text: formattedText,
           },
-          ...(result.screenshot
-            ? [
-                {
-                  type: 'image',
-                  data: result.screenshot,
-                  mimeType: 'image/png',
-                },
-              ]
-            : []),
-          ...(result.metadata
-            ? [
-                {
-                  type: 'text',
-                  text: `\n\n---\nMetadata:\n${JSON.stringify(result.metadata, null, 2)}`,
-                },
-              ]
-            : []),
-          ...(result.links
-            ? [
-                {
-                  type: 'text',
-                  text: `\n\n---\nLinks:\nInternal: ${result.links.internal.length}\nExternal: ${result.links.external.length}`,
-                },
-              ]
-            : []),
         ],
       };
     } catch (error: any) {
-      throw new Error(`Failed to crawl page: ${error.response?.data?.detail || error.message}`);
+      throw new Error(`Failed to get markdown: ${error.response?.data?.detail || error.message}`);
     }
   }
 
-  private async captureScreenshot(options: { url: string; full_page?: boolean; wait_for?: string; timeout?: number }) {
+  private async captureScreenshot(options: ScreenshotEndpointOptions) {
     try {
-      const response = await this.axiosClient.post('/screenshot', {
-        url: options.url,
-        full_page: options.full_page,
-        wait_for: options.wait_for,
-        timeout: options.timeout,
-      });
+      const result: ScreenshotEndpointResponse = await this.service.captureScreenshot(options);
+
+      // Response has { success: true, screenshot: "base64string" }
+      if (!result.success || !result.screenshot) {
+        throw new Error('Screenshot capture failed - no screenshot data in response');
+      }
 
       return {
         content: [
           {
             type: 'image',
-            data: response.data.screenshot,
+            data: result.screenshot,
             mimeType: 'image/png',
           },
           {
@@ -901,19 +1366,26 @@ class Crawl4AIServer {
     }
   }
 
-  private async generatePDF(options: { url: string; wait_for?: string; timeout?: number }) {
+  private async generatePDF(options: PDFEndpointOptions) {
     try {
-      const response = await this.axiosClient.post('/pdf', {
-        url: options.url,
-        wait_for: options.wait_for,
-        timeout: options.timeout,
-      });
+      const result: PDFEndpointResponse = await this.service.generatePDF(options);
+
+      // Response has { success: true, pdf: "base64string" }
+      if (!result.success || !result.pdf) {
+        throw new Error('PDF generation failed - no PDF data in response');
+      }
 
       return {
         content: [
           {
+            type: 'resource',
+            uri: `data:application/pdf;base64,${result.pdf}`,
+            data: result.pdf,
+            mimeType: 'application/pdf',
+          },
+          {
             type: 'text',
-            text: `PDF generated for: ${options.url}\nBase64 PDF data: ${response.data.pdf.substring(0, 100)}...`,
+            text: `PDF generated for: ${options.url}`,
           },
         ],
       };
@@ -922,31 +1394,21 @@ class Crawl4AIServer {
     }
   }
 
-  private async executeJS(options: JSExecuteOptions & { url: string }) {
+  private async executeJS(options: JSExecuteEndpointOptions) {
     try {
-      // Check if js_code is provided
-      if (!options.js_code || options.js_code === null) {
+      // Check if scripts is provided
+      if (!options.scripts || options.scripts === null) {
         throw new Error(
-          'js_code is required. Please provide a JavaScript string with return statement (e.g., "return document.title") or an array of strings (e.g., ["return document.querySelectorAll(\'a\').length", "return window.location.href"])',
+          'scripts is required. Please provide JavaScript code to execute. Use "return" statements to get values back.',
         );
       }
-      // Ensure scripts is always an array
-      const scripts = Array.isArray(options.js_code) ? options.js_code : [options.js_code];
 
-      // Note: Server's /execute_js endpoint doesn't support sessions
-      // Use crawl_with_config for session-based JavaScript execution
-      const response = await this.axiosClient.post('/execute_js', {
-        url: options.url,
-        scripts: scripts,
-        wait_after_js: options.wait_after_js,
-        screenshot: options.screenshot,
-        // session_id not supported by server endpoint
-      });
-
-      const result = response.data;
+      const result: JSExecuteEndpointResponse = await this.service.executeJS(options);
 
       // Extract JavaScript execution results
       const jsResults = result.js_execution_result?.results || [];
+      // Ensure scripts is always an array for mapping
+      const scripts = Array.isArray(options.scripts) ? options.scripts : [options.scripts];
 
       // Format results for display
       let formattedResults = '';
@@ -954,7 +1416,18 @@ class Crawl4AIServer {
         formattedResults = jsResults
           .map((res: any, idx: number) => {
             const script = scripts[idx] || 'Script ' + (idx + 1);
-            return `Script: ${script}\nResult: ${JSON.stringify(res, null, 2)}`;
+            // Handle the actual return value or success/error status
+            let resultStr = '';
+            if (res && typeof res === 'object' && 'success' in res) {
+              // This is a status object (e.g., from null return or execution without return)
+              resultStr = res.success
+                ? 'Executed successfully (no return value)'
+                : `Error: ${res.error || 'Unknown error'}`;
+            } else {
+              // This is an actual return value
+              resultStr = JSON.stringify(res, null, 2);
+            }
+            return `Script: ${script}\nReturned: ${resultStr}`;
           })
           .join('\n\n');
       } else {
@@ -965,17 +1438,8 @@ class Crawl4AIServer {
         content: [
           {
             type: 'text',
-            text: `JavaScript executed successfully on: ${options.url}\n\nResults:\n${formattedResults}${result.markdown ? `\n\nPage Content:\n${typeof result.markdown === 'string' ? result.markdown : JSON.stringify(result.markdown, null, 2)}` : ''}`,
+            text: `JavaScript executed on: ${options.url}\n\nResults:\n${formattedResults}${result.markdown ? `\n\nPage Content After Execution:\n${typeof result.markdown === 'string' ? result.markdown : JSON.stringify(result.markdown, null, 2)}` : ''}`,
           },
-          ...(result.screenshot
-            ? [
-                {
-                  type: 'image',
-                  data: result.screenshot,
-                  mimeType: 'image/png',
-                },
-              ]
-            : []),
         ],
       };
     } catch (error: any) {
@@ -1082,19 +1546,16 @@ class Crawl4AIServer {
     }
   }
 
-  private async getHTML(options: { url: string; wait_for?: string; bypass_cache?: boolean }) {
+  private async getHTML(options: HTMLEndpointOptions) {
     try {
-      const response = await this.axiosClient.post('/html', {
-        url: options.url,
-        wait_for: options.wait_for,
-        bypass_cache: options.bypass_cache,
-      });
+      const result: HTMLEndpointResponse = await this.service.getHTML(options);
 
+      // Response has { html: string, url: string, success: true }
       return {
         content: [
           {
             type: 'text',
-            text: response.data.html || 'No HTML content extracted',
+            text: result.html || '',
           },
         ],
       };
@@ -1324,11 +1785,11 @@ class Crawl4AIServer {
     }
   }
 
-  private async crawlWithConfig(options: any) {
+  private async crawl(options: any) {
     try {
       // Ensure options is an object
       if (!options || typeof options !== 'object') {
-        throw new Error('crawl_with_config requires options object with at least a url parameter');
+        throw new Error('crawl requires options object with at least a url parameter');
       }
 
       // Build browser_config
@@ -1367,9 +1828,7 @@ class Crawl4AIServer {
         crawler_config.js_code = Array.isArray(options.js_code) ? options.js_code.join('\n') : options.js_code;
       } else if (options.js_code === null) {
         // If js_code is explicitly null, throw a helpful error
-        throw new Error(
-          'js_code parameter is null. Please provide a JavaScript string (e.g., "document.querySelectorAll(\'a\').length") or an array of strings (e.g., ["window.scrollTo(0, 1000)", "document.querySelector(\'.more\').click()"])',
-        );
+        throw new Error('js_code parameter is null. Please provide JavaScript code as a string or array of strings.');
       }
       if (options.wait_for) crawler_config.wait_for = options.wait_for;
       if (options.wait_for_timeout) crawler_config.wait_for_timeout = options.wait_for_timeout;
@@ -1434,26 +1893,30 @@ class Crawl4AIServer {
       // Virtual scroll
       if (options.virtual_scroll_config) crawler_config.virtual_scroll_config = options.virtual_scroll_config;
 
+      // Cache control
+      if (options.cache_mode) crawler_config.cache_mode = options.cache_mode;
+
       // Other
       if (options.log_console) crawler_config.log_console = options.log_console;
 
-      // Build request body
-      const requestBody: any = {
-        urls: [options.url],
+      // Call service with proper configuration
+      const response: CrawlEndpointResponse = await this.service.crawl({
+        url: options.url,
         browser_config,
         crawler_config,
-      };
+      });
 
-      // Call /crawl endpoint
-      const response = await this.axiosClient.post('/crawl', requestBody);
+      // Validate response structure
+      if (!response || !response.results || response.results.length === 0) {
+        throw new Error('Invalid response from server: no results received');
+      }
 
-      const results = response.data.results || [];
-      const result = results[0] || response.data;
+      const result: CrawlResultItem = response.results[0];
 
       // Build response content
       const content = [];
 
-      // Main content - ensure we get a string
+      // Main content - use markdown.raw_markdown as primary content
       let mainContent = 'No content extracted';
 
       if (result.extracted_content) {
@@ -1463,33 +1926,12 @@ class Crawl4AIServer {
         } else if (typeof result.extracted_content === 'object') {
           mainContent = JSON.stringify(result.extracted_content, null, 2);
         }
-      } else if (result.extraction_result) {
-        // Another possible field name for extraction results
-        if (typeof result.extraction_result === 'string') {
-          mainContent = result.extraction_result;
-        } else if (typeof result.extraction_result === 'object') {
-          mainContent = JSON.stringify(result.extraction_result, null, 2);
-        }
-      } else if (result.data && result.data.extracted_content) {
-        // Check nested data field
-        if (typeof result.data.extracted_content === 'string') {
-          mainContent = result.data.extracted_content;
-        } else if (typeof result.data.extracted_content === 'object') {
-          mainContent = JSON.stringify(result.data.extracted_content, null, 2);
-        }
-      } else if (result.markdown && typeof result.markdown === 'string') {
-        mainContent = result.markdown;
-      } else if (result.content && typeof result.content === 'string') {
-        mainContent = result.content;
-      } else if (result.html && typeof result.html === 'string') {
+      } else if (result.markdown?.raw_markdown) {
+        mainContent = result.markdown.raw_markdown;
+      } else if (result.html) {
         mainContent = result.html;
-      } else if (result.text && typeof result.text === 'string') {
-        mainContent = result.text;
-      } else if (typeof result === 'string') {
-        mainContent = result;
-      } else if (result && typeof result === 'object') {
-        // If all else fails, try to stringify the entire result
-        mainContent = JSON.stringify(result, null, 2);
+      } else if (result.fit_html) {
+        mainContent = result.fit_html;
       }
 
       content.push({
@@ -1506,11 +1948,17 @@ class Crawl4AIServer {
         });
       }
 
-      // PDF info if available
+      // PDF if available
       if (result.pdf) {
         content.push({
+          type: 'resource',
+          uri: `data:application/pdf;base64,${result.pdf}`,
+          data: result.pdf,
+          mimeType: 'application/pdf',
+        });
+        content.push({
           type: 'text',
-          text: `PDF generated (${result.pdf.length} bytes)`,
+          text: `PDF generated for: ${options.url}`,
         });
       }
 
@@ -1523,16 +1971,29 @@ class Crawl4AIServer {
       }
 
       // Links
-      if (result.links) {
+      if (result.links && (result.links.internal.length > 0 || result.links.external.length > 0)) {
         content.push({
           type: 'text',
-          text: `\n---\nLinks: Internal: ${result.links.internal?.length || 0}, External: ${result.links.external?.length || 0}`,
+          text: `\n---\nLinks: Internal: ${result.links.internal.length}, External: ${result.links.external.length}`,
+        });
+      }
+
+      // JS execution results if available
+      if (result.js_execution_result && result.js_execution_result.results.length > 0) {
+        const jsResults = result.js_execution_result.results
+          .map((res: any, idx: number) => {
+            return `Result ${idx + 1}: ${JSON.stringify(res, null, 2)}`;
+          })
+          .join('\n');
+        content.push({
+          type: 'text',
+          text: `\n---\nJavaScript Execution Results:\n${jsResults}`,
         });
       }
 
       return { content };
     } catch (error: any) {
-      throw new Error(`Failed to crawl with config: ${error.response?.data?.detail || error.message}`);
+      throw new Error(`Failed to crawl: ${error.response?.data?.detail || error.message}`);
     }
   }
 
@@ -1671,7 +2132,7 @@ class Crawl4AIServer {
         content: [
           {
             type: 'text',
-            text: JSON.stringify(result.data || result, null, 2),
+            text: result.answer,
           },
         ],
       };

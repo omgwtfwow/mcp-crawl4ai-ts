@@ -35,34 +35,89 @@ describe('Crawl4AIService', () => {
     });
   });
 
-  describe('crawlPage', () => {
-    it('should successfully crawl a page', async () => {
-      mockAxiosInstance.post.mockResolvedValueOnce({ data: fixtures.crawlPage.success });
-
-      const result = await service.crawlPage({
+  describe('getMarkdown', () => {
+    it('should successfully get markdown with default filter', async () => {
+      const mockResponse = {
         url: 'https://example.com',
-        remove_images: true,
-        bypass_cache: true,
+        filter: 'fit',
+        query: null,
+        cache: '0',
+        markdown: '# Example Domain\n\nThis domain is for use in illustrative examples in documents.',
+        success: true,
+      };
+      mockAxiosInstance.post.mockResolvedValueOnce({ data: mockResponse });
+
+      const result = await service.getMarkdown({
+        url: 'https://example.com',
       });
 
       expect(mockAxiosInstance.post).toHaveBeenCalledWith('/md', {
         url: 'https://example.com',
-        remove_images: true,
-        bypass_cache: true,
-        filter_mode: undefined,
-        filter_list: undefined,
-        screenshot: undefined,
-        wait_for: undefined,
-        timeout: undefined,
+        f: undefined,
+        q: undefined,
+        c: undefined,
       });
 
-      expect(result).toEqual(fixtures.crawlPage.success);
+      expect(result).toEqual(mockResponse);
+    });
+
+    it('should get markdown with raw filter', async () => {
+      const mockResponse = {
+        url: 'https://example.com',
+        filter: 'raw',
+        query: null,
+        cache: '0',
+        markdown: 'Raw markdown content',
+        success: true,
+      };
+      mockAxiosInstance.post.mockResolvedValueOnce({ data: mockResponse });
+
+      const result = await service.getMarkdown({
+        url: 'https://example.com',
+        f: 'raw',
+      });
+
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/md', {
+        url: 'https://example.com',
+        f: 'raw',
+        q: undefined,
+        c: undefined,
+      });
+
+      expect(result).toEqual(mockResponse);
+    });
+
+    it('should get markdown with bm25 filter and query', async () => {
+      const mockResponse = {
+        url: 'https://example.com',
+        filter: 'bm25',
+        query: 'example domain',
+        cache: '0',
+        markdown: 'Filtered markdown content',
+        success: true,
+      };
+      mockAxiosInstance.post.mockResolvedValueOnce({ data: mockResponse });
+
+      const result = await service.getMarkdown({
+        url: 'https://example.com',
+        f: 'bm25',
+        q: 'example domain',
+      });
+
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/md', {
+        url: 'https://example.com',
+        f: 'bm25',
+        q: 'example domain',
+        c: undefined,
+      });
+
+      expect(result).toEqual(mockResponse);
     });
 
     it('should handle errors', async () => {
       mockAxiosInstance.post.mockRejectedValueOnce(new Error('Network error'));
 
-      await expect(service.crawlPage({ url: 'https://example.com' })).rejects.toThrow('Network error');
+      await expect(service.getMarkdown({ url: 'https://example.com' })).rejects.toThrow('Network error');
     });
   });
 
@@ -72,14 +127,12 @@ describe('Crawl4AIService', () => {
 
       const result = await service.captureScreenshot({
         url: 'https://example.com',
-        full_page: true,
+        screenshot_wait_for: 3,
       });
 
       expect(mockAxiosInstance.post).toHaveBeenCalledWith('/screenshot', {
         url: 'https://example.com',
-        full_page: true,
-        wait_for: undefined,
-        timeout: undefined,
+        screenshot_wait_for: 3,
       });
 
       expect(result).toEqual(fixtures.screenshot.success);
@@ -92,13 +145,10 @@ describe('Crawl4AIService', () => {
 
       const result = await service.generatePDF({
         url: 'https://example.com',
-        wait_for: '.content',
       });
 
       expect(mockAxiosInstance.post).toHaveBeenCalledWith('/pdf', {
         url: 'https://example.com',
-        wait_for: '.content',
-        timeout: undefined,
       });
 
       expect(result).toEqual(fixtures.pdf.success);
@@ -118,15 +168,12 @@ describe('Crawl4AIService', () => {
 
       const result = await service.executeJS({
         url: 'https://example.com',
-        js_code: 'return document.title',
-        wait_after_js: 1000,
+        scripts: 'return document.title',
       });
 
       expect(mockAxiosInstance.post).toHaveBeenCalledWith('/execute_js', {
         url: 'https://example.com',
         scripts: ['return document.title'],
-        wait_after_js: 1000,
-        screenshot: undefined,
       });
 
       expect(result).toEqual(mockResult);
@@ -145,7 +192,7 @@ describe('Crawl4AIService', () => {
 
       const result = await service.executeJS({
         url: 'https://example.com',
-        js_code: [
+        scripts: [
           'return document.title',
           'return document.querySelectorAll("a").length',
           'return Array.from(document.querySelectorAll("a")).map(a => a.href)',
@@ -159,14 +206,41 @@ describe('Crawl4AIService', () => {
           'return document.querySelectorAll("a").length',
           'return Array.from(document.querySelectorAll("a")).map(a => a.href)',
         ],
-        wait_after_js: undefined,
-        screenshot: undefined,
       });
 
       expect(result.js_execution_result?.results).toHaveLength(3);
       expect(result.js_execution_result?.results[0]).toBe('Example Domain');
       expect(result.js_execution_result?.results[1]).toBe(10);
       expect(result.js_execution_result?.results[2]).toEqual(['https://link1.com', 'https://link2.com']);
+    });
+
+    it('should reject JavaScript with HTML entities', async () => {
+      await expect(
+        service.executeJS({
+          url: 'https://example.com',
+          scripts: 'document.querySelector(&quot;button&quot;).click()',
+        }),
+      ).rejects.toThrow('Invalid JavaScript: Contains HTML entities');
+    });
+
+    it('should reject JavaScript with literal \\n', async () => {
+      await expect(
+        service.executeJS({
+          url: 'https://example.com',
+          scripts: 'console.log("test");\\nreturn true;',
+        }),
+      ).rejects.toThrow('Invalid JavaScript: Contains HTML entities');
+    });
+
+    it('should accept valid JavaScript with \\n in strings', async () => {
+      mockAxiosInstance.post.mockResolvedValueOnce({ data: { markdown: 'Content' } });
+
+      await service.executeJS({
+        url: 'https://example.com',
+        scripts: 'console.log("line1\\nline2")',
+      });
+
+      expect(mockAxiosInstance.post).toHaveBeenCalled();
     });
   });
 
@@ -196,13 +270,10 @@ describe('Crawl4AIService', () => {
 
       const result = await service.getHTML({
         url: 'https://example.com',
-        bypass_cache: true,
       });
 
       expect(mockAxiosInstance.post).toHaveBeenCalledWith('/html', {
         url: 'https://example.com',
-        wait_for: undefined,
-        bypass_cache: true,
       });
 
       expect(result).toEqual(fixtures.html.success);
@@ -341,7 +412,7 @@ describe('Crawl4AIService', () => {
     });
   });
 
-  describe('crawlWithConfig', () => {
+  describe('crawl', () => {
     it('should crawl with advanced config successfully', async () => {
       const mockResponse = {
         data: {
@@ -350,7 +421,7 @@ describe('Crawl4AIService', () => {
       };
       mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
 
-      const result = await service.crawlWithConfig({
+      const result = await service.crawl({
         url: 'https://example.com',
         browser_config: {
           viewport_width: 1920,
@@ -390,7 +461,7 @@ describe('Crawl4AIService', () => {
       };
       mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
 
-      const result = await service.crawlWithConfig({
+      const result = await service.crawl({
         urls: ['https://example.com', 'https://example.org'],
         browser_config: { headless: true },
         crawler_config: { cache_mode: 'BYPASS' },
@@ -404,6 +475,41 @@ describe('Crawl4AIService', () => {
 
       expect(result).toEqual(mockResponse.data);
     });
+
+    it('should reject invalid JavaScript in js_code', async () => {
+      await expect(
+        service.crawl({
+          url: 'https://example.com',
+          crawler_config: {
+            js_code: 'document.querySelector(&quot;button&quot;).click()',
+          },
+        }),
+      ).rejects.toThrow('Invalid JavaScript: Contains HTML entities');
+    });
+
+    it('should reject JavaScript arrays with invalid code', async () => {
+      await expect(
+        service.crawl({
+          url: 'https://example.com',
+          crawler_config: {
+            js_code: ['console.log("valid")', 'document.querySelector(&quot;input&quot;).value = &quot;test&quot;'],
+          },
+        }),
+      ).rejects.toThrow('Invalid JavaScript: Contains HTML entities');
+    });
+
+    it('should accept valid JavaScript code', async () => {
+      mockAxiosInstance.post.mockResolvedValueOnce({ data: { results: [] } });
+
+      await service.crawl({
+        url: 'https://example.com',
+        crawler_config: {
+          js_code: ['document.querySelector("button").click()', 'return document.title'],
+        },
+      });
+
+      expect(mockAxiosInstance.post).toHaveBeenCalled();
+    });
   });
 
   describe('Error handling', () => {
@@ -415,7 +521,7 @@ describe('Crawl4AIService', () => {
         },
       });
 
-      await expect(service.crawlPage({ url: 'https://example.com' })).rejects.toMatchObject({
+      await expect(service.getMarkdown({ url: 'https://example.com' })).rejects.toMatchObject({
         response: {
           status: 404,
           data: { detail: 'Not found' },
@@ -429,7 +535,7 @@ describe('Crawl4AIService', () => {
         message: 'Connection refused',
       });
 
-      await expect(service.crawlPage({ url: 'https://example.com' })).rejects.toMatchObject({
+      await expect(service.getMarkdown({ url: 'https://example.com' })).rejects.toMatchObject({
         code: 'ECONNREFUSED',
         message: 'Connection refused',
       });

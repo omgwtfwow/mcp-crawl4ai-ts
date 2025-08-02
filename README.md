@@ -51,13 +51,6 @@ npm run build
 
 # 3. Add to your MCP client (see Usage section)
 ```
-
-## Features
-
-- **Core Tools**: Web crawling, screenshots, PDF generation, JavaScript execution
-- **Smart Tools**: Auto-detect content types (HTML/sitemap/RSS), recursive crawling, link analysis
-- **Advanced**: Custom headers, cache control, batch processing, URL filtering
-
 ## Configuration
 
 ```env
@@ -143,60 +136,104 @@ Consult your client's documentation for MCP server configuration. The key detail
 
 ## Available Tools
 
-### 1. `crawl_page` - Extract markdown with filters
+### 1. `get_markdown` - Extract content as markdown with filtering
 ```typescript
-{ url: string, remove_images?: boolean, bypass_cache?: boolean, 
-  filter_mode?: 'blacklist'|'whitelist', filter_list?: string[],
-  screenshot?: boolean, wait_for?: string, timeout?: number }
+{ 
+  url: string,                              // Required: URL to extract markdown from
+  filter?: 'raw'|'fit'|'bm25'|'llm',       // Filter type (default: 'fit')
+  query?: string,                           // Query for bm25/llm filters
+  cache?: string                            // Cache-bust parameter (default: '0')
+}
 ```
+Extracts content as markdown with various filtering options. Use 'bm25' or 'llm' filters with a query for specific content extraction.
 
-### 2. `capture_screenshot` - Full-page screenshots
+### 2. `capture_screenshot` - Capture webpage screenshot
 ```typescript
-{ url: string, full_page?: boolean, wait_for?: string, timeout?: number }
+{ 
+  url: string,                   // Required: URL to capture
+  screenshot_wait_for?: number   // Seconds to wait before screenshot (default: 2)
+}
 ```
+Returns base64-encoded PNG. Note: This is stateless - for screenshots after JS execution, use `crawl` with `screenshot: true`.
 
-### 3. `generate_pdf` - Convert to PDF
+### 3. `generate_pdf` - Convert webpage to PDF
 ```typescript
-{ url: string, wait_for?: string, timeout?: number }
+{ 
+  url: string  // Required: URL to convert to PDF
+}
 ```
+Returns base64-encoded PDF. Stateless tool - for PDFs after JS execution, use `crawl` with `pdf: true`.
 
-### 4. `execute_js` - Run JS before crawling
+### 4. `execute_js` - Execute JavaScript and get return values
 ```typescript
-{ url: string, js_code: string | string[], wait_after_js?: number, screenshot?: boolean }
+{ 
+  url: string,                    // Required: URL to load
+  scripts: string | string[]      // Required: JavaScript to execute
+}
 ```
+Executes JavaScript and returns results. Each script can use 'return' to get values back. Stateless - for persistent JS execution use `crawl` with `js_code`.
 
-### 5. `batch_crawl` - Parallel processing
+### 5. `batch_crawl` - Crawl multiple URLs concurrently
 ```typescript
-{ urls: string[], max_concurrent?: number, remove_images?: boolean, bypass_cache?: boolean }
+{ 
+  urls: string[],           // Required: List of URLs to crawl
+  max_concurrent?: number,  // Parallel request limit (default: 5)
+  remove_images?: boolean,  // Remove images from output (default: false)
+  bypass_cache?: boolean    // Bypass cache for all URLs (default: false)
+}
 ```
+Efficiently crawls multiple URLs in parallel. Each URL gets a fresh browser instance.
 
-### 6. `smart_crawl` - Auto-detect content type
+### 6. `smart_crawl` - Auto-detect and handle different content types
 ```typescript
-{ url: string, max_depth?: number, follow_links?: boolean, bypass_cache?: boolean }
+{ 
+  url: string,            // Required: URL to crawl
+  max_depth?: number,     // Maximum depth for recursive crawling (default: 2)
+  follow_links?: boolean, // Follow links in content (default: true)
+  bypass_cache?: boolean  // Bypass cache (default: false)
+}
 ```
+Intelligently detects content type (HTML/sitemap/RSS) and processes accordingly.
 
-### 7. `get_html` - Raw HTML extraction
+### 7. `get_html` - Get sanitized HTML for analysis
 ```typescript
-{ url: string, wait_for?: string, bypass_cache?: boolean }
+{ 
+  url: string  // Required: URL to extract HTML from
+}
 ```
+Returns preprocessed HTML optimized for structure analysis. Use for building schemas or analyzing patterns.
 
-### 8. `extract_links` - Analyze all links
+### 8. `extract_links` - Extract and categorize page links
 ```typescript
-{ url: string, categorize?: boolean }  // Returns internal/external/social/etc
+{ 
+  url: string,          // Required: URL to extract links from
+  categorize?: boolean  // Group by type (default: true)
+}
 ```
+Extracts all links and groups them by type: internal, external, social media, documents, images.
 
-### 9. `crawl_recursive` - Deep site crawling
+### 9. `crawl_recursive` - Deep crawl website following links
 ```typescript
-{ url: string, max_depth?: number, max_pages?: number, 
-  include_pattern?: string, exclude_pattern?: string }
+{ 
+  url: string,              // Required: Starting URL
+  max_depth?: number,       // Maximum depth to crawl (default: 3)
+  max_pages?: number,       // Maximum pages to crawl (default: 50)
+  include_pattern?: string, // Regex pattern for URLs to include
+  exclude_pattern?: string  // Regex pattern for URLs to exclude
+}
 ```
+Crawls a website following internal links up to specified depth. Returns content from all discovered pages.
 
-### 10. `parse_sitemap` - Extract URLs from sitemap
+### 10. `parse_sitemap` - Extract URLs from XML sitemaps
 ```typescript
-{ url: string, filter_pattern?: string }
+{ 
+  url: string,              // Required: Sitemap URL (e.g., /sitemap.xml)
+  filter_pattern?: string   // Optional: Regex pattern to filter URLs
+}
 ```
+Extracts all URLs from XML sitemaps. Supports regex filtering for specific URL patterns.
 
-### 11. `crawl_with_config` - Advanced web crawling with full configuration
+### 11. `crawl` - Advanced web crawling with full configuration
 ```typescript
 {
   url: string,                              // URL to crawl
@@ -224,7 +261,7 @@ Consult your client's documentation for MCP server configuration. The key detail
   exclude_external_links?: boolean,         // Remove external links
   screenshot?: boolean,                     // Capture screenshot
   pdf?: boolean,                           // Generate PDF
-  session_id?: string,                      // Reuse browser session (only works with crawl_with_config)
+  session_id?: string,                      // Reuse browser session (only works with crawl tool)
   cache_mode?: 'ENABLED'|'BYPASS'|'DISABLED',  // Cache control
   extraction_type?: 'llm',                  // Only 'llm' extraction is supported via REST API
   llm_provider?: string,                    // LLM provider (e.g., "openai/gpt-4o-mini")
@@ -236,22 +273,17 @@ Consult your client's documentation for MCP server configuration. The key detail
 }
 ```
 
-**Important Notes**:
-- **CSS/XPath extraction is NOT supported** via the REST API due to Python class serialization limitations
-- Use the `extract_with_llm` tool for structured data extraction instead
-- For simple content extraction, use `crawl_page` or `crawl_with_config` which return markdown
-
-### 12. `create_session` - Create browser session for stateful crawling
+### 12. `create_session` - Create persistent browser session
 ```typescript
 { 
-  session_id?: string,      // Optional - auto-generated if not provided
-  initial_url?: string,     // Optional - URL to pre-warm the session
-  browser_type?: string     // Browser engine (default: 'chromium')
+  session_id?: string,                            // Optional: Custom ID (auto-generated if not provided)
+  initial_url?: string,                           // Optional: URL to load when creating session
+  browser_type?: 'chromium'|'firefox'|'webkit'   // Optional: Browser engine (default: 'chromium')
 }
 ```
-Creates a session reference for maintaining browser state across multiple requests. Sessions persist on the Crawl4AI server and maintain cookies, login state, and JavaScript context.
+Creates a persistent browser session for maintaining state across multiple requests. Returns the session_id for use with the `crawl` tool.
 
-**Important**: Only the `crawl_with_config` tool supports session_id. Other tools like `execute_js`, `capture_screenshot`, and `extract_with_llm` are stateless and run in isolated browser contexts.
+**Important**: Only the `crawl` tool supports session_id. Other tools are stateless and create new browsers each time.
 
 ### 13. `clear_session` - Remove session from tracking
 ```typescript
@@ -273,20 +305,6 @@ Returns all locally tracked sessions with creation time, last used time, and ini
 }
 ```
 Uses AI to extract structured data from webpages. Returns results immediately without any polling or job management. This is the recommended way to extract specific information since CSS/XPath extraction is not supported via the REST API.
-
-**Example usage:**
-```typescript
-const result = await client.callTool({
-  name: 'extract_with_llm',
-  arguments: {
-    url: 'https://example.com/products',
-    query: 'Extract all product names, prices, and availability status'
-  }
-});
-
-// Response format:
-// { "answer": "Product A costs $10 and is in stock. Product B costs $20 and is out of stock..." }
-```
 
 ## Advanced Configuration
 
@@ -331,8 +349,6 @@ Integration tests cover:
 - Content filtering
 - Bot detection avoidance
 - Error handling
-
-Note: CSS/XPath extraction tests are skipped due to REST API limitations.
 
 ## License
 

@@ -4,7 +4,7 @@ import axios from 'axios';
 
 jest.mock('axios');
 
-describe('crawlWithConfig parameter mapping', () => {
+describe('crawl parameter mapping', () => {
   let service: Crawl4AIService;
   let mockAxiosInstance: any;
 
@@ -27,7 +27,7 @@ describe('crawlWithConfig parameter mapping', () => {
       const mockResponse = { data: { results: [{ markdown: 'test' }] } };
       mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
 
-      await service.crawlWithConfig({
+      await service.crawl({
         url: 'https://example.com',
         browser_config: {
           browser_type: 'firefox',
@@ -63,7 +63,7 @@ describe('crawlWithConfig parameter mapping', () => {
           headers: { 'X-Custom-Header': 'value' },
           extra_args: ['--disable-gpu'],
         },
-        crawler_config: undefined,
+        crawler_config: {},
       });
     });
   });
@@ -73,7 +73,7 @@ describe('crawlWithConfig parameter mapping', () => {
       const mockResponse = { data: { results: [{ markdown: 'test' }] } };
       mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
 
-      await service.crawlWithConfig({
+      await service.crawl({
         url: 'https://example.com',
         crawler_config: {
           word_count_threshold: 150,
@@ -105,7 +105,7 @@ describe('crawlWithConfig parameter mapping', () => {
       const mockResponse = { data: { results: [{ markdown: 'test' }] } };
       mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
 
-      await service.crawlWithConfig({
+      await service.crawl({
         url: 'https://example.com',
         crawler_config: {
           js_code: ['document.querySelector(".load-more").click()', 'window.scrollTo(0, 1000)'],
@@ -131,7 +131,7 @@ describe('crawlWithConfig parameter mapping', () => {
       const mockResponse = { data: { results: [{ markdown: 'test' }] } };
       mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
 
-      await service.crawlWithConfig({
+      await service.crawl({
         url: 'https://example.com',
         crawler_config: {
           wait_until: 'networkidle',
@@ -163,7 +163,7 @@ describe('crawlWithConfig parameter mapping', () => {
       const mockResponse = { data: { results: [{ markdown: 'test' }] } };
       mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
 
-      await service.crawlWithConfig({
+      await service.crawl({
         url: 'https://example.com',
         crawler_config: {
           screenshot: true,
@@ -195,7 +195,7 @@ describe('crawlWithConfig parameter mapping', () => {
       const mockResponse = { data: { results: [{ markdown: 'test' }] } };
       mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
 
-      await service.crawlWithConfig({
+      await service.crawl({
         url: 'https://example.com',
         crawler_config: {
           exclude_external_links: true,
@@ -219,7 +219,7 @@ describe('crawlWithConfig parameter mapping', () => {
       const mockResponse = { data: { results: [{ markdown: 'test' }] } };
       mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
 
-      await service.crawlWithConfig({
+      await service.crawl({
         url: 'https://example.com',
         crawler_config: {
           simulate_user: true,
@@ -245,7 +245,7 @@ describe('crawlWithConfig parameter mapping', () => {
       const mockResponse = { data: { results: [{ markdown: 'test' }] } };
       mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
 
-      await service.crawlWithConfig({
+      await service.crawl({
         url: 'https://example.com',
         crawler_config: {
           virtual_scroll_config: {
@@ -278,7 +278,7 @@ describe('crawlWithConfig parameter mapping', () => {
       const mockResponse = { data: { results: [{ markdown: 'test' }] } };
       mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
 
-      await service.crawlWithConfig({
+      await service.crawl({
         url: 'https://example.com',
         crawler_config: {
           session_id: 'test-session-123',
@@ -300,7 +300,7 @@ describe('crawlWithConfig parameter mapping', () => {
       const mockResponse = { data: { results: [{ markdown: 'test' }] } };
       mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
 
-      await service.crawlWithConfig({
+      await service.crawl({
         url: 'https://example.com',
         crawler_config: {
           timeout: 90000,
@@ -326,7 +326,7 @@ describe('crawlWithConfig parameter mapping', () => {
       const mockResponse = { data: { results: [{ markdown: 'test' }] } };
       mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
 
-      await service.crawlWithConfig({
+      await service.crawl({
         url: 'https://example.com',
         browser_config: {
           viewport_width: 1920,
@@ -367,7 +367,7 @@ describe('crawlWithConfig parameter mapping', () => {
       const mockResponse = { data: { results: [{ markdown: 'test' }] } };
       mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
 
-      await service.crawlWithConfig({
+      await service.crawl({
         url: 'https://example.com',
         crawler_config: {
           word_count_threshold: 0, // Should be included (falsy but defined)
@@ -393,7 +393,7 @@ describe('crawlWithConfig parameter mapping', () => {
       const mockResponse = { data: { results: [{ markdown: 'test' }] } };
       mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
 
-      await service.crawlWithConfig({
+      await service.crawl({
         url: 'https://example.com',
         crawler_config: {
           excluded_tags: [],
