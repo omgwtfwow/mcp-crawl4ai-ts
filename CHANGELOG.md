@@ -2,15 +2,6 @@
 
 ## Version 2.0.2 (2025-08-03)
 
-### Improvements
-- Installed nock library for future HTTP mocking in unit tests
-- Fixed TypeScript lint warnings by replacing `any` types with proper types:
-  - Changed error handling to use proper type assertions
-  - Updated `unknown[]` for JavaScript execution results
-  - Used `Record<string, unknown>` for generic objects
-  - Created `LinkItem` interface for better type safety
-  - Fixed all production code `any` types
-
 ### Bug Fixes
 - Fixed parameter mapping in `get_markdown` tool - now correctly maps schema properties (`filter`, `query`, `cache`) to API parameters (`f`, `q`, `c`)
 - Fixed `smart_crawl` schema to use `follow_links` parameter instead of `remove_images`
@@ -25,6 +16,7 @@
 - Implemented proper handling for non-functional server parameters:
   - `batch_crawl`: `remove_images` now uses `exclude_tags` in crawler_config to actually remove images
   - `smart_crawl`: `follow_links` now crawls URLs found in sitemaps/RSS feeds (max 10 URLs)
+- Fixed `crawl` and `generate_pdf` tools PDF response to use proper MCP SDK embedded resource format with blob field
 
 ### Improvements
 - Updated tool descriptions to accurately reflect actual behavior
@@ -39,7 +31,14 @@
 - Added comprehensive integration tests for `parse_sitemap` tool with various test cases
 - Added comprehensive integration tests for session management tools (`create_session`, `clear_session`, `list_sessions`)
 - Enhanced integration tests for `extract_with_llm` tool to handle non-deterministic LLM responses
-- Fixed `crawl` and `generate_pdf` tools PDF response to use proper MCP SDK embedded resource format with blob field
+- Installed nock library for future HTTP mocking in unit tests
+- Fixed TypeScript lint warnings by replacing `any` types with proper types:
+  - Changed error handling to use proper type assertions
+  - Updated `unknown[]` for JavaScript execution results
+  - Used `Record<string, unknown>` for generic objects
+  - Created `LinkItem` interface for better type safety
+  - Fixed all production code `any` types
+  - Removed unused legacy `CrawlResult` interface
 
 ## Version 2.0.1 (2025-08-02)
 Update README
