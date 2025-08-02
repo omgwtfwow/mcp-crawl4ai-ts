@@ -10,6 +10,7 @@
 - Fixed `crawl_recursive` schema mismatch - corrected schema to use `include_pattern` and `exclude_pattern` instead of `filter_pattern` and `bypass_cache`
 - Fixed `crawl_recursive` implementation to use `/crawl` endpoint instead of `/md` for proper link extraction
 - Fixed `crawl_recursive` type issues and improved link handling for recursive crawling
+- Fixed `parse_sitemap` implementation to fetch sitemaps directly instead of through Crawl4AI server API
 - Implemented proper handling for non-functional server parameters:
   - `batch_crawl`: `remove_images` now uses `exclude_tags` in crawler_config to actually remove images
   - `smart_crawl`: `follow_links` now crawls URLs found in sitemaps/RSS feeds (max 10 URLs)
@@ -24,6 +25,7 @@
 - Added comprehensive integration tests for `crawl_recursive` tool
 - Improved `crawl_recursive` output format to clearly show depth levels and internal link counts
 - Enhanced error handling in `crawl_recursive` to continue crawling even if individual pages fail
+- Added comprehensive integration tests for `parse_sitemap` tool with various test cases
 
 ## Version 2.0.1 (2025-08-02)
 Update README

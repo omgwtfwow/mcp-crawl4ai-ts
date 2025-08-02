@@ -1889,8 +1889,14 @@ class Crawl4AIServer {
 
   private async parseSitemap(options: { url: string; filter_pattern?: string }) {
     try {
-      // First try to fetch the sitemap
-      const response = await this.axiosClient.get(options.url);
+      // Fetch the sitemap directly (not through Crawl4AI server)
+      const axios = (await import('axios')).default;
+      const response = await axios.get(options.url, {
+        timeout: 30000,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; MCP-Crawl4AI/1.0)',
+        },
+      });
       const sitemapContent = response.data;
 
       // Parse XML content - simple regex approach for basic sitemaps
