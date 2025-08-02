@@ -1308,13 +1308,14 @@ class Crawl4AIServer {
     });
   }
 
-  private async getMarkdown(options: MarkdownEndpointOptions) {
+  private async getMarkdown(options: any) {
     try {
+      // Map from schema property names to API parameter names
       const result: MarkdownEndpointResponse = await this.service.getMarkdown({
         url: options.url,
-        f: options.f,
-        q: options.q,
-        c: options.c,
+        f: options.filter,  // Schema provides 'filter', API expects 'f'
+        q: options.query,   // Schema provides 'query', API expects 'q'
+        c: options.cache,   // Schema provides 'cache', API expects 'c'
       });
 
       // Format the response

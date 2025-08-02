@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 2.0.1 (2025-08-02)
+
+### Bug Fixes
+- Fixed parameter mapping in `get_markdown` tool - now correctly maps schema properties (`filter`, `query`, `cache`) to API parameters (`f`, `q`, `c`)
+
 ## Version 2.0.0 (2025-08-02)
 
 ### Breaking Changes
