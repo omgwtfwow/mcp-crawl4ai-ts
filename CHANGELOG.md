@@ -29,6 +29,7 @@
 - Enhanced error handling in `crawl_recursive` to continue crawling even if individual pages fail
 - Added comprehensive integration tests for `parse_sitemap` tool with various test cases
 - Added comprehensive integration tests for session management tools (`create_session`, `clear_session`, `list_sessions`)
+- Enhanced integration tests for `extract_with_llm` tool to handle non-deterministic LLM responses
 
 ## Version 2.0.1 (2025-08-02)
 Update README
