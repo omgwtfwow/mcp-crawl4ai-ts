@@ -256,8 +256,47 @@ describe('Crawl4AIService', () => {
       expect(mockAxiosInstance.post).toHaveBeenCalledWith('/crawl', {
         urls: ['https://example.com', 'https://example.org'],
         max_concurrent: 2,
-        remove_images: undefined,
-        bypass_cache: undefined,
+        crawler_config: undefined,
+      });
+
+      expect(result).toEqual(fixtures.batch.success);
+    });
+
+    it('should handle remove_images option', async () => {
+      mockAxiosInstance.post.mockResolvedValueOnce({ data: fixtures.batch.success });
+
+      const result = await service.batchCrawl({
+        urls: ['https://example.com'],
+        remove_images: true,
+      });
+
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/crawl', {
+        urls: ['https://example.com'],
+        max_concurrent: undefined,
+        crawler_config: {
+          exclude_tags: ['img', 'picture', 'svg'],
+        },
+      });
+
+      expect(result).toEqual(fixtures.batch.success);
+    });
+
+    it('should handle both remove_images and bypass_cache', async () => {
+      mockAxiosInstance.post.mockResolvedValueOnce({ data: fixtures.batch.success });
+
+      const result = await service.batchCrawl({
+        urls: ['https://example.com'],
+        remove_images: true,
+        bypass_cache: true,
+      });
+
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/crawl', {
+        urls: ['https://example.com'],
+        max_concurrent: undefined,
+        crawler_config: {
+          exclude_tags: ['img', 'picture', 'svg'],
+          cache_mode: 'BYPASS',
+        },
       });
 
       expect(result).toEqual(fixtures.batch.success);

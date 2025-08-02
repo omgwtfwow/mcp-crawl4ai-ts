@@ -206,7 +206,7 @@ const SmartCrawlSchema = createStatelessSchema(
   z.object({
     url: z.string().url(),
     max_depth: z.number().optional(),
-    remove_images: z.boolean().optional(),
+    follow_links: z.boolean().optional(),
     bypass_cache: z.boolean().optional(),
   }),
   'smart_crawl',
@@ -511,7 +511,7 @@ class Crawl4AIServer {
               },
               remove_images: {
                 type: 'boolean',
-                description: 'Remove images from markdown output',
+                description: 'Remove images from output by excluding img, picture, and svg tags',
                 default: false,
               },
               bypass_cache: {
@@ -541,7 +541,7 @@ class Crawl4AIServer {
               },
               follow_links: {
                 type: 'boolean',
-                description: 'Follow links found in content',
+                description: 'For sitemaps/RSS: crawl found URLs (max 10). For HTML: no effect',
                 default: false,
               },
               bypass_cache: {
@@ -1308,14 +1308,16 @@ class Crawl4AIServer {
     });
   }
 
-  private async getMarkdown(options: any) {
+  private async getMarkdown(
+    options: Omit<MarkdownEndpointOptions, 'f' | 'q' | 'c'> & { filter?: string; query?: string; cache?: string },
+  ) {
     try {
       // Map from schema property names to API parameter names
       const result: MarkdownEndpointResponse = await this.service.getMarkdown({
         url: options.url,
-        f: options.filter,  // Schema provides 'filter', API expects 'f'
-        q: options.query,   // Schema provides 'query', API expects 'q'
-        c: options.cache,   // Schema provides 'cache', API expects 'c'
+        f: options.filter, // Schema provides 'filter', API expects 'f'
+        q: options.query, // Schema provides 'query', API expects 'q'
+        c: options.cache, // Schema provides 'cache', API expects 'c'
       });
 
       // Format the response
@@ -1450,11 +1452,22 @@ class Crawl4AIServer {
 
   private async batchCrawl(options: BatchCrawlOptions) {
     try {
+      // Build crawler config if needed
+      const crawler_config: any = {};
+
+      // Handle remove_images by using exclude_tags
+      if (options.remove_images) {
+        crawler_config.exclude_tags = ['img', 'picture', 'svg'];
+      }
+
+      if (options.bypass_cache) {
+        crawler_config.cache_mode = 'BYPASS';
+      }
+
       const response = await this.axiosClient.post('/crawl', {
         urls: options.urls,
         max_concurrent: options.max_concurrent,
-        remove_images: options.remove_images,
-        bypass_cache: options.bypass_cache,
+        crawler_config: Object.keys(crawler_config).length > 0 ? crawler_config : undefined,
       });
 
       const results = response.data.results || [];
@@ -1508,7 +1521,6 @@ class Crawl4AIServer {
           urls: [options.url],
           strategy,
           max_depth: options.max_depth,
-          follow_links: options.follow_links,
           bypass_cache: options.bypass_cache,
         })
         .catch((error) => {
@@ -1525,6 +1537,53 @@ class Crawl4AIServer {
 
       const results = response.data.results || [];
       const result = results[0] || {};
+
+      // Handle follow_links for sitemaps and RSS feeds
+      if (options.follow_links && (strategy === 'sitemap' || strategy === 'rss')) {
+        // Extract URLs from the content
+        const urlPattern = /<loc>(.*?)<\/loc>|<link[^>]*>(.*?)<\/link>|href=["']([^"']+)["']/gi;
+        const content = result.markdown || result.html || '';
+        const foundUrls: string[] = [];
+        let match;
+
+        while ((match = urlPattern.exec(content)) !== null) {
+          const url = match[1] || match[2] || match[3];
+          if (url && url.startsWith('http')) {
+            foundUrls.push(url);
+          }
+        }
+
+        if (foundUrls.length > 0) {
+          // Limit to first 10 URLs to avoid overwhelming the system
+          const urlsToFollow = foundUrls.slice(0, Math.min(10, options.max_depth || 10));
+
+          // Crawl the found URLs
+          const followResponse = await this.axiosClient.post('/crawl', {
+            urls: urlsToFollow,
+            max_concurrent: 3,
+            bypass_cache: options.bypass_cache,
+          });
+
+          // const followResults = followResponse.data.results || [];
+
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Smart crawl detected content type: ${strategy}\n\nMain content:\n${result.markdown || result.content || 'No content extracted'}\n\n---\nFollowed ${urlsToFollow.length} links:\n${urlsToFollow.map((url, i) => `${i + 1}. ${url}`).join('\n')}`,
+              },
+              ...(result.metadata
+                ? [
+                    {
+                      type: 'text',
+                      text: `\n\n---\nMetadata:\n${JSON.stringify(result.metadata, null, 2)}`,
+                    },
+                  ]
+                : []),
+            ],
+          };
+        }
+      }
 
       return {
         content: [

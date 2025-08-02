@@ -111,11 +111,22 @@ export class Crawl4AIService {
   }
 
   async batchCrawl(options: BatchCrawlOptions) {
+    // Build crawler config if needed
+    const crawler_config: any = {};
+
+    // Handle remove_images by using exclude_tags
+    if (options.remove_images) {
+      crawler_config.exclude_tags = ['img', 'picture', 'svg'];
+    }
+
+    if (options.bypass_cache) {
+      crawler_config.cache_mode = 'BYPASS';
+    }
+
     const response = await this.axiosClient.post('/crawl', {
       urls: options.urls,
       max_concurrent: options.max_concurrent,
-      remove_images: options.remove_images,
-      bypass_cache: options.bypass_cache,
+      crawler_config: Object.keys(crawler_config).length > 0 ? crawler_config : undefined,
     });
 
     return response.data;

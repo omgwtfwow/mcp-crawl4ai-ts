@@ -4,6 +4,15 @@
 
 ### Bug Fixes
 - Fixed parameter mapping in `get_markdown` tool - now correctly maps schema properties (`filter`, `query`, `cache`) to API parameters (`f`, `q`, `c`)
+- Fixed `smart_crawl` schema to use `follow_links` parameter instead of `remove_images`
+- Implemented proper handling for non-functional server parameters:
+  - `batch_crawl`: `remove_images` now uses `exclude_tags` in crawler_config to actually remove images
+  - `smart_crawl`: `follow_links` now crawls URLs found in sitemaps/RSS feeds (max 10 URLs)
+
+### Improvements
+- Updated tool descriptions to accurately reflect actual behavior
+- Added proper TypeScript types for getMarkdown function
+- Enhanced test coverage for batch_crawl parameter handling
 
 ## Version 2.0.0 (2025-08-02)
 
