@@ -19,6 +19,7 @@
     "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
     "test:unit": "NODE_OPTIONS=--experimental-vm-modules jest --testPathIgnorePatterns=integration --testPathIgnorePatterns=examples",
     "test:integration": "NODE_OPTIONS=--experimental-vm-modules jest src/__tests__/integration --testTimeout=180000",
+    "test:ci": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\"",
