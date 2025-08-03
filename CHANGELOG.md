@@ -1,6 +1,12 @@
 # Changelog
 
-## Version 2.1 (2025-08-03)
+## Version 2.1.1 (2025-08-03)
+
+### Bug Fixes
+- Fixed GitHub homepage README display issue by renaming .github/README.md to CI.md
+  - GitHub was showing the CI documentation instead of the main project README
+
+## Version 2.1.0 (2025-08-03)
 
 ### Bug Fixes
 - Fixed `smart_crawl` bug where markdown object was incorrectly printed as `[object Object]`
