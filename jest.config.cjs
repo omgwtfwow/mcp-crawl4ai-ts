@@ -25,4 +25,6 @@ module.exports = {
     ],
   },
   extensionsToTreatAsEsm: ['.ts'],
+  // Limit parallelization for integration tests to avoid overwhelming the server
+  maxWorkers: process.env.NODE_ENV === 'test' && process.argv.some(arg => arg.includes('integration')) ? 2 : undefined,
 };
