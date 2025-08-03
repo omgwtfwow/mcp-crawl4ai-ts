@@ -7,6 +7,7 @@ import axios, { AxiosInstance } from 'axios';
 import dotenv from 'dotenv';
 import { z } from 'zod';
 import {
+  AdvancedCrawlConfig,
   BatchCrawlOptions,
   CrawlEndpointResponse,
   CrawlResultItem,
@@ -2068,11 +2069,17 @@ class Crawl4AIServer {
       if (options.log_console) crawler_config.log_console = options.log_console;
 
       // Call service with proper configuration
-      const response: CrawlEndpointResponse = await this.service.crawl({
+      const crawlConfig: AdvancedCrawlConfig = {
         url: options.url ? String(options.url) : undefined,
-        browser_config,
         crawler_config,
-      });
+      };
+
+      // Only include browser_config if we're not using a session
+      if (!options.session_id) {
+        crawlConfig.browser_config = browser_config;
+      }
+
+      const response: CrawlEndpointResponse = await this.service.crawl(crawlConfig);
 
       // Validate response structure
       if (!response || !response.results || response.results.length === 0) {

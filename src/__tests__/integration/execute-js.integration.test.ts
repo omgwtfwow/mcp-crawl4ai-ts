@@ -71,7 +71,7 @@ describe('execute_js Integration Tests', () => {
         expect(content[0].text).toContain('Script: return window.location.href');
         expect(content[0].text).toContain('Returned: "https://example.com');
       },
-      TEST_TIMEOUTS.long,  // Increase timeout to 120s
+      TEST_TIMEOUTS.long, // Increase timeout to 120s
     );
 
     it(
@@ -132,7 +132,7 @@ describe('execute_js Integration Tests', () => {
         expect(content[0].text).toContain('JavaScript executed on: https://example.com');
         expect(content[0].text).toContain('Returned: "line1\\nline2"');
       },
-      TEST_TIMEOUTS.medium,  // Increase from short to medium
+      TEST_TIMEOUTS.medium, // Increase from short to medium
     );
 
     it(
