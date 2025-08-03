@@ -1,10 +1,21 @@
 /* eslint-env jest */
-import { Crawl4AIService } from '../crawl4ai-service';
-import axios from 'axios';
+import { jest } from '@jest/globals';
 import type { AxiosResponse } from 'axios';
-import type { MockAxiosInstance } from './types/mocks';
+import type { MockAxiosInstance } from './types/mocks.js';
+import type { Crawl4AIService as Crawl4AIServiceType } from '../crawl4ai-service.js';
 
-jest.mock('axios');
+// Manual mock for axios
+const mockAxios = {
+  create: jest.fn()
+};
+
+jest.unstable_mockModule('axios', () => ({
+  default: mockAxios
+}));
+
+// Import modules after mocking
+const axios = await import('axios');
+const { Crawl4AIService } = await import('../crawl4ai-service.js');
 
 // Helper function to create a complete AxiosResponse object
 function createMockAxiosResponse<T>(data: T): AxiosResponse<T> {
@@ -22,7 +33,7 @@ function createMockAxiosResponse<T>(data: T): AxiosResponse<T> {
 }
 
 describe('crawl parameter mapping', () => {
-  let service: Crawl4AIService;
+  let service: Crawl4AIServiceType;
   let mockAxiosInstance: MockAxiosInstance;
 
   beforeEach(() => {
@@ -31,7 +42,7 @@ describe('crawl parameter mapping', () => {
       get: jest.fn(),
       head: jest.fn(),
     };
-    (axios.create as jest.Mock).mockReturnValue(mockAxiosInstance);
+    mockAxios.create.mockReturnValue(mockAxiosInstance);
     service = new Crawl4AIService('http://test.com', 'test-key');
   });
 
