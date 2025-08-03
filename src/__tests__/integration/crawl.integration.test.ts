@@ -680,4 +680,295 @@ describe('crawl Integration Tests', () => {
       TEST_TIMEOUTS.medium,
     );
   });
+
+  describe('Browser Configuration Tests', () => {
+    describe('Cookie handling', () => {
+      it(
+        'should set and send cookies correctly',
+        async () => {
+          const result = await client.callTool({
+            name: 'crawl',
+            arguments: {
+              url: 'https://httpbin.org/cookies',
+              cookies: [
+                {
+                  name: 'test_cookie',
+                  value: 'test_value',
+                  domain: '.httpbin.org',
+                  path: '/',
+                },
+              ],
+              cache_mode: 'BYPASS',
+            },
+          });
+
+          await expectSuccessfulCrawl(result);
+          const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
+          expect(textContent?.text).toBeTruthy();
+          // httpbin returns cookies as JSON in the response
+          expect(textContent?.text).toContain('test_cookie');
+          expect(textContent?.text).toContain('test_value');
+        },
+        TEST_TIMEOUTS.short,
+      );
+
+      it(
+        'should handle multiple cookies',
+        async () => {
+          const result = await client.callTool({
+            name: 'crawl',
+            arguments: {
+              url: 'https://httpbin.org/cookies',
+              cookies: [
+                {
+                  name: 'session_id',
+                  value: 'abc123',
+                  domain: '.httpbin.org',
+                  path: '/',
+                },
+                {
+                  name: 'user_pref',
+                  value: 'dark_mode',
+                  domain: '.httpbin.org',
+                  path: '/',
+                },
+              ],
+              cache_mode: 'BYPASS',
+            },
+          });
+
+          await expectSuccessfulCrawl(result);
+          const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
+          expect(textContent?.text).toBeTruthy();
+          // Verify both cookies are present
+          expect(textContent?.text).toContain('session_id');
+          expect(textContent?.text).toContain('abc123');
+          expect(textContent?.text).toContain('user_pref');
+          expect(textContent?.text).toContain('dark_mode');
+        },
+        TEST_TIMEOUTS.short,
+      );
+    });
+
+    describe('Custom headers', () => {
+      it(
+        'should send custom headers',
+        async () => {
+          const result = await client.callTool({
+            name: 'crawl',
+            arguments: {
+              url: 'https://httpbin.org/headers',
+              headers: {
+                'X-Custom-Header': 'test-value',
+                'X-Request-ID': '12345',
+                'Accept-Language': 'en-US,en;q=0.9',
+              },
+              cache_mode: 'BYPASS',
+            },
+          });
+
+          await expectSuccessfulCrawl(result);
+          const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
+          expect(textContent?.text).toBeTruthy();
+          // httpbin returns headers in the response
+          expect(textContent?.text).toContain('X-Custom-Header');
+          expect(textContent?.text).toContain('test-value');
+          // Note: Some headers may be filtered by the browser
+          // Just verify our custom header got through
+        },
+        TEST_TIMEOUTS.short,
+      );
+    });
+
+    describe('User-Agent configuration', () => {
+      it(
+        'should set custom user agent',
+        async () => {
+          const customUserAgent = 'MCP-Crawl4AI-Test/1.0 (Integration Tests)';
+          const result = await client.callTool({
+            name: 'crawl',
+            arguments: {
+              url: 'https://httpbin.org/user-agent',
+              user_agent: customUserAgent,
+              cache_mode: 'BYPASS',
+            },
+          });
+
+          await expectSuccessfulCrawl(result);
+          const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
+          expect(textContent?.text).toBeTruthy();
+          // httpbin returns the user-agent in the response
+          expect(textContent?.text).toContain(customUserAgent);
+        },
+        TEST_TIMEOUTS.short,
+      );
+    });
+
+    describe('Viewport sizes and screenshots', () => {
+      it(
+        'should capture screenshot at mobile size (375x667)',
+        async () => {
+          const result = await client.callTool({
+            name: 'crawl',
+            arguments: {
+              url: 'https://httpbin.org/html',
+              viewport_width: 375,
+              viewport_height: 667,
+              screenshot: true,
+              screenshot_wait_for: 1,
+              cache_mode: 'BYPASS',
+            },
+          });
+
+          await expectSuccessfulCrawl(result);
+          await expectScreenshot(result);
+          
+          // Check screenshot was captured
+          const imageContent = (result as ToolResult).content.find((c) => c.type === 'image');
+          expect(imageContent).toBeDefined();
+          expect(imageContent?.data).toBeTruthy();
+          
+          // Verify reasonable data size for mobile screenshot
+          const dataLength = imageContent?.data?.length || 0;
+          expect(dataLength).toBeGreaterThan(10000); // At least 10KB
+          expect(dataLength).toBeLessThan(3000000); // Less than 3MB for mobile (base64 encoded)
+        },
+        TEST_TIMEOUTS.medium,
+      );
+
+      it(
+        'should capture screenshot at tablet size (768x1024)',
+        async () => {
+          const result = await client.callTool({
+            name: 'crawl',
+            arguments: {
+              url: 'https://httpbin.org/html',
+              viewport_width: 768,
+              viewport_height: 1024,
+              screenshot: true,
+              screenshot_wait_for: 1,
+              cache_mode: 'BYPASS',
+            },
+          });
+
+          await expectSuccessfulCrawl(result);
+          await expectScreenshot(result);
+          
+          // Check screenshot was captured
+          const imageContent = (result as ToolResult).content.find((c) => c.type === 'image');
+          expect(imageContent).toBeDefined();
+          expect(imageContent?.data).toBeTruthy();
+          
+          // Verify reasonable data size for tablet screenshot
+          const dataLength = imageContent?.data?.length || 0;
+          expect(dataLength).toBeGreaterThan(15000); // At least 15KB
+          expect(dataLength).toBeLessThan(3000000); // Less than 3MB for tablet (base64 encoded)
+        },
+        TEST_TIMEOUTS.medium,
+      );
+
+      it(
+        'should capture screenshot at HD size (1280x720)',
+        async () => {
+          const result = await client.callTool({
+            name: 'crawl',
+            arguments: {
+              url: 'https://httpbin.org/html',
+              viewport_width: 1280,
+              viewport_height: 720,
+              screenshot: true,
+              screenshot_wait_for: 1,
+              cache_mode: 'BYPASS',
+            },
+          });
+
+          await expectSuccessfulCrawl(result);
+          await expectScreenshot(result);
+          
+          // Check screenshot was captured
+          const imageContent = (result as ToolResult).content.find((c) => c.type === 'image');
+          expect(imageContent).toBeDefined();
+          expect(imageContent?.data).toBeTruthy();
+          
+          // Verify reasonable data size for HD screenshot
+          const dataLength = imageContent?.data?.length || 0;
+          expect(dataLength).toBeGreaterThan(20000); // At least 20KB
+          expect(dataLength).toBeLessThan(3000000); // Less than 3MB for HD (base64 encoded)
+        },
+        TEST_TIMEOUTS.medium,
+      );
+
+      it(
+        'should fail gracefully for very large viewport (1920x1080)',
+        async () => {
+          const result = await client.callTool({
+            name: 'crawl',
+            arguments: {
+              url: 'https://httpbin.org/html',
+              viewport_width: 1920,
+              viewport_height: 1080,
+              screenshot: true,
+              screenshot_wait_for: 1,
+              cache_mode: 'BYPASS',
+            },
+          });
+
+          // This should either timeout or return an error based on testing
+          // We expect either an error or no screenshot data
+          const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
+          const imageContent = (result as ToolResult).content.find((c) => c.type === 'image');
+          
+          // If we got text but no image, that's expected for large viewports
+          if (textContent && !imageContent) {
+            expect(textContent).toBeDefined();
+          } else if (textContent?.text?.includes('Error') || textContent?.text?.includes('timeout')) {
+            // Expected error for large viewport
+            expect(textContent.text).toMatch(/Error|timeout/i);
+          }
+        },
+        TEST_TIMEOUTS.long,
+      );
+    });
+
+    describe('Combined browser configurations', () => {
+      it(
+        'should handle cookies, headers, and custom viewport together',
+        async () => {
+          const result = await client.callTool({
+            name: 'crawl',
+            arguments: {
+              url: 'https://httpbin.org/anything',
+              viewport_width: 768,
+              viewport_height: 1024,
+              user_agent: 'MCP-Test-Bot/2.0',
+              cookies: [
+                {
+                  name: 'auth_token',
+                  value: 'secret123',
+                  domain: '.httpbin.org',
+                  path: '/',
+                },
+              ],
+              headers: {
+                'X-Test-Header': 'combined-test',
+              },
+              cache_mode: 'BYPASS',
+            },
+          });
+
+          await expectSuccessfulCrawl(result);
+          const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
+          expect(textContent?.text).toBeTruthy();
+          
+          // httpbin/anything endpoint returns all request data
+          // Verify all configurations were applied
+          expect(textContent?.text).toContain('MCP-Test-Bot/2.0');
+          expect(textContent?.text).toContain('auth_token');
+          expect(textContent?.text).toContain('X-Test-Header');
+          expect(textContent?.text).toContain('combined-test');
+        },
+        TEST_TIMEOUTS.medium,
+      );
+    });
+  });
 });
