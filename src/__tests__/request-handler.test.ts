@@ -1,5 +1,4 @@
 import { jest } from '@jest/globals';
-import { z } from 'zod';
 
 // Mock all dependencies before imports
 const mockGetMarkdown = jest.fn();
@@ -80,20 +79,24 @@ describe('MCP Request Handler Direct Testing', () => {
     mockExtractWithLLM.mockResolvedValue({ answer: 'extracted answer' });
     mockCrawl.mockResolvedValue({
       success: true,
-      results: [{
-        url: 'https://example.com',
-        markdown: { raw_markdown: 'content' },
-        success: true,
-        status_code: 200,
-      }],
+      results: [
+        {
+          url: 'https://example.com',
+          markdown: { raw_markdown: 'content' },
+          success: true,
+          status_code: 200,
+        },
+      ],
     });
     mockParseSitemap.mockResolvedValue(['https://example.com/page1']);
     mockPost.mockResolvedValue({
       data: {
-        results: [{
-          links: { internal: [], external: [] },
-          success: true,
-        }],
+        results: [
+          {
+            links: { internal: [], external: [] },
+            success: true,
+          },
+        ],
       },
     });
 
@@ -142,7 +145,11 @@ describe('MCP Request Handler Direct Testing', () => {
         { name: 'get_markdown', arguments: {}, expectedError: 'Invalid parameters for get_markdown' },
         { name: 'capture_screenshot', arguments: {}, expectedError: 'Invalid parameters for capture_screenshot' },
         { name: 'generate_pdf', arguments: {}, expectedError: 'Invalid parameters for generate_pdf' },
-        { name: 'execute_js', arguments: { url: 'https://example.com' }, expectedError: 'Invalid parameters for execute_js' },
+        {
+          name: 'execute_js',
+          arguments: { url: 'https://example.com' },
+          expectedError: 'Invalid parameters for execute_js',
+        },
         { name: 'batch_crawl', arguments: {}, expectedError: 'Invalid parameters for batch_crawl' },
         { name: 'smart_crawl', arguments: {}, expectedError: 'Invalid parameters for smart_crawl' },
         { name: 'get_html', arguments: {}, expectedError: 'Invalid parameters for get_html' },
@@ -151,7 +158,11 @@ describe('MCP Request Handler Direct Testing', () => {
         { name: 'parse_sitemap', arguments: {}, expectedError: 'Invalid parameters for parse_sitemap' },
         { name: 'crawl', arguments: {}, expectedError: 'Invalid parameters for crawl' },
         { name: 'clear_session', arguments: {}, expectedError: 'Invalid parameters for clear_session' },
-        { name: 'extract_with_llm', arguments: { url: 'https://example.com' }, expectedError: 'Invalid parameters for extract_with_llm' },
+        {
+          name: 'extract_with_llm',
+          arguments: { url: 'https://example.com' },
+          expectedError: 'Invalid parameters for extract_with_llm',
+        },
       ];
 
       for (const req of invalidRequests) {
@@ -185,7 +196,7 @@ describe('MCP Request Handler Direct Testing', () => {
           arguments: { url: 'https://example.com' },
         },
       });
-      
+
       expect(result.content[0].text).toContain('Error: Failed to get markdown: Service error');
     });
 
@@ -194,14 +205,14 @@ describe('MCP Request Handler Direct Testing', () => {
         method: 'tools/call',
         params: {
           name: 'create_session',
-          arguments: { 
+          arguments: {
             session_id: 'test-session',
             initial_url: 'https://example.com',
-            browser_type: 'firefox'
+            browser_type: 'firefox',
           },
         },
       });
-      
+
       expect(result.content[0].text).toContain('Session created successfully');
       expect(result.content[0].text).toContain('firefox');
     });
@@ -214,12 +225,12 @@ describe('MCP Request Handler Direct Testing', () => {
         method: 'tools/call',
         params: {
           name: 'create_session',
-          arguments: { 
-            initial_url: 'https://example.com'
+          arguments: {
+            initial_url: 'https://example.com',
           },
         },
       });
-      
+
       // Session should still be created even if initial crawl fails
       expect(result.content[0].text).toContain('Session created successfully');
     });
@@ -232,7 +243,7 @@ describe('MCP Request Handler Direct Testing', () => {
           arguments: { session_id: 'non-existent' },
         },
       });
-      
+
       expect(result.content[0].text).toContain('Session not found: non-existent');
     });
 
@@ -253,7 +264,7 @@ describe('MCP Request Handler Direct Testing', () => {
           arguments: {},
         },
       });
-      
+
       expect(result.content[0].text).toContain('Active sessions (1)');
       expect(result.content[0].text).toContain('test-session');
     });

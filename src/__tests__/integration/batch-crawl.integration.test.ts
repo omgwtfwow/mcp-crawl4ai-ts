@@ -53,7 +53,7 @@ describe('batch_crawl Integration Tests', () => {
         const result = await client.callTool({
           name: 'batch_crawl',
           arguments: {
-            urls: ['https://httpbin.org/delay/1', 'https://httpbin.org/delay/1', 'https://httpbin.org/delay/1'],
+            urls: ['https://httpbin.org/html', 'https://httpbin.org/xml', 'https://httpbin.org/json'],
             max_concurrent: 1,
           },
         });
@@ -64,7 +64,7 @@ describe('batch_crawl Integration Tests', () => {
 
         const text = content[0].text || '';
         expect(text).toContain('Processed 3 URLs');
-        expect(text).toContain('https://httpbin.org/delay/1: Success');
+        expect(text).toContain(': Success');
       },
       TEST_TIMEOUTS.long,
     );

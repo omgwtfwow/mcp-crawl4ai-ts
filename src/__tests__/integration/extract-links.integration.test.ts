@@ -102,7 +102,7 @@ describe('extract_links Integration Tests', () => {
         const result = await client.callTool({
           name: 'extract_links',
           arguments: {
-            url: 'https://api.github.com',
+            url: 'https://httpbin.org/json',
           },
         });
 
