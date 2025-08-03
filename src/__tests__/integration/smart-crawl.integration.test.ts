@@ -51,7 +51,7 @@ describe('smart_crawl Integration Tests', () => {
         const result = await client.callTool({
           name: 'smart_crawl',
           arguments: {
-            url: 'https://httpbin.org/xml',
+            url: 'https://docs.python.org/sitemap.xml',
             max_depth: 1,
           },
         });
@@ -62,7 +62,7 @@ describe('smart_crawl Integration Tests', () => {
 
         const text = content[0].text || '';
         expect(text).toContain('Smart crawl detected content type:');
-        expect(text).toContain('xml');
+        expect(text).toContain('sitemap');
       },
       TEST_TIMEOUTS.medium,
     );
@@ -73,7 +73,7 @@ describe('smart_crawl Integration Tests', () => {
         const result = await client.callTool({
           name: 'smart_crawl',
           arguments: {
-            url: 'https://httpbin.org/xml',
+            url: 'https://docs.python.org/sitemap.xml',
             follow_links: true,
             max_depth: 1,
           },
