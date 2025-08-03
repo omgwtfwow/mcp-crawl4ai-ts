@@ -29,7 +29,7 @@ describe('batch_crawl Integration Tests', () => {
         const result = await client.callTool({
           name: 'batch_crawl',
           arguments: {
-            urls: ['https://example.com/', 'https://httpbingo.org/html'],
+            urls: ['https://httpbingo.org/html', 'https://httpbingo.org/json'],
           },
         });
 
@@ -41,8 +41,8 @@ describe('batch_crawl Integration Tests', () => {
         const text = content[0].text || '';
         expect(text).toContain('Batch crawl completed');
         expect(text).toContain('Processed 2 URLs');
-        expect(text).toContain('https://example.com/: Success');
         expect(text).toContain('https://httpbingo.org/html: Success');
+        expect(text).toContain('https://httpbingo.org/json: Success');
       },
       TEST_TIMEOUTS.medium,
     );
@@ -53,7 +53,7 @@ describe('batch_crawl Integration Tests', () => {
         const result = await client.callTool({
           name: 'batch_crawl',
           arguments: {
-            urls: ['https://example.com/', 'https://httpbingo.org/html', 'https://testpages.eviltester.com/styled/basic-web-page-test.html'],
+            urls: ['https://httpbingo.org/html', 'https://httpbingo.org/xml', 'https://httpbingo.org/json'],
             max_concurrent: 1,
           },
         });
