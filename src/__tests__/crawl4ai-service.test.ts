@@ -1,12 +1,12 @@
 import nock from 'nock';
-import { Crawl4AIService } from '../crawl4ai-service.js';
+import { Crawl4AIService } from '../crawl4ai-service';
 import type {
   MarkdownEndpointResponse,
   ScreenshotEndpointResponse,
   PDFEndpointResponse,
   HTMLEndpointResponse,
   CrawlEndpointResponse,
-} from '../types.js';
+} from '../types';
 
 /**
  * Unit tests for Crawl4AIService using nock for HTTP mocking

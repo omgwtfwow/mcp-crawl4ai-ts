@@ -1,8 +1,8 @@
 /* eslint-env jest */
-import { Crawl4AIService } from '../crawl4ai-service.js';
+import { Crawl4AIService } from '../crawl4ai-service';
 import axios from 'axios';
 import type { AxiosResponse } from 'axios';
-import type { MockAxiosInstance } from './types/mocks.js';
+import type { MockAxiosInstance } from './types/mocks';
 
 jest.mock('axios');
 
