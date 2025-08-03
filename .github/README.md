@@ -29,10 +29,10 @@ Option 1 - Generate mock code from real API:
 CRAWL4AI_API_KEY=your-key npm run generate-mocks
 ```
 
-Option 2 - Capture mock responses as JSON:
+Option 2 - View API responses as JSON:
 ```bash
-# This will save responses to mock-responses.json
-CRAWL4AI_API_KEY=your-key npm run update-mocks
+# This will save responses to mock-responses.json for inspection
+CRAWL4AI_API_KEY=your-key npm run view-mocks
 ```
 
 Option 3 - Manual update:

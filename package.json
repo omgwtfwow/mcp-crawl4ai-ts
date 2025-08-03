@@ -21,7 +21,7 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
     "check": "npm run lint && npm run format:check && npm run build",
-    "update-mocks": "tsx scripts/update-mocks.ts",
+    "view-mocks": "tsx scripts/view-api-responses.ts",
     "generate-mocks": "tsx scripts/generate-mock-code.ts"
   },
   "keywords": [

@@ -45,6 +45,14 @@
   - Renamed test file for clarity
   - Improved unit test performance from 92s to ~1s by removing timeout tests
   - Cleaned up test organization and removed test README
+- Added GitHub Actions CI workflow:
+  - Automatic testing on push to main and pull requests
+  - Tests run on Node.js 18.x and 20.x
+  - Includes linting, formatting checks, and build verification
+- Added mock helper scripts:
+  - `npm run generate-mocks`: Generate nock mock code from real API
+  - `npm run view-mocks`: View and save API responses for reference
+  - Both scripts help maintain accurate test mocks
 
 ## Version 2.0.1 (2025-08-02)
 Update README

@@ -1,7 +1,10 @@
 #!/usr/bin/env tsx
 /**
- * Helper script to update nock mocks based on real API responses
- * Usage: npm run update-mocks
+ * View real API responses and save them to a JSON file for reference
+ * Usage: npm run view-mocks
+ * 
+ * This script helps you understand what the API returns so you can write better tests.
+ * The responses are saved to mock-responses.json (gitignored).
  */
 
 /// <reference types="node" />

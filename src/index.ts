@@ -1299,7 +1299,7 @@ class Crawl4AIServer {
           content: [
             {
               type: 'text',
-              text: `Error: ${error.message}`,
+              text: `Error: ${error instanceof Error ? error.message : String(error)}`,
             },
           ],
         };
@@ -1386,7 +1386,7 @@ class Crawl4AIServer {
           {
             type: 'resource',
             resource: {
-              uri: `data:application/pdf;name=${encodeURIComponent(new URL(options.url).hostname)}.pdf;base64,${result.pdf}`,
+              uri: `data:application/pdf;name=${encodeURIComponent(new URL(String(options.url)).hostname)}.pdf;base64,${result.pdf}`,
               mimeType: 'application/pdf',
               blob: result.pdf,
             },
@@ -1430,9 +1430,10 @@ class Crawl4AIServer {
             let resultStr = '';
             if (res && typeof res === 'object' && 'success' in res) {
               // This is a status object (e.g., from null return or execution without return)
-              resultStr = res.success
+              const statusObj = res as { success: unknown; error?: unknown };
+              resultStr = statusObj.success
                 ? 'Executed successfully (no return value)'
-                : `Error: ${res.error || 'Unknown error'}`;
+                : `Error: ${statusObj.error || 'Unknown error'}`;
             } else {
               // This is an actual return value
               resultStr = JSON.stringify(res, null, 2);
@@ -1881,7 +1882,7 @@ class Crawl4AIServer {
           }
         } catch (error) {
           // Log but continue crawling other pages
-          console.error(`Failed to crawl ${current.url}:`, error.message || error);
+          console.error(`Failed to crawl ${current.url}:`, error instanceof Error ? error.message : error);
         }
       }
 
@@ -1903,7 +1904,7 @@ class Crawl4AIServer {
         ],
       };
     } catch (error) {
-      throw new Error(`Failed to crawl recursively: ${error.message}`);
+      throw new Error(`Failed to crawl recursively: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -2009,12 +2010,12 @@ class Crawl4AIServer {
       if (options.session_id) {
         crawler_config.session_id = options.session_id;
         // Update session last_used time
-        const session = this.sessions.get(options.session_id);
+        const session = this.sessions.get(String(options.session_id));
         if (session) {
           session.last_used = new Date();
         }
       }
-      if (options.cache_mode) crawler_config.cache_mode = options.cache_mode.toLowerCase();
+      if (options.cache_mode) crawler_config.cache_mode = String(options.cache_mode).toLowerCase();
 
       // Performance
       if (options.timeout) crawler_config.timeout = options.timeout;
@@ -2061,7 +2062,7 @@ class Crawl4AIServer {
 
       // Call service with proper configuration
       const response: CrawlEndpointResponse = await this.service.crawl({
-        url: options.url,
+        url: options.url ? String(options.url) : undefined,
         browser_config,
         crawler_config,
       });
@@ -2113,7 +2114,7 @@ class Crawl4AIServer {
         content.push({
           type: 'resource',
           resource: {
-            uri: `data:application/pdf;name=${encodeURIComponent(new URL(options.url).hostname)}.pdf;base64,${result.pdf}`,
+            uri: `data:application/pdf;name=${encodeURIComponent(new URL(String(options.url)).hostname)}.pdf;base64,${result.pdf}`,
             mimeType: 'application/pdf',
             blob: result.pdf,
           },
@@ -2213,7 +2214,7 @@ class Crawl4AIServer {
         created_at: this.sessions.get(sessionId)?.created_at.toISOString(),
       };
     } catch (error) {
-      throw new Error(`Failed to create session: ${error.message}`);
+      throw new Error(`Failed to create session: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -2236,7 +2237,7 @@ class Crawl4AIServer {
         ],
       };
     } catch (error) {
-      throw new Error(`Failed to clear session: ${error.message}`);
+      throw new Error(`Failed to clear session: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -2285,7 +2286,7 @@ class Crawl4AIServer {
         ],
       };
     } catch (error) {
-      throw new Error(`Failed to list sessions: ${error.message}`);
+      throw new Error(`Failed to list sessions: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -2302,7 +2303,7 @@ class Crawl4AIServer {
         ],
       };
     } catch (error) {
-      throw new Error(`Failed to extract with LLM: ${error.message}`);
+      throw new Error(`Failed to extract with LLM: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
