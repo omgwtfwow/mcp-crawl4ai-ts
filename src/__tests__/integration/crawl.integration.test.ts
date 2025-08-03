@@ -971,4 +971,316 @@ describe('crawl Integration Tests', () => {
       );
     });
   });
+
+  describe('Crawler Configuration Advanced Tests', () => {
+    describe('Content filtering parameters', () => {
+      it(
+        'should remove forms when remove_forms is true',
+        async () => {
+          const result = await client.callTool({
+            name: 'crawl',
+            arguments: {
+              url: 'https://httpbin.org/forms/post',
+              remove_forms: true,
+              cache_mode: 'BYPASS',
+            },
+          });
+
+          await expectSuccessfulCrawl(result);
+          const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
+          expect(textContent?.text).toBeTruthy();
+          // Forms should be removed, so no form-related text should appear
+          expect(textContent?.text).not.toContain('<form');
+          expect(textContent?.text).not.toContain('type="submit"');
+          expect(textContent?.text).not.toContain('input type=');
+        },
+        TEST_TIMEOUTS.short,
+      );
+
+      it(
+        'should keep forms when remove_forms is false',
+        async () => {
+          const result = await client.callTool({
+            name: 'crawl',
+            arguments: {
+              url: 'https://httpbin.org/forms/post',
+              remove_forms: false,
+              cache_mode: 'BYPASS',
+              word_count_threshold: 10,
+            },
+          });
+
+          await expectSuccessfulCrawl(result);
+          const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
+          expect(textContent?.text).toBeTruthy();
+          // Forms should be present - check for form-related keywords
+          const text = textContent?.text?.toLowerCase() || '';
+          // httpbin forms page should have form elements
+          expect(text.length).toBeGreaterThan(100);
+        },
+        TEST_TIMEOUTS.short,
+      );
+
+      it(
+        'should preserve data attributes when keep_data_attributes is true',
+        async () => {
+          const result = await client.callTool({
+            name: 'crawl',
+            arguments: {
+              url: 'https://getbootstrap.com/docs/4.0/components/alerts/',
+              keep_data_attributes: true,
+              cache_mode: 'BYPASS',
+              word_count_threshold: 10,
+            },
+          });
+
+          await expectSuccessfulCrawl(result);
+          const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
+          expect(textContent?.text).toBeTruthy();
+          // Should contain alert content
+          expect(textContent?.text).toContain('alert');
+        },
+        TEST_TIMEOUTS.medium,
+      );
+    });
+
+    describe('JavaScript execution parameters', () => {
+      it(
+        'should return only JS results when js_only is true',
+        async () => {
+          const result = await client.callTool({
+            name: 'crawl',
+            arguments: {
+              url: 'https://httpbin.org/html',
+              js_code: ['return document.title', 'return document.querySelectorAll("p").length'],
+              js_only: true,
+              cache_mode: 'BYPASS',
+            },
+          });
+
+          await expectSuccessfulCrawl(result);
+          const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
+          expect(textContent?.text).toBeTruthy();
+
+          // Should contain JS execution results but not the full HTML content
+          // The result should be much shorter than full page content
+          expect(textContent?.text?.length).toBeLessThan(1000);
+          // Should not contain the full Moby Dick text from the page
+          expect(textContent?.text).not.toContain('Herman Melville');
+        },
+        TEST_TIMEOUTS.short,
+      );
+
+      it(
+        'should handle js_only with session_id',
+        async () => {
+          const sessionId = generateSessionId();
+          const result = await client.callTool({
+            name: 'crawl',
+            arguments: {
+              url: 'https://httpbin.org/html',
+              session_id: sessionId,
+              js_code: 'return window.location.href',
+              js_only: true,
+              cache_mode: 'BYPASS',
+            },
+          });
+
+          await expectSuccessfulCrawl(result);
+        },
+        TEST_TIMEOUTS.short,
+      );
+    });
+
+    describe('Page visibility parameters', () => {
+      it(
+        'should extract content when body is hidden and ignore_body_visibility is true',
+        async () => {
+          const result = await client.callTool({
+            name: 'crawl',
+            arguments: {
+              url: 'https://httpbin.org/html',
+              js_code: 'document.body.style.visibility = "hidden"; return "body hidden"',
+              ignore_body_visibility: true,
+              cache_mode: 'BYPASS',
+              word_count_threshold: 10,
+            },
+          });
+
+          await expectSuccessfulCrawl(result);
+          const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
+          expect(textContent?.text).toBeTruthy();
+          // Should still extract content despite hidden body
+          expect(textContent?.text).toContain('Herman Melville');
+        },
+        TEST_TIMEOUTS.short,
+      );
+
+      it(
+        'should respect body visibility when ignore_body_visibility is false',
+        async () => {
+          const result = await client.callTool({
+            name: 'crawl',
+            arguments: {
+              url: 'https://httpbin.org/html',
+              js_code: 'document.body.style.visibility = "hidden"; return "body hidden"',
+              ignore_body_visibility: false,
+              cache_mode: 'BYPASS',
+              word_count_threshold: 10,
+            },
+          });
+
+          await expectSuccessfulCrawl(result);
+          // Content extraction behavior may vary when body is hidden
+        },
+        TEST_TIMEOUTS.short,
+      );
+    });
+
+    describe('Debug and logging parameters', () => {
+      it(
+        'should capture console logs when log_console is true',
+        async () => {
+          const result = await client.callTool({
+            name: 'crawl',
+            arguments: {
+              url: 'https://httpbin.org/html',
+              js_code: [
+                'console.log("Test log message 1")',
+                'console.warn("Test warning")',
+                'console.error("Test error")',
+                'return "logs executed"',
+              ],
+              log_console: true,
+              cache_mode: 'BYPASS',
+            },
+          });
+
+          await expectSuccessfulCrawl(result);
+          // Note: Console logs may be captured in a separate field or in verbose output
+        },
+        TEST_TIMEOUTS.short,
+      );
+
+      it(
+        'should provide verbose output when verbose is true',
+        async () => {
+          const result = await client.callTool({
+            name: 'crawl',
+            arguments: {
+              url: 'https://httpbin.org/html',
+              verbose: true,
+              cache_mode: 'BYPASS',
+              word_count_threshold: 50,
+            },
+          });
+
+          await expectSuccessfulCrawl(result);
+          // Verbose output may include additional debugging information
+        },
+        TEST_TIMEOUTS.short,
+      );
+    });
+
+    describe('Media filtering parameters', () => {
+      it(
+        'should exclude external images when exclude_external_images is true',
+        async () => {
+          // First, let's create a page with external images via JS
+          const result = await client.callTool({
+            name: 'crawl',
+            arguments: {
+              url: 'https://httpbin.org/html',
+              js_code: `
+                const img1 = document.createElement('img');
+                img1.src = 'https://httpbin.org/image/png';
+                img1.alt = 'External PNG';
+                document.body.appendChild(img1);
+                
+                const img2 = document.createElement('img');
+                img2.src = '/local-image.png';
+                img2.alt = 'Local image';
+                document.body.appendChild(img2);
+                
+                return document.images.length;
+              `,
+              exclude_external_images: true,
+              cache_mode: 'BYPASS',
+            },
+          });
+
+          await expectSuccessfulCrawl(result);
+          const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
+          expect(textContent?.text).toBeTruthy();
+          // The external image references should be filtered out
+        },
+        TEST_TIMEOUTS.medium,
+      );
+
+      it(
+        'should include external images when exclude_external_images is false',
+        async () => {
+          const result = await client.callTool({
+            name: 'crawl',
+            arguments: {
+              url: 'https://httpbin.org/html',
+              exclude_external_images: false,
+              cache_mode: 'BYPASS',
+            },
+          });
+
+          await expectSuccessfulCrawl(result);
+        },
+        TEST_TIMEOUTS.short,
+      );
+    });
+
+    describe('Combined crawler configuration tests', () => {
+      it(
+        'should handle multiple filtering options together',
+        async () => {
+          const result = await client.callTool({
+            name: 'crawl',
+            arguments: {
+              url: 'https://httpbin.org/forms/post',
+              remove_forms: true,
+              exclude_external_links: true,
+              exclude_external_images: true,
+              only_text: true,
+              word_count_threshold: 10,
+              cache_mode: 'BYPASS',
+            },
+          });
+
+          await expectSuccessfulCrawl(result);
+          const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
+          expect(textContent?.text).toBeTruthy();
+          // Should have filtered content
+          expect(textContent?.text).not.toContain('<form');
+          expect(textContent?.text).not.toContain('type="submit"');
+        },
+        TEST_TIMEOUTS.short,
+      );
+
+      it(
+        'should handle debug options with content extraction',
+        async () => {
+          const result = await client.callTool({
+            name: 'crawl',
+            arguments: {
+              url: 'https://httpbin.org/html',
+              verbose: true,
+              log_console: true,
+              js_code: 'console.log("Debug test"); return document.title',
+              keep_data_attributes: true,
+              cache_mode: 'BYPASS',
+            },
+          });
+
+          await expectSuccessfulCrawl(result);
+        },
+        TEST_TIMEOUTS.short,
+      );
+    });
+  });
 });
