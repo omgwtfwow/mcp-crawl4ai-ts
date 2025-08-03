@@ -59,7 +59,7 @@ interface ErrorWithResponse {
 
 // Validation schemas
 // Helper to validate JavaScript code
-const validateJavaScriptCode = (code: string): boolean => {
+export const validateJavaScriptCode = (code: string): boolean => {
   // Check for common HTML entities that shouldn't be in JS
   if (/&quot;|&amp;|&lt;|&gt;|&#\d+;|&\w+;/.test(code)) {
     return false;
@@ -372,6 +372,20 @@ const CrawlSchema = z
         'Error: js_code array cannot be empty. Either provide JavaScript code to execute or remove the js_code parameter entirely.',
     },
   );
+
+// Export schemas for testing
+export {
+  GetMarkdownSchema,
+  CrawlSchema,
+  BatchCrawlSchema,
+  CreateSessionSchema,
+  CaptureScreenshotSchema,
+  GeneratePdfSchema,
+  ExecuteJsSchema,
+  ExtractWithLlmSchema,
+  SmartCrawlSchema,
+  CrawlRecursiveSchema,
+};
 
 export class Crawl4AIServer {
   private server: Server;
@@ -1760,20 +1774,34 @@ export class Crawl4AIServer {
 
       // Categorize links
       const categorized: Record<string, string[]> = {
-        internal: internalUrls,
-        external: externalUrls,
+        internal: [],
+        external: [],
         social: [],
         documents: [],
         images: [],
         scripts: [],
       };
 
-      // Further categorize external links
+      // Further categorize links
       const socialDomains = ['facebook.com', 'twitter.com', 'linkedin.com', 'instagram.com', 'youtube.com'];
       const docExtensions = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx'];
       const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp'];
       const scriptExtensions = ['.js', '.css'];
 
+      // Categorize internal URLs
+      internalUrls.forEach((href: string) => {
+        if (docExtensions.some((ext) => href.toLowerCase().endsWith(ext))) {
+          categorized.documents.push(href);
+        } else if (imageExtensions.some((ext) => href.toLowerCase().endsWith(ext))) {
+          categorized.images.push(href);
+        } else if (scriptExtensions.some((ext) => href.toLowerCase().endsWith(ext))) {
+          categorized.scripts.push(href);
+        } else {
+          categorized.internal.push(href);
+        }
+      });
+
+      // Categorize external URLs
       externalUrls.forEach((href: string) => {
         if (socialDomains.some((domain) => href.includes(domain))) {
           categorized.social.push(href);
@@ -1783,6 +1811,8 @@ export class Crawl4AIServer {
           categorized.images.push(href);
         } else if (scriptExtensions.some((ext) => href.toLowerCase().endsWith(ext))) {
           categorized.scripts.push(href);
+        } else {
+          categorized.external.push(href);
         }
       });
 

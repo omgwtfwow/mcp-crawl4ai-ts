@@ -1,38 +1,8 @@
 /* eslint-env jest */
 import { describe, it, expect } from '@jest/globals';
-
-// Since validateJavaScriptCode is not exported, we need to test it through the schemas
-// that use it, or we need to export it from index.ts for testing
-// For now, let's test it through the JsCodeSchema validation
+import { validateJavaScriptCode } from '../../index.js';
 
 describe('JavaScript Code Validation', () => {
-  // Mock the validation function logic that we know exists in index.ts
-  // This is a direct copy from index.ts
-  const validateJavaScriptCode = (code: string): boolean => {
-    // Check for common HTML entities that shouldn't be in JS
-    if (/&quot;|&amp;|&lt;|&gt;|&#\d+;|&\w+;/.test(code)) {
-      return false;
-    }
-
-    // Basic check to ensure it's not HTML
-    if (/<(!DOCTYPE|html|body|head|script|style)\b/i.test(code)) {
-      return false;
-    }
-
-    // Check for literal \n, \t, \r outside of strings (common LLM mistake)
-    // Look for patterns like: ;\n or }\n or )\n which suggest literal newlines
-    if (/[;})]\s*\\n|\\n\s*[{(/]/.test(code)) {
-      return false;
-    }
-
-    // Check for obvious cases of literal \n between statements
-    if (/[;})]\s*\\n\s*\w/.test(code)) {
-      return false;
-    }
-
-    return true;
-  };
-
   describe('Valid JavaScript', () => {
     it('should accept simple JavaScript code', () => {
       expect(validateJavaScriptCode('console.log("Hello world")')).toBe(true);

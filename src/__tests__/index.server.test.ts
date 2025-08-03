@@ -64,7 +64,19 @@ jest.unstable_mockModule('axios', () => ({
 }));
 
 // Now dynamically import the modules after mocks are set up
-const { Crawl4AIServer } = await import('../index.js');
+const { 
+  Crawl4AIServer,
+  GetMarkdownSchema,
+  CrawlSchema,
+  BatchCrawlSchema,
+  CreateSessionSchema,
+  CaptureScreenshotSchema,
+  GeneratePdfSchema,
+  ExecuteJsSchema,
+  ExtractWithLlmSchema,
+  SmartCrawlSchema,
+  CrawlRecursiveSchema,
+} = await import('../index.js');
 const { Crawl4AIService } = await import('../crawl4ai-service.js');
 
 // Import types statically (these are removed at compile time)
@@ -78,8 +90,9 @@ import type {
 
 describe('Crawl4AIServer Tool Handlers', () => {
   let server: InstanceType<typeof Crawl4AIServer>;
+  let requestHandler: any;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
 
     // Reset all mock functions
@@ -97,6 +110,12 @@ describe('Crawl4AIServer Tool Handlers', () => {
 
     // Create server instance - the mock will be used automatically
     server = new Crawl4AIServer();
+    
+    // Start the server to register handlers
+    await server.start();
+    
+    // Get the request handler
+    requestHandler = mockSetRequestHandler.mock.calls.find(call => call[0].parse === undefined)?.[1];
   });
 
   // Add a simple test to verify mocking works
@@ -104,6 +123,19 @@ describe('Crawl4AIServer Tool Handlers', () => {
     const MockedService = Crawl4AIService as jest.MockedClass<typeof Crawl4AIService>;
     expect(MockedService).toHaveBeenCalledTimes(1);
     expect(MockedService).toHaveBeenCalledWith('http://test.example.com', 'test-api-key');
+  });
+
+  describe('Constructor and setup', () => {
+    it('should initialize with correct configuration', () => {
+      expect(server).toBeDefined();
+      expect((server as any).service).toBeDefined();
+      expect((server as any).sessions).toBeDefined();
+    });
+
+    it('should set up handlers on construction', () => {
+      expect(mockSetRequestHandler).toHaveBeenCalled();
+      expect(mockSetRequestHandler.mock.calls.length).toBeGreaterThan(0);
+    });
   });
 
   describe('Tool Handler Success Cases', () => {
@@ -822,6 +854,930 @@ describe('Crawl4AIServer Tool Handlers', () => {
         });
 
         expect(result.content[0].text).toContain('Smart crawl detected content type');
+      });
+    });
+
+    describe('ZodError validation tests', () => {
+      it('should validate get_markdown parameters', () => {
+        // Valid case
+        expect(() => {
+          GetMarkdownSchema.parse({ url: 'https://example.com' });
+        }).not.toThrow();
+
+        // Invalid - missing url
+        expect(() => {
+          GetMarkdownSchema.parse({ filter: 'fit' });
+        }).toThrow();
+
+        // Invalid - bm25 without query
+        expect(() => {
+          GetMarkdownSchema.parse({ url: 'https://example.com', filter: 'bm25' });
+        }).toThrow('Query parameter is required when using bm25 or llm filter');
+      });
+
+      it('should validate crawl parameters', () => {
+        // Valid case
+        expect(() => {
+          CrawlSchema.parse({ url: 'https://example.com' });
+        }).not.toThrow();
+
+        // Invalid - js_only without session_id
+        expect(() => {
+          CrawlSchema.parse({ url: 'https://example.com', js_only: true });
+        }).toThrow('js_only requires session_id');
+
+        // Invalid - empty js_code array
+        expect(() => {
+          CrawlSchema.parse({ url: 'https://example.com', js_code: [] });
+        }).toThrow('js_code array cannot be empty');
+      });
+
+      it('should validate batch_crawl parameters', () => {
+        // Valid case
+        expect(() => {
+          BatchCrawlSchema.parse({ urls: ['https://example.com'] });
+        }).not.toThrow();
+
+        // Invalid - not an array
+        expect(() => {
+          BatchCrawlSchema.parse({ urls: 'not-an-array' });
+        }).toThrow();
+      });
+
+      it('should validate create_session parameters', () => {
+        // Valid case
+        expect(() => {
+          CreateSessionSchema.parse({});
+        }).not.toThrow();
+
+        // Invalid browser type
+        expect(() => {
+          CreateSessionSchema.parse({ browser_type: 'invalid' });
+        }).toThrow();
+      });
+    });
+
+    describe('Parameter validation edge cases', () => {
+      // These tests require proper schema validation which happens at the handler level
+      // Skipping direct method calls as they bypass validation
+    });
+
+    describe('Additional coverage tests', () => {
+      it('should handle crawl with media extraction', async () => {
+        mockCrawl.mockResolvedValue({
+          success: true,
+          results: [{
+            url: 'https://example.com',
+            markdown: { raw_markdown: 'Content' },
+            media: {
+              images: [
+                { src: 'https://example.com/img1.jpg', alt: 'Image 1' },
+                { src: 'https://example.com/img2.jpg', alt: 'Image 2' }
+              ],
+              videos: [{ src: 'https://example.com/video.mp4', type: 'video/mp4' }],
+              audios: []
+            },
+            success: true,
+            status_code: 200,
+          }],
+        });
+
+        const result = await (server as any).crawl({
+          url: 'https://example.com',
+          media_handling: { images: true, videos: true },
+        });
+
+        expect(result.content.length).toBeGreaterThan(0);
+        expect(result.content[0].type).toBe('text');
+        expect(result.content[0].text).toBe('Content');
+      });
+
+      it('should handle crawl with tables extraction', async () => {
+        mockCrawl.mockResolvedValue({
+          success: true,
+          results: [{
+            url: 'https://example.com',
+            markdown: { raw_markdown: 'Content' },
+            tables: [
+              {
+                headers: ['Name', 'Age'],
+                rows: [['John', '30'], ['Jane', '25']],
+                markdown: '| Name | Age |\n|------|-----|\n| John | 30 |\n| Jane | 25 |'
+              }
+            ],
+            success: true,
+            status_code: 200,
+          }],
+        });
+
+        const result = await (server as any).crawl({
+          url: 'https://example.com',
+        });
+
+        expect(result.content.length).toBeGreaterThan(0);
+        expect(result.content[0].type).toBe('text');
+        expect(result.content[0].text).toBe('Content');
+      });
+
+      it('should handle crawl with network_requests', async () => {
+        mockCrawl.mockResolvedValue({
+          success: true,
+          results: [{
+            url: 'https://example.com',
+            markdown: { raw_markdown: 'Content' },
+            network_requests: [
+              { url: 'https://api.example.com/data', method: 'GET', status: 200 },
+              { url: 'https://api.example.com/post', method: 'POST', status: 201 }
+            ],
+            success: true,
+            status_code: 200,
+          }],
+        });
+
+        const result = await (server as any).crawl({
+          url: 'https://example.com',
+          network_requests: true,
+        });
+
+        expect(result.content.length).toBeGreaterThan(0);
+        expect(result.content[0].type).toBe('text');
+        expect(result.content[0].text).toBe('Content');
+      });
+
+      it('should handle crawl with mhtml output', async () => {
+        mockCrawl.mockResolvedValue({
+          success: true,
+          results: [{
+            url: 'https://example.com',
+            markdown: { raw_markdown: 'Content' },
+            mhtml: 'MHTML content here',
+            success: true,
+            status_code: 200,
+          }],
+        });
+
+        const result = await (server as any).crawl({
+          url: 'https://example.com',
+          mhtml: true,
+        });
+
+        expect(result.content.length).toBeGreaterThan(0);
+        expect(result.content[0].type).toBe('text');
+        expect(result.content[0].text).toBe('Content');
+      });
+
+      it('should handle crawl with downloaded_files', async () => {
+        mockCrawl.mockResolvedValue({
+          success: true,
+          results: [{
+            url: 'https://example.com',
+            markdown: { raw_markdown: 'Content' },
+            downloaded_files: {
+              'file1.pdf': 'base64content1',
+              'file2.doc': 'base64content2'
+            },
+            success: true,
+            status_code: 200,
+          }],
+        });
+
+        const result = await (server as any).crawl({
+          url: 'https://example.com',
+          download_files: true,
+        });
+
+        expect(result.content.length).toBeGreaterThan(0);
+        expect(result.content[0].type).toBe('text');
+        expect(result.content[0].text).toBe('Content');
+      });
+
+      it('should handle crawl with ssl_certificate', async () => {
+        mockCrawl.mockResolvedValue({
+          success: true,
+          results: [{
+            url: 'https://example.com',
+            markdown: { raw_markdown: 'Content' },
+            ssl_certificate: {
+              issuer: 'Let\'s Encrypt',
+              subject: '*.example.com',
+              validFrom: '2024-01-01',
+              validTo: '2024-12-31',
+              protocol: 'TLSv1.3'
+            },
+            success: true,
+            status_code: 200,
+          }],
+        });
+
+        const result = await (server as any).crawl({
+          url: 'https://example.com',
+          ssl_certificate: true,
+        });
+
+        expect(result.content.length).toBeGreaterThan(0);
+        expect(result.content[0].type).toBe('text');
+        expect(result.content[0].text).toBe('Content');
+      });
+
+      it('should handle crawl with wait_for conditions', async () => {
+        mockCrawl.mockResolvedValue({
+          success: true,
+          results: [{
+            url: 'https://example.com',
+            markdown: { raw_markdown: 'Dynamic content loaded' },
+            success: true,
+            status_code: 200,
+          }],
+        });
+
+        const result = await (server as any).crawl({
+          url: 'https://example.com',
+          wait_for: {
+            selector: '.dynamic-content',
+            timeout: 5000
+          },
+        });
+
+        expect(mockCrawl).toHaveBeenCalledWith(
+          expect.objectContaining({
+            crawler_config: expect.objectContaining({
+              wait_for: {
+                selector: '.dynamic-content',
+                timeout: 5000
+              }
+            })
+          })
+        );
+      });
+
+      it('should handle crawl error scenarios', async () => {
+        mockCrawl.mockResolvedValue({
+          success: false,
+          results: [{
+            url: 'https://example.com',
+            success: false,
+            error: 'Page load timeout',
+            status_code: 0,
+          }],
+        });
+
+        const result = await (server as any).crawl({
+          url: 'https://example.com',
+        });
+
+        expect(result.content[0].text).toBe('No content extracted');
+      });
+
+      it('should handle extract_links with categorized output', async () => {
+        mockPost.mockResolvedValue({
+          data: {
+            results: [{
+              links: {
+                internal: [
+                  { href: '/page1', text: 'Page 1' },
+                  { href: '/page2', text: 'Page 2' }
+                ],
+                external: [
+                  { href: 'https://external.com', text: 'External' }
+                ],
+                social: [
+                  { href: 'https://twitter.com/example', text: 'Twitter' }
+                ],
+                documents: [
+                  { href: '/file.pdf', text: 'PDF Document' }
+                ],
+                images: [
+                  { href: '/image.jpg', text: 'Image' }
+                ]
+              },
+            }],
+          },
+        });
+
+        const result = await (server as any).extractLinks({
+          url: 'https://example.com',
+          categorize: true,
+        });
+
+        expect(result.content[0].text).toContain('internal (2)');
+        expect(result.content[0].text).toContain('external (1)');
+        expect(result.content[0].text).toContain('social (0)'); // No social links in internal/external
+        expect(result.content[0].text).toContain('documents (0)'); // No documents in internal/external
+        expect(result.content[0].text).toContain('images (0)'); // No images in internal/external
+      });
+
+      it('should handle smart_crawl for sitemap', async () => {
+        // Set up axios client mock for the server instance
+        const axiosClientMock = {
+          head: jest.fn().mockResolvedValue({
+            headers: { 'content-type': 'application/xml' },
+          }),
+          post: jest.fn().mockResolvedValue({
+            data: {
+              results: [{
+                url: 'https://example.com/sitemap.xml',
+                markdown: { raw_markdown: 'Sitemap content' },
+                success: true,
+                status_code: 200,
+              }],
+            },
+          }),
+        };
+        (server as any).axiosClient = axiosClientMock;
+
+        const result = await (server as any).smartCrawl({
+          url: 'https://example.com/sitemap.xml',
+        });
+
+        expect(result.content[0].text).toContain('Smart crawl detected content type: sitemap');
+        expect(result.content[0].text).toContain('Sitemap content');
+        expect(axiosClientMock.post).toHaveBeenCalledWith('/crawl', expect.objectContaining({
+          urls: ['https://example.com/sitemap.xml'],
+          strategy: 'sitemap',
+        }));
+      });
+
+      it('should handle smart_crawl for RSS feed', async () => {
+        const axiosClientMock = {
+          head: jest.fn().mockResolvedValue({
+            headers: { 'content-type': 'application/rss+xml' },
+          }),
+          post: jest.fn().mockResolvedValue({
+            data: {
+              results: [{
+                url: 'https://example.com/feed.rss',
+                markdown: { raw_markdown: 'RSS feed content' },
+                success: true,
+                status_code: 200,
+              }],
+            },
+          }),
+        };
+        (server as any).axiosClient = axiosClientMock;
+
+        const result = await (server as any).smartCrawl({
+          url: 'https://example.com/feed.rss',
+        });
+
+        expect(result.content[0].text).toContain('Smart crawl detected content type: rss');
+        expect(result.content[0].text).toContain('RSS feed content');
+        expect(axiosClientMock.post).toHaveBeenCalledWith('/crawl', expect.objectContaining({
+          urls: ['https://example.com/feed.rss'],
+          strategy: 'rss',
+        }));
+      });
+
+      it('should handle smart_crawl for JSON content', async () => {
+        const axiosClientMock = {
+          head: jest.fn().mockResolvedValue({
+            headers: { 'content-type': 'application/json' },
+          }),
+          post: jest.fn().mockResolvedValue({
+            data: {
+              results: [{
+                url: 'https://example.com/data.json',
+                markdown: { raw_markdown: 'JSON content' },
+                success: true,
+                status_code: 200,
+              }],
+            },
+          }),
+        };
+        (server as any).axiosClient = axiosClientMock;
+
+        const result = await (server as any).smartCrawl({
+          url: 'https://example.com/data.json',
+        });
+
+        expect(result.content[0].text).toContain('Smart crawl detected content type: html');
+        expect(result.content[0].text).toContain('JSON content');
+        expect(axiosClientMock.post).toHaveBeenCalledWith('/crawl', expect.objectContaining({
+          urls: ['https://example.com/data.json'],
+          strategy: 'html',
+        }));
+      });
+
+      it('should correctly categorize internal documents and images', async () => {
+        mockPost.mockResolvedValue({
+          data: {
+            results: [{
+              links: {
+                internal: [
+                  { href: '/page1', text: 'Page 1' },
+                  { href: '/docs/manual.pdf', text: 'Manual' },
+                  { href: '/images/logo.png', text: 'Logo' },
+                  { href: '/assets/style.css', text: 'Styles' }
+                ],
+                external: [
+                  { href: 'https://example.com/report.pdf', text: 'External Report' }
+                ],
+              },
+            }],
+          },
+        });
+
+        const result = await (server as any).extractLinks({
+          url: 'https://example.com',
+          categorize: true,
+        });
+
+        expect(result.content[0].text).toContain('internal (1)'); // Only /page1 remains as internal
+        expect(result.content[0].text).toContain('external (0)'); // External PDF moved to documents
+        expect(result.content[0].text).toContain('documents (2)'); // Both PDFs
+        expect(result.content[0].text).toContain('images (1)'); // The PNG
+        expect(result.content[0].text).toContain('scripts (1)'); // The CSS
+      });
+
+      it('should handle smart_crawl for plain text', async () => {
+        const axiosClientMock = {
+          head: jest.fn().mockResolvedValue({
+            headers: { 'content-type': 'text/plain' },
+          }),
+          post: jest.fn().mockResolvedValue({
+            data: {
+              results: [{
+                url: 'https://example.com/file.txt',
+                markdown: { raw_markdown: 'This is plain text content' },
+                success: true,
+                status_code: 200,
+              }],
+            },
+          }),
+        };
+        (server as any).axiosClient = axiosClientMock;
+
+        const result = await (server as any).smartCrawl({
+          url: 'https://example.com/file.txt',
+        });
+
+        expect(result.content[0].text).toContain('Smart crawl detected content type: text');
+        expect(result.content[0].text).toContain('This is plain text content');
+        expect(axiosClientMock.post).toHaveBeenCalledWith('/crawl', expect.objectContaining({
+          urls: ['https://example.com/file.txt'],
+          strategy: 'text',
+        }));
+      });
+    });
+
+    describe('Additional Method Tests', () => {
+      it('should handle parse_sitemap', async () => {
+        mockPost.mockResolvedValue({
+          data: [
+            'https://example.com/page1',
+            'https://example.com/page2',
+            'https://example.com/page3'
+          ],
+        });
+
+        // parseSitemap now uses the service's parseSitemap method
+        const service = (server as any).service;
+        service.parseSitemap = jest.fn().mockResolvedValue([
+          'https://example.com/page1',
+          'https://example.com/page2',
+          'https://example.com/page3'
+        ]);
+
+        const result = await (server as any).parseSitemap({
+          url: 'https://example.com/sitemap.xml'
+        });
+
+        expect(result.content[0].text).toContain('Parsed sitemap');
+        expect(result.content[0].text).toContain('3 URLs found');
+      });
+
+      it('should handle parse_sitemap with filter', async () => {
+        mockPost.mockResolvedValue({
+          data: [
+            'https://example.com/blog/post1',
+            'https://example.com/blog/post2'
+          ],
+        });
+
+        const service = (server as any).service;
+        service.parseSitemap = jest.fn().mockResolvedValue([
+          'https://example.com/blog/post1',
+          'https://example.com/blog/post2'
+        ]);
+
+        const result = await (server as any).parseSitemap({
+          url: 'https://example.com/sitemap.xml',
+          filter_pattern: '.*blog.*'
+        });
+
+        expect(result.content[0].text).toContain('2 URLs found');
+      });
+
+      it('should handle list_sessions', async () => {
+        const result = await (server as any).listSessions();
+
+        expect(result.content[0].text).toContain('No active sessions');
+      });
+
+      it('should handle create_session', async () => {
+        const result = await (server as any).createSession({
+          session_id: 'test-session'
+        });
+
+        expect(result.content[0].text).toContain('Session created successfully');
+        expect(result.content[0].text).toContain('test-session');
+      });
+
+      it('should handle create_session with initial_url', async () => {
+        mockCrawl.mockResolvedValue({
+          success: true,
+          results: [{ success: true }],
+        });
+
+        const result = await (server as any).createSession({
+          session_id: 'test-session-2',
+          initial_url: 'https://example.com',
+          browser_type: 'firefox'
+        });
+
+        expect(result.content[0].text).toContain('Session created successfully');
+        expect(result.content[0].text).toContain('firefox');
+        expect(result.content[0].text).toContain('Pre-warmed with: https://example.com');
+      });
+
+      it('should handle clear_session', async () => {
+        // First create a session
+        await (server as any).createSession({
+          session_id: 'test-to-clear'
+        });
+
+        const result = await (server as any).clearSession({
+          session_id: 'test-to-clear'
+        });
+
+        expect(result.content[0].text).toContain('Session cleared successfully: test-to-clear');
+      });
+
+      it('should handle crawl_recursive', async () => {
+        mockCrawl.mockResolvedValue({
+          success: true,
+          results: [{
+            url: 'https://example.com',
+            markdown: { raw_markdown: 'Content' },
+            links: { internal: [], external: [] },
+            success: true,
+            status_code: 200,
+          }],
+        });
+
+        const result = await (server as any).crawlRecursive({ 
+          url: 'https://example.com' 
+        });
+
+        expect(result.content[0].text).toContain('Recursive crawl completed');
+      });
+
+      it('should handle clearSession for non-existent session', async () => {
+        const result = await (server as any).clearSession({
+          session_id: 'non-existent'
+        });
+
+        expect(result.content[0].text).toContain('Session not found: non-existent');
+      });
+
+      it('should handle parse_sitemap error', async () => {
+        const service = (server as any).service;
+        service.parseSitemap = jest.fn().mockRejectedValue(new Error('Network error'));
+
+        await expect((server as any).parseSitemap({
+          url: 'https://example.com/sitemap.xml'
+        })).rejects.toThrow('Failed to parse sitemap');
+      });
+
+      it('should handle crawl with error result', async () => {
+        mockCrawl.mockResolvedValue({
+          success: false,
+          results: [],
+        });
+
+        await expect((server as any).crawl({
+          url: 'https://example.com'
+        })).rejects.toThrow('Invalid response from server');
+      });
+
+      it('should handle crawl with metadata and links', async () => {
+        mockCrawl.mockResolvedValue({
+          success: true,
+          results: [{
+            url: 'https://example.com',
+            markdown: { raw_markdown: 'Content' },
+            metadata: { title: 'Test Page', description: 'Test' },
+            links: { internal: ['/page1'], external: ['https://external.com'] },
+            js_execution_result: { results: [42, 'test'] },
+            success: true,
+            status_code: 200,
+          }],
+        });
+
+        const result = await (server as any).crawl({
+          url: 'https://example.com'
+        });
+
+        expect(result.content.length).toBeGreaterThan(1);
+        expect(result.content.some((c: any) => c.text.includes('Metadata'))).toBe(true);
+        expect(result.content.some((c: any) => c.text.includes('Links'))).toBe(true);
+        expect(result.content.some((c: any) => c.text.includes('JavaScript Execution Results'))).toBe(true);
+      });
+
+      it('should handle executeJS with no scripts', async () => {
+        await expect((server as any).executeJS({
+          url: 'https://example.com',
+          scripts: null
+        })).rejects.toThrow('scripts is required');
+      });
+
+      it('should handle executeJS with array of scripts', async () => {
+        mockExecuteJS.mockResolvedValue({
+          content: [{ type: 'text', text: 'JS executed' }],
+        });
+
+        const result = await (server as any).executeJS({
+          url: 'https://example.com',
+          scripts: ['return 1', 'return 2']
+        });
+
+        expect(result.content[0].text).toContain('JavaScript executed on:');
+      });
+
+      it('should handle batchCrawl with cache bypass', async () => {
+        mockPost.mockResolvedValue({
+          data: {
+            results: [
+              { success: true },
+              { success: false }
+            ],
+          },
+        });
+
+        const result = await (server as any).batchCrawl({
+          urls: ['https://example.com/1', 'https://example.com/2'],
+          bypass_cache: true,
+          remove_images: true
+        });
+
+        expect(result.content[0].text).toContain('Batch crawl completed');
+        expect(mockPost).toHaveBeenCalledWith('/crawl', expect.objectContaining({
+          crawler_config: expect.objectContaining({
+            cache_mode: 'BYPASS',
+            exclude_tags: ['img', 'picture', 'svg']
+          })
+        }));
+      });
+
+      it('should handle smart_crawl with follow_links', async () => {
+        const axiosClientMock = {
+          head: jest.fn().mockResolvedValue({
+            headers: { 'content-type': 'application/xml' },
+          }),
+          post: jest.fn().mockResolvedValue({
+            data: {
+              results: [{
+                url: 'https://example.com/sitemap.xml',
+                markdown: { raw_markdown: '<url><loc>https://example.com/page1</loc></url>' },
+                success: true,
+                status_code: 200,
+              }],
+            },
+          }),
+        };
+        (server as any).axiosClient = axiosClientMock;
+
+        const result = await (server as any).smartCrawl({
+          url: 'https://example.com/sitemap.xml',
+          follow_links: true
+        });
+
+        expect(result.content[0].text).toContain('Smart crawl detected content type: sitemap');
+      });
+
+      it('should handle smart_crawl with server error fallback', async () => {
+        const axiosClientMock = {
+          head: jest.fn().mockRejectedValue({ response: { status: 500 } }),
+          post: jest.fn()
+            .mockRejectedValueOnce({ response: { status: 500 } })
+            .mockResolvedValueOnce({
+              data: {
+                results: [{
+                  url: 'https://example.com',
+                  markdown: { raw_markdown: 'Fallback content' },
+                  success: true,
+                  status_code: 200,
+                }],
+              },
+            }),
+        };
+        (server as any).axiosClient = axiosClientMock;
+
+        const result = await (server as any).smartCrawl({
+          url: 'https://example.com'
+        });
+
+        expect(result.content[0].text).toContain('Fallback content');
+      });
+
+      it('should handle extractLinks with no links', async () => {
+        mockPost.mockResolvedValue({
+          data: {
+            results: [{
+              markdown: 'Content without links',
+            }],
+          },
+        });
+
+        const result = await (server as any).extractLinks({
+          url: 'https://example.com',
+          categorize: false
+        });
+
+        expect(result.content[0].text).toContain('All links from');
+      });
+
+      it('should handle extractLinks with manually extracted links', async () => {
+        mockPost.mockResolvedValue({
+          data: {
+            results: [{
+              markdown: 'Check out <a href="/page1">Page 1</a>',
+            }],
+          },
+        });
+
+        const result = await (server as any).extractLinks({
+          url: 'https://example.com'
+        });
+
+        expect(result.content[0].text).toContain('All links from');
+      });
+
+      it('should handle MCP request handler for all tools', async () => {
+        // Request handler should be available from beforeEach
+        expect(requestHandler).toBeDefined();
+
+        // Test various tools through the request handler
+        const tools = [
+          { name: 'get_markdown', args: { url: 'https://example.com' } },
+          { name: 'capture_screenshot', args: { url: 'https://example.com' } },
+          { name: 'generate_pdf', args: { url: 'https://example.com' } },
+          { name: 'execute_js', args: { url: 'https://example.com', scripts: 'return 1' } },
+          { name: 'batch_crawl', args: { urls: ['https://example.com'] } },
+          { name: 'smart_crawl', args: { url: 'https://example.com' } },
+          { name: 'get_html', args: { url: 'https://example.com' } },
+          { name: 'extract_links', args: { url: 'https://example.com' } },
+          { name: 'crawl_recursive', args: { url: 'https://example.com' } },
+          { name: 'parse_sitemap', args: { url: 'https://example.com/sitemap.xml' } },
+          { name: 'crawl', args: { url: 'https://example.com' } },
+          { name: 'create_session', args: {} },
+          { name: 'clear_session', args: { session_id: 'test' } },
+          { name: 'list_sessions', args: {} },
+          { name: 'extract_with_llm', args: { url: 'https://example.com', prompt: 'test' } },
+        ];
+
+        // Mock all service methods to return success
+        mockGetMarkdown.mockResolvedValue({ content: [{ type: 'text', text: 'markdown' }] });
+        mockCaptureScreenshot.mockResolvedValue({ content: [{ type: 'text', text: 'screenshot' }] });
+        mockGeneratePDF.mockResolvedValue({ content: [{ type: 'text', text: 'pdf' }] });
+        mockExecuteJS.mockResolvedValue({ content: [{ type: 'text', text: 'js' }] });
+        mockBatchCrawl.mockResolvedValue({ content: [{ type: 'text', text: 'batch' }] });
+        mockGetHTML.mockResolvedValue({ content: [{ type: 'text', text: 'html' }] });
+        mockExtractWithLLM.mockResolvedValue({ content: [{ type: 'text', text: 'llm' }] });
+        mockCrawl.mockResolvedValue({
+          success: true,
+          results: [{
+            url: 'https://example.com',
+            markdown: { raw_markdown: 'content' },
+            success: true,
+            status_code: 200,
+          }],
+        });
+        mockPost.mockResolvedValue({
+          data: {
+            results: [{
+              links: { internal: [], external: [] },
+            }],
+          },
+        });
+        
+        const service = (server as any).service;
+        service.parseSitemap = jest.fn().mockResolvedValue(['https://example.com/page1']);
+
+        // Test each tool
+        for (const tool of tools) {
+          const result = await requestHandler({
+            method: 'tools/call',
+            params: {
+              name: tool.name,
+              arguments: tool.args
+            }
+          });
+          expect(result).toBeDefined();
+          expect(result.content).toBeDefined();
+        }
+
+        // Test unknown tool
+        const unknownResult = await requestHandler({
+          method: 'tools/call',
+          params: {
+            name: 'unknown_tool',
+            arguments: {}
+          }
+        });
+        expect(unknownResult.content[0].text).toContain('Error: Unknown tool');
+
+        // Test non-tools/call method
+        const otherResult = await requestHandler({
+          method: 'other/method',
+          params: {}
+        });
+        expect(otherResult).toBeUndefined();
+      });
+
+      it('should handle MCP request handler validation errors', async () => {
+        expect(requestHandler).toBeDefined();
+
+        // Test validation errors for various tools
+        const invalidRequests = [
+          { name: 'get_markdown', args: {} }, // missing url
+          { name: 'capture_screenshot', args: {} }, // missing url
+          { name: 'generate_pdf', args: {} }, // missing url
+          { name: 'execute_js', args: { url: 'https://example.com' } }, // missing scripts
+          { name: 'batch_crawl', args: {} }, // missing urls
+          { name: 'smart_crawl', args: {} }, // missing url
+          { name: 'get_html', args: {} }, // missing url
+          { name: 'extract_links', args: {} }, // missing url
+          { name: 'crawl_recursive', args: {} }, // missing url
+          { name: 'parse_sitemap', args: {} }, // missing url
+          { name: 'crawl', args: {} }, // missing url
+          { name: 'clear_session', args: {} }, // missing session_id
+          { name: 'extract_with_llm', args: { url: 'https://example.com' } }, // missing prompt
+        ];
+
+        for (const req of invalidRequests) {
+          const result = await requestHandler({
+            method: 'tools/call',
+            params: {
+              name: req.name,
+              arguments: req.args
+            }
+          });
+          expect(result.content[0].text).toContain(`Error: Invalid parameters for ${req.name}`);
+        }
+      });
+
+      it('should handle crawl with all output types', async () => {
+        mockCrawl.mockResolvedValue({
+          success: true,
+          results: [{
+            url: 'https://example.com',
+            extracted_content: { data: 'extracted' },
+            screenshot: 'base64screenshot',
+            pdf: 'base64pdf',
+            success: true,
+            status_code: 200,
+          }],
+        });
+
+        const result = await (server as any).crawl({
+          url: 'https://example.com',
+          screenshot: true,
+          pdf: true
+        });
+
+        expect(result.content.some((c: any) => c.type === 'text')).toBe(true);
+        expect(result.content.some((c: any) => c.type === 'image')).toBe(true);
+        expect(result.content.some((c: any) => c.type === 'resource' && c.resource.mimeType === 'application/pdf')).toBe(true);
+      });
+    });
+
+    describe('MCP Protocol Handler Tests', () => {
+      it('should handle tools/list request', async () => {
+        // Find the tools/list handler
+        const toolsListHandler = mockSetRequestHandler.mock.calls.find(
+          call => call[0].method === 'tools/list'
+        )?.[1];
+        
+        expect(toolsListHandler).toBeDefined();
+        
+        const result = await toolsListHandler({ method: 'tools/list', params: {} });
+        expect(result).toBeDefined();
+        expect(result.tools).toBeDefined();
+        expect(result.tools.length).toBe(15); // Should have 15 tools
+      });
+      
+      it('should handle get_markdown query functionality', async () => {
+        mockGetMarkdown.mockResolvedValue({
+          content: [{ type: 'text', text: 'Page content about products' }],
+        });
+
+        const result = await (server as any).getMarkdown({
+          url: 'https://example.com',
+          query: 'What products are listed?'
+        });
+
+        expect(result.content[0].text).toContain('Query: What products are listed?');
+        expect(result.content[0].text).toContain('Page content about products');
       });
     });
   });
