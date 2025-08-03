@@ -39,7 +39,7 @@ describe('extract_with_llm Integration Tests', () => {
         expect(typedResult.content).toBeDefined();
         expect(typedResult.content.length).toBeGreaterThan(0);
 
-        const textContent = (result as ToolResult).content.find((c: any) => c.type === 'text');
+        const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
         expect(textContent?.text).toBeTruthy();
         // Should return a meaningful response (LLM responses are non-deterministic)
         expect(textContent?.text?.length || 0).toBeGreaterThan(10);
@@ -61,7 +61,7 @@ describe('extract_with_llm Integration Tests', () => {
         expect(result).toBeTruthy();
         expect(result.content).toBeDefined();
 
-        const textContent = (result as ToolResult).content.find((c: any) => c.type === 'text');
+        const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
         expect(textContent?.text).toBeTruthy();
         // Should provide an answer about the content
         expect(textContent?.text?.length || 0).toBeGreaterThan(5);
@@ -81,7 +81,7 @@ describe('extract_with_llm Integration Tests', () => {
         });
 
         expect(result).toBeTruthy();
-        const textContent = (result as ToolResult).content.find((c: any) => c.type === 'text');
+        const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
         expect(textContent?.text).toBeTruthy();
         // Should provide a response about links (content may vary)
         expect(textContent?.text?.length || 0).toBeGreaterThan(10);

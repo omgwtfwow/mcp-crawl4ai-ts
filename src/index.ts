@@ -43,7 +43,17 @@ interface SessionInfo {
   created_at: Date;
   last_used: Date;
   initial_url?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
+}
+
+// Error handling types
+interface ErrorWithResponse {
+  response?: {
+    data?: {
+      detail?: string;
+    };
+  };
+  message?: string;
 }
 
 // Validation schemas
@@ -91,7 +101,7 @@ const JsCodeSchema = z
   .describe('JavaScript code as string or array of strings');
 
 // Helper to create schema that rejects session_id
-const createStatelessSchema = <T extends z.ZodTypeAny>(schema: T, toolName: string) => {
+const createStatelessSchema = <T extends z.ZodObject<z.ZodRawShape>>(schema: T, toolName: string) => {
   // Tool-specific guidance for common scenarios
   const toolGuidance: Record<string, string> = {
     capture_screenshot: 'To capture screenshots with sessions, use crawl(session_id, screenshot: true)',
@@ -102,7 +112,7 @@ const createStatelessSchema = <T extends z.ZodTypeAny>(schema: T, toolName: stri
   };
 
   const message = `${toolName} does not support session_id. This tool is stateless - each call creates a new browser. ${
-    toolGuidance[toolName] || 'For persistent operations, use crawlg with session_id.'
+    toolGuidance[toolName] || 'For persistent operations, use crawl with session_id.'
   }`;
 
   return z
@@ -112,11 +122,11 @@ const createStatelessSchema = <T extends z.ZodTypeAny>(schema: T, toolName: stri
     .passthrough()
     .and(schema)
     .transform((data) => {
-      const { session_id, ...rest } = data as any;
+      const { session_id, ...rest } = data;
       if (session_id !== undefined) {
         throw new Error(message);
       }
-      return rest;
+      return rest as z.infer<T>;
     });
 };
 
@@ -128,28 +138,25 @@ const ExecuteJsSchema = createStatelessSchema(
   'execute_js',
 );
 
-const GetMarkdownSchema = createStatelessSchema(
-  z
-    .object({
-      url: z.string().url(),
-      filter: z.enum(['raw', 'fit', 'bm25', 'llm']).optional().default('fit'),
-      query: z.string().optional(),
-      cache: z.string().optional().default('0'),
-    })
-    .refine(
-      (data) => {
-        // If filter is bm25 or llm, query is required
-        if ((data.filter === 'bm25' || data.filter === 'llm') && !data.query) {
-          return false;
-        }
-        return true;
-      },
-      {
-        message: 'Query parameter is required when using bm25 or llm filter',
-        path: ['query'],
-      },
-    ),
-  'get_markdown',
+const GetMarkdownBaseSchema = z.object({
+  url: z.string().url(),
+  filter: z.enum(['raw', 'fit', 'bm25', 'llm']).optional().default('fit'),
+  query: z.string().optional(),
+  cache: z.string().optional().default('0'),
+});
+
+const GetMarkdownSchema = createStatelessSchema(GetMarkdownBaseSchema, 'get_markdown').refine(
+  (data) => {
+    // If filter is bm25 or llm, query is required
+    if ((data.filter === 'bm25' || data.filter === 'llm') && !data.query) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: 'Query parameter is required when using bm25 or llm filter',
+    path: ['query'],
+  },
 );
 
 const VirtualScrollConfigSchema = z.object({
@@ -1095,7 +1102,7 @@ class Crawl4AIServer {
           case 'get_markdown':
             try {
               const validatedArgs = GetMarkdownSchema.parse(args);
-              return await this.getMarkdown(validatedArgs);
+              return await this.getMarkdown(validatedArgs as z.infer<typeof GetMarkdownBaseSchema>);
             } catch (error) {
               if (error instanceof z.ZodError) {
                 const details = error.errors
@@ -1338,7 +1345,7 @@ class Crawl4AIServer {
       };
     } catch (error) {
       throw new Error(
-        `Failed to get markdown: ${(error as any).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
+        `Failed to get markdown: ${(error as ErrorWithResponse).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
       );
     }
   }
@@ -1367,7 +1374,7 @@ class Crawl4AIServer {
       };
     } catch (error) {
       throw new Error(
-        `Failed to capture screenshot: ${(error as any).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
+        `Failed to capture screenshot: ${(error as ErrorWithResponse).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
       );
     }
   }
@@ -1399,7 +1406,7 @@ class Crawl4AIServer {
       };
     } catch (error) {
       throw new Error(
-        `Failed to generate PDF: ${(error as any).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
+        `Failed to generate PDF: ${(error as ErrorWithResponse).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
       );
     }
   }
@@ -1455,7 +1462,7 @@ class Crawl4AIServer {
       };
     } catch (error) {
       throw new Error(
-        `Failed to execute JavaScript: ${(error as any).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
+        `Failed to execute JavaScript: ${(error as ErrorWithResponse).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
       );
     }
   }
@@ -1496,7 +1503,7 @@ class Crawl4AIServer {
       };
     } catch (error) {
       throw new Error(
-        `Failed to batch crawl: ${(error as any).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
+        `Failed to batch crawl: ${(error as ErrorWithResponse).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
       );
     }
   }
@@ -1617,7 +1624,7 @@ class Crawl4AIServer {
       };
     } catch (error) {
       throw new Error(
-        `Failed to smart crawl: ${(error as any).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
+        `Failed to smart crawl: ${(error as ErrorWithResponse).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
       );
     }
   }
@@ -1637,7 +1644,7 @@ class Crawl4AIServer {
       };
     } catch (error) {
       throw new Error(
-        `Failed to get HTML: ${(error as any).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
+        `Failed to get HTML: ${(error as ErrorWithResponse).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
       );
     }
   }
@@ -1786,7 +1793,7 @@ class Crawl4AIServer {
               type: 'text',
               text: `Link analysis for ${options.url}:\n\n${Object.entries(categorized)
                 .map(
-                  ([category, links]: [string, any]) =>
+                  ([category, links]: [string, string[]]) =>
                     `${category} (${links.length}):\n${links.slice(0, 10).join('\n')}${links.length > 10 ? '\n...' : ''}`,
                 )
                 .join('\n\n')}`,
@@ -1807,7 +1814,7 @@ class Crawl4AIServer {
       }
     } catch (error) {
       throw new Error(
-        `Failed to extract links: ${(error as any).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
+        `Failed to extract links: ${(error as ErrorWithResponse).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
       );
     }
   }
@@ -1941,7 +1948,7 @@ class Crawl4AIServer {
       };
     } catch (error) {
       throw new Error(
-        `Failed to parse sitemap: ${(error as any).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
+        `Failed to parse sitemap: ${(error as ErrorWithResponse).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
       );
     }
   }
@@ -2153,7 +2160,7 @@ class Crawl4AIServer {
       return { content };
     } catch (error) {
       throw new Error(
-        `Failed to crawl: ${(error as any).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
+        `Failed to crawl: ${(error as ErrorWithResponse).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
       );
     }
   }
