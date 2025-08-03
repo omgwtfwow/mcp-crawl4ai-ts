@@ -9,17 +9,6 @@
   - Replaced example.com with httpbin.org/html in tests to avoid "domcontentloaded" timeout issues
   - Fixed httpbin.org URLs by adding proper path suffixes (e.g., /links/5/0)
   - Limited Jest parallelization for integration tests to prevent server overload
-
-### Features
-- Added comprehensive integration tests for `batch_crawl` tool (7 tests)
-- Added comprehensive integration tests for `smart_crawl` tool (8 tests)
-
-### Improvements
-- Fixed all ESLint formatting issues across the codebase
-- Enhanced error handling for empty URL arrays in batch_crawl
-- Improved test reliability by replacing problematic test URLs
-
-### Bug Fixes
 - Fixed parameter mapping in `get_markdown` tool - now correctly maps schema properties (`filter`, `query`, `cache`) to API parameters (`f`, `q`, `c`)
 - Fixed `smart_crawl` schema to use `follow_links` parameter instead of `remove_images`
 - Fixed `extract_links` schema mismatch - corrected schema to use `categorize` parameter as defined in tool
@@ -36,6 +25,11 @@
 - Fixed `crawl` and `generate_pdf` tools PDF response to use proper MCP SDK embedded resource format with blob field
 
 ### Improvements
+- Added comprehensive integration tests for `batch_crawl` tool (7 tests)
+- Added comprehensive integration tests for `smart_crawl` tool (8 tests)
+- Fixed all ESLint formatting issues across the codebase
+- Enhanced error handling for empty URL arrays in batch_crawl
+- Improved test reliability by replacing problematic test URLs
 - Updated tool descriptions to accurately reflect actual behavior
 - Added proper TypeScript types for getMarkdown function
 - Enhanced test coverage for batch_crawl parameter handling
