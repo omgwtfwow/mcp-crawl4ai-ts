@@ -350,4 +350,369 @@ describe('Crawl4AIService', () => {
       ).rejects.toThrow('No LLM provider configured');
     });
   });
+
+  describe('Browser Configuration', () => {
+    it('should send cookies configuration correctly', async () => {
+      const mockResponse: CrawlEndpointResponse = {
+        success: true,
+        results: [
+          {
+            url: 'https://httpbin.org/cookies',
+            html: '<html>...</html>',
+            cleaned_html: '<html>...</html>',
+            fit_html: '<html>...</html>',
+            success: true,
+            status_code: 200,
+            response_headers: {},
+            session_id: null,
+            metadata: {},
+            links: { internal: [], external: [] },
+            media: { images: [], videos: [], audios: [] },
+            markdown: {
+              raw_markdown: '{"cookies": {"test": "value"}}',
+              markdown_with_citations: '',
+              references_markdown: '',
+              fit_markdown: '{"cookies": {"test": "value"}}',
+              fit_html: '',
+            },
+            tables: [],
+            extracted_content: null,
+            screenshot: null,
+            pdf: null,
+            mhtml: null,
+            js_execution_result: null,
+            downloaded_files: null,
+            network_requests: null,
+            console_messages: null,
+            ssl_certificate: null,
+            dispatch_result: null,
+          },
+        ],
+        server_processing_time_s: 1.0,
+        server_memory_delta_mb: 5,
+        server_peak_memory_mb: 50,
+      };
+
+      nock(baseURL)
+        .post('/crawl', {
+          urls: ['https://httpbin.org/cookies'],
+          browser_config: {
+            headless: true,
+            cookies: [
+              {
+                name: 'test',
+                value: 'value',
+                domain: '.httpbin.org',
+                path: '/',
+              },
+            ],
+          },
+          crawler_config: {},
+        })
+        .matchHeader('x-api-key', apiKey)
+        .reply(200, mockResponse);
+
+      const result = await service.crawl({
+        urls: ['https://httpbin.org/cookies'],
+        browser_config: {
+          headless: true,
+          cookies: [
+            {
+              name: 'test',
+              value: 'value',
+              domain: '.httpbin.org',
+              path: '/',
+            },
+          ],
+        },
+        crawler_config: {},
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.results[0].markdown?.raw_markdown).toContain('cookies');
+    });
+
+    it('should send headers configuration correctly', async () => {
+      const mockResponse: CrawlEndpointResponse = {
+        success: true,
+        results: [
+          {
+            url: 'https://httpbin.org/headers',
+            html: '<html>...</html>',
+            cleaned_html: '<html>...</html>',
+            fit_html: '<html>...</html>',
+            success: true,
+            status_code: 200,
+            response_headers: {},
+            session_id: null,
+            metadata: {},
+            links: { internal: [], external: [] },
+            media: { images: [], videos: [], audios: [] },
+            markdown: {
+              raw_markdown: '{"headers": {"X-Custom": "test-value"}}',
+              markdown_with_citations: '',
+              references_markdown: '',
+              fit_markdown: '{"headers": {"X-Custom": "test-value"}}',
+              fit_html: '',
+            },
+            tables: [],
+            extracted_content: null,
+            screenshot: null,
+            pdf: null,
+            mhtml: null,
+            js_execution_result: null,
+            downloaded_files: null,
+            network_requests: null,
+            console_messages: null,
+            ssl_certificate: null,
+            dispatch_result: null,
+          },
+        ],
+        server_processing_time_s: 1.0,
+        server_memory_delta_mb: 5,
+        server_peak_memory_mb: 50,
+      };
+
+      nock(baseURL)
+        .post('/crawl', {
+          urls: ['https://httpbin.org/headers'],
+          browser_config: {
+            headless: true,
+            headers: {
+              'X-Custom': 'test-value',
+              'X-Request-ID': '12345',
+            },
+          },
+          crawler_config: {},
+        })
+        .matchHeader('x-api-key', apiKey)
+        .reply(200, mockResponse);
+
+      const result = await service.crawl({
+        urls: ['https://httpbin.org/headers'],
+        browser_config: {
+          headless: true,
+          headers: {
+            'X-Custom': 'test-value',
+            'X-Request-ID': '12345',
+          },
+        },
+        crawler_config: {},
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.results[0].markdown?.raw_markdown).toContain('headers');
+    });
+
+    it('should send viewport configuration correctly', async () => {
+      const mockResponse: CrawlEndpointResponse = {
+        success: true,
+        results: [
+          {
+            url: 'https://example.com',
+            html: '<html>...</html>',
+            cleaned_html: '<html>...</html>',
+            fit_html: '<html>...</html>',
+            success: true,
+            status_code: 200,
+            response_headers: {},
+            session_id: null,
+            metadata: {},
+            links: { internal: [], external: [] },
+            media: { images: [], videos: [], audios: [] },
+            markdown: {
+              raw_markdown: 'Content',
+              markdown_with_citations: '',
+              references_markdown: '',
+              fit_markdown: 'Content',
+              fit_html: '',
+            },
+            tables: [],
+            extracted_content: null,
+            screenshot: 'base64-screenshot-data',
+            pdf: null,
+            mhtml: null,
+            js_execution_result: null,
+            downloaded_files: null,
+            network_requests: null,
+            console_messages: null,
+            ssl_certificate: null,
+            dispatch_result: null,
+          },
+        ],
+        server_processing_time_s: 2.0,
+        server_memory_delta_mb: 10,
+        server_peak_memory_mb: 100,
+      };
+
+      nock(baseURL)
+        .post('/crawl', {
+          urls: ['https://example.com'],
+          browser_config: {
+            headless: true,
+            viewport_width: 375,
+            viewport_height: 667,
+          },
+          crawler_config: {
+            screenshot: true,
+          },
+        })
+        .matchHeader('x-api-key', apiKey)
+        .reply(200, mockResponse);
+
+      const result = await service.crawl({
+        urls: ['https://example.com'],
+        browser_config: {
+          headless: true,
+          viewport_width: 375,
+          viewport_height: 667,
+        },
+        crawler_config: {
+          screenshot: true,
+        },
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.results[0].screenshot).toBeTruthy();
+    });
+
+    it('should send user agent configuration correctly', async () => {
+      const mockResponse: CrawlEndpointResponse = {
+        success: true,
+        results: [
+          {
+            url: 'https://httpbin.org/user-agent',
+            html: '<html>...</html>',
+            cleaned_html: '<html>...</html>',
+            fit_html: '<html>...</html>',
+            success: true,
+            status_code: 200,
+            response_headers: {},
+            session_id: null,
+            metadata: {},
+            links: { internal: [], external: [] },
+            media: { images: [], videos: [], audios: [] },
+            markdown: {
+              raw_markdown: '{"user-agent": "Custom-Bot/1.0"}',
+              markdown_with_citations: '',
+              references_markdown: '',
+              fit_markdown: '{"user-agent": "Custom-Bot/1.0"}',
+              fit_html: '',
+            },
+            tables: [],
+            extracted_content: null,
+            screenshot: null,
+            pdf: null,
+            mhtml: null,
+            js_execution_result: null,
+            downloaded_files: null,
+            network_requests: null,
+            console_messages: null,
+            ssl_certificate: null,
+            dispatch_result: null,
+          },
+        ],
+        server_processing_time_s: 1.0,
+        server_memory_delta_mb: 5,
+        server_peak_memory_mb: 50,
+      };
+
+      nock(baseURL)
+        .post('/crawl', {
+          urls: ['https://httpbin.org/user-agent'],
+          browser_config: {
+            headless: true,
+            user_agent: 'Custom-Bot/1.0',
+          },
+          crawler_config: {},
+        })
+        .matchHeader('x-api-key', apiKey)
+        .reply(200, mockResponse);
+
+      const result = await service.crawl({
+        urls: ['https://httpbin.org/user-agent'],
+        browser_config: {
+          headless: true,
+          user_agent: 'Custom-Bot/1.0',
+        },
+        crawler_config: {},
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.results[0].markdown?.raw_markdown).toContain('Custom-Bot/1.0');
+    });
+
+    it('should handle complex browser configuration', async () => {
+      const mockResponse: CrawlEndpointResponse = {
+        success: true,
+        results: [
+          {
+            url: 'https://httpbin.org/anything',
+            html: '<html>...</html>',
+            cleaned_html: '<html>...</html>',
+            fit_html: '<html>...</html>',
+            success: true,
+            status_code: 200,
+            response_headers: {},
+            session_id: null,
+            metadata: {},
+            links: { internal: [], external: [] },
+            media: { images: [], videos: [], audios: [] },
+            markdown: {
+              raw_markdown: 'Response with all configs',
+              markdown_with_citations: '',
+              references_markdown: '',
+              fit_markdown: 'Response with all configs',
+              fit_html: '',
+            },
+            tables: [],
+            extracted_content: null,
+            screenshot: null,
+            pdf: null,
+            mhtml: null,
+            js_execution_result: null,
+            downloaded_files: null,
+            network_requests: null,
+            console_messages: null,
+            ssl_certificate: null,
+            dispatch_result: null,
+          },
+        ],
+        server_processing_time_s: 1.5,
+        server_memory_delta_mb: 8,
+        server_peak_memory_mb: 80,
+      };
+
+      const complexConfig = {
+        urls: ['https://httpbin.org/anything'],
+        browser_config: {
+          headless: true,
+          viewport_width: 768,
+          viewport_height: 1024,
+          user_agent: 'Test-Bot/2.0',
+          cookies: [
+            {
+              name: 'session',
+              value: 'abc123',
+              domain: '.httpbin.org',
+              path: '/',
+            },
+          ],
+          headers: {
+            'X-Test': 'value',
+          },
+        },
+        crawler_config: {
+          cache_mode: 'BYPASS' as const,
+        },
+      };
+
+      nock(baseURL).post('/crawl', complexConfig).matchHeader('x-api-key', apiKey).reply(200, mockResponse);
+
+      const result = await service.crawl(complexConfig);
+
+      expect(result.success).toBe(true);
+      expect(result.results).toHaveLength(1);
+    });
+  });
 });
