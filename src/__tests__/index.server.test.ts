@@ -379,7 +379,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
 
         mockCrawl.mockResolvedValue(mockResponse);
 
-        await (server as any).crawl({
+        const result = await (server as any).crawl({
           url: 'https://example.com',
           screenshot: true,
           pdf: true,
@@ -946,7 +946,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           ],
         });
 
-        await (server as any).crawl({
+        const result = await (server as any).crawl({
           url: 'https://example.com',
           media_handling: { images: true, videos: true },
         });
@@ -979,7 +979,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           ],
         });
 
-        await (server as any).crawl({
+        const result = await (server as any).crawl({
           url: 'https://example.com',
         });
 
@@ -1005,7 +1005,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           ],
         });
 
-        await (server as any).crawl({
+        const result = await (server as any).crawl({
           url: 'https://example.com',
           network_requests: true,
         });
@@ -1029,7 +1029,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           ],
         });
 
-        await (server as any).crawl({
+        const result = await (server as any).crawl({
           url: 'https://example.com',
           mhtml: true,
         });
@@ -1056,7 +1056,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           ],
         });
 
-        await (server as any).crawl({
+        const result = await (server as any).crawl({
           url: 'https://example.com',
           download_files: true,
         });
@@ -1086,7 +1086,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           ],
         });
 
-        await (server as any).crawl({
+        const result = await (server as any).crawl({
           url: 'https://example.com',
           ssl_certificate: true,
         });
@@ -1142,7 +1142,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           ],
         });
 
-        await (server as any).crawl({
+        const result = await (server as any).crawl({
           url: 'https://example.com',
         });
 
@@ -1506,7 +1506,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           ],
         });
 
-        await (server as any).crawl({
+        const result = await (server as any).crawl({
           url: 'https://example.com',
         });
 
@@ -1789,7 +1789,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           ],
         });
 
-        await (server as any).crawl({
+        const result = await (server as any).crawl({
           url: 'https://example.com',
           screenshot: true,
           pdf: true,
