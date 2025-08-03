@@ -88,9 +88,46 @@ import type {
   CrawlEndpointResponse,
 } from '../types.js';
 
+// Define types for test results
+interface ContentItem {
+  type: string;
+  text?: string;
+  data?: string;
+  resource?: {
+    uri: string;
+    mimeType: string;
+    blob: string;
+  };
+}
+
+interface ToolResult {
+  content: ContentItem[];
+}
+
+type RequestHandler = (request: { method: string; params: unknown }) => Promise<ToolResult>;
+
+// Create a test interface for server methods
+interface TestServerMethods {
+  getMarkdown: (params: unknown) => Promise<ToolResult>;
+  captureScreenshot: (params: unknown) => Promise<ToolResult>;
+  generatePDF: (params: unknown) => Promise<ToolResult>;
+  executeJS: (params: unknown) => Promise<ToolResult>;
+  getHTML: (params: unknown) => Promise<ToolResult>;
+  batchCrawl: (params: unknown) => Promise<ToolResult>;
+  crawl: (params: unknown) => Promise<ToolResult>;
+  createSession: (params: unknown) => Promise<ToolResult>;
+  clearSession: (params: unknown) => Promise<ToolResult>;
+  listSessions: () => Promise<ToolResult>;
+  extractWithLLM: (params: unknown) => Promise<ToolResult>;
+  extractLinks: (params: unknown) => Promise<ToolResult>;
+  crawlRecursive: (params: unknown) => Promise<ToolResult>;
+  parseSitemap: (params: unknown) => Promise<ToolResult>;
+  smartCrawl: (params: unknown) => Promise<ToolResult>;
+}
+
 describe('Crawl4AIServer Tool Handlers', () => {
-  let server: InstanceType<typeof Crawl4AIServer>;
-  let requestHandler: any;
+  let server: InstanceType<typeof Crawl4AIServer> & TestServerMethods;
+  let requestHandler: RequestHandler;
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -109,7 +146,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
     mockHead.mockReset();
 
     // Create server instance - the mock will be used automatically
-    server = new Crawl4AIServer();
+    server = new Crawl4AIServer() as InstanceType<typeof Crawl4AIServer> & TestServerMethods;
 
     // Start the server to register handlers
     await server.start();
@@ -128,8 +165,8 @@ describe('Crawl4AIServer Tool Handlers', () => {
   describe('Constructor and setup', () => {
     it('should initialize with correct configuration', () => {
       expect(server).toBeDefined();
-      expect((server as any).service).toBeDefined();
-      expect((server as any).sessions).toBeDefined();
+      expect((server as InstanceType<typeof Crawl4AIServer>).service).toBeDefined();
+      expect((server as InstanceType<typeof Crawl4AIServer>).sessions).toBeDefined();
     });
 
     it('should set up handlers on construction', () => {
@@ -152,7 +189,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
 
         mockGetMarkdown.mockResolvedValue(mockResponse);
 
-        const result = await (server as any).getMarkdown({
+        const result: ToolResult = await server.getMarkdown({
           url: 'https://example.com',
         });
 
@@ -175,7 +212,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
 
         mockGetMarkdown.mockResolvedValue(mockResponse);
 
-        const result = await (server as any).getMarkdown({
+        const result: ToolResult = await server.getMarkdown({
           url: 'https://example.com',
           filter: 'bm25',
           query: 'test query',
@@ -199,7 +236,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
 
         mockCaptureScreenshot.mockResolvedValue(mockResponse);
 
-        const result = await (server as any).captureScreenshot({
+        const result: ToolResult = await server.captureScreenshot({
           url: 'https://example.com',
         });
 
@@ -220,7 +257,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
 
         mockGeneratePDF.mockResolvedValue(mockResponse);
 
-        const result = await (server as any).generatePDF({
+        const result: ToolResult = await server.generatePDF({
           url: 'https://example.com',
         });
 
@@ -242,9 +279,9 @@ describe('Crawl4AIServer Tool Handlers', () => {
           },
         };
 
-        mockExecuteJS.mockResolvedValue(mockResponse as any);
+        mockExecuteJS.mockResolvedValue(mockResponse);
 
-        const result = await (server as any).executeJS({
+        const result: ToolResult = await server.executeJS({
           url: 'https://example.com',
           scripts: ['return document.title', 'return document.links.length'],
         });
@@ -262,9 +299,9 @@ describe('Crawl4AIServer Tool Handlers', () => {
           js_execution_result: null,
         };
 
-        mockExecuteJS.mockResolvedValue(mockResponse as any);
+        mockExecuteJS.mockResolvedValue(mockResponse);
 
-        const result = await (server as any).executeJS({
+        const result: ToolResult = await server.executeJS({
           url: 'https://example.com',
           scripts: 'console.log("test")',
         });
@@ -284,7 +321,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
 
         mockGetHTML.mockResolvedValue(mockResponse);
 
-        const result = await (server as any).getHTML({
+        const result: ToolResult = await server.getHTML({
           url: 'https://example.com',
         });
 
@@ -307,7 +344,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
         // Mock axios response since batchCrawl uses axiosClient directly
         mockPost.mockResolvedValue({ data: mockResponse });
 
-        const result = await (server as any).batchCrawl({
+        const result: ToolResult = await server.batchCrawl({
           urls: ['https://example1.com', 'https://example2.com'],
         });
 
@@ -320,7 +357,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
         // Mock axios response since batchCrawl uses axiosClient directly
         mockPost.mockResolvedValue({ data: { results: [] } });
 
-        const result = await (server as any).batchCrawl({
+        const result: ToolResult = await server.batchCrawl({
           urls: ['https://example.com'],
           remove_images: true,
         });
@@ -379,7 +416,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
 
         mockCrawl.mockResolvedValue(mockResponse);
 
-        const result = await (server as any).crawl({
+        const result: ToolResult = await server.crawl({
           url: 'https://example.com',
           screenshot: true,
           pdf: true,
@@ -389,10 +426,10 @@ describe('Crawl4AIServer Tool Handlers', () => {
 
         expect(result.content.length).toBeGreaterThan(0); // Multiple content types
         // Check text content
-        const textContent = result.content.find((c: any) => c.type === 'text' && c.text.includes('# Example'));
+        const textContent = result.content.find((c) => c.type === 'text' && c.text?.includes('# Example'));
         expect(textContent).toBeDefined();
         // Check screenshot
-        const screenshotContent = result.content.find((c: any) => c.type === 'image');
+        const screenshotContent = result.content.find((c) => c.type === 'image');
         expect(screenshotContent?.data).toBe('screenshot-data');
       });
 
@@ -411,7 +448,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
 
         mockCrawl.mockResolvedValue(mockResponse);
 
-        await (server as any).crawl({
+        await server.crawl({
           url: 'https://example.com',
           proxy_server: 'http://proxy.example.com:8080',
           proxy_username: 'user',
@@ -446,7 +483,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
 
         mockCrawl.mockResolvedValue(mockResponse);
 
-        await (server as any).crawl({
+        await server.crawl({
           url: 'https://example.com',
           cookies: [{ name: 'session', value: 'abc123' }],
           headers: { Authorization: 'Bearer token123' },
@@ -477,7 +514,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
 
         mockCrawl.mockResolvedValue(mockResponse);
 
-        await (server as any).crawl({
+        await server.crawl({
           url: 'https://example.com',
           virtual_scroll_config: {
             enabled: true,
@@ -501,7 +538,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
 
       it('should handle js_code as null error', async () => {
         await expect(
-          (server as any).crawl({
+          server.crawl({
             url: 'https://example.com',
             js_code: null,
           }),
@@ -511,7 +548,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
 
     describe('Session management', () => {
       it('should create a session successfully', async () => {
-        const result = await (server as any).createSession({
+        const result: ToolResult = await server.createSession({
           initial_url: 'https://example.com',
         });
 
@@ -523,11 +560,11 @@ describe('Crawl4AIServer Tool Handlers', () => {
 
       it('should clear a session successfully', async () => {
         // First create a session
-        const createResult = await (server as any).createSession({});
+        const createResult = await server.createSession({});
         const sessionIdMatch = createResult.content[0].text.match(/Session ID: (session-[^\n]+)/);
         const sessionId = sessionIdMatch?.[1] || 'test-session';
 
-        const result = await (server as any).clearSession({
+        const result: ToolResult = await server.clearSession({
           session_id: sessionId,
         });
 
@@ -536,10 +573,10 @@ describe('Crawl4AIServer Tool Handlers', () => {
 
       it('should list sessions', async () => {
         // Create a couple of sessions
-        await (server as any).createSession({ initial_url: 'https://example1.com' });
-        await (server as any).createSession({ initial_url: 'https://example2.com' });
+        await server.createSession({ initial_url: 'https://example1.com' });
+        await server.createSession({ initial_url: 'https://example2.com' });
 
-        const result = await (server as any).listSessions();
+        const result: ToolResult = await server.listSessions();
 
         expect(result.content[0].text).toContain('Active sessions (2)');
         expect(result.content[0].text).toMatch(/session-\w+-\w+/);
@@ -552,7 +589,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           answer: 'The main topic is JavaScript testing.',
         });
 
-        const result = await (server as any).extractWithLLM({
+        const result: ToolResult = await server.extractWithLLM({
           url: 'https://example.com',
           query: 'What is the main topic?',
         });
@@ -580,7 +617,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           },
         });
 
-        const result = await (server as any).extractLinks({
+        const result: ToolResult = await server.extractLinks({
           url: 'https://example.com',
           categorize: true,
         });
@@ -625,7 +662,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
             },
           });
 
-        const result = await (server as any).crawlRecursive({
+        const result: ToolResult = await server.crawlRecursive({
           url: 'https://example.com',
           max_depth: 2,
         });
@@ -648,7 +685,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
             </urlset>`,
         });
 
-        const result = await (server as any).parseSitemap({
+        const result: ToolResult = await server.parseSitemap({
           url: 'https://example.com/sitemap.xml',
         });
 
@@ -675,7 +712,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           },
         });
 
-        const result = await (server as any).smartCrawl({
+        const result: ToolResult = await server.smartCrawl({
           url: 'https://example.com',
         });
 
@@ -700,7 +737,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           },
         });
 
-        const result = await (server as any).smartCrawl({
+        const result: ToolResult = await server.smartCrawl({
           url: 'https://example.com/doc.pdf',
         });
 
@@ -715,7 +752,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
       it('should handle service error for get_markdown', async () => {
         mockGetMarkdown.mockRejectedValue(new Error('Network error'));
 
-        await expect((server as any).getMarkdown({ url: 'https://example.com' })).rejects.toThrow(
+        await expect(server.getMarkdown({ url: 'https://example.com' })).rejects.toThrow(
           'Failed to get markdown: Network error',
         );
       });
@@ -730,7 +767,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
         };
         mockCaptureScreenshot.mockRejectedValue(axiosError);
 
-        await expect((server as any).captureScreenshot({ url: 'https://example.com' })).rejects.toThrow(
+        await expect(server.captureScreenshot({ url: 'https://example.com' })).rejects.toThrow(
           'Failed to capture screenshot: Invalid API key',
         );
       });
@@ -741,7 +778,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           screenshot: '',
         });
 
-        await expect((server as any).captureScreenshot({ url: 'https://example.com' })).rejects.toThrow(
+        await expect(server.captureScreenshot({ url: 'https://example.com' })).rejects.toThrow(
           'Screenshot capture failed - no screenshot data in response',
         );
       });
@@ -752,7 +789,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           pdf: '',
         });
 
-        await expect((server as any).generatePDF({ url: 'https://example.com' })).rejects.toThrow(
+        await expect(server.generatePDF({ url: 'https://example.com' })).rejects.toThrow(
           'PDF generation failed - no PDF data in response',
         );
       });
@@ -760,13 +797,13 @@ describe('Crawl4AIServer Tool Handlers', () => {
 
     describe('Validation errors', () => {
       it('should handle missing scripts for execute_js', async () => {
-        await expect((server as any).executeJS({ url: 'https://example.com', scripts: null as any })).rejects.toThrow(
-          'scripts is required',
-        );
+        await expect(
+          server.executeJS({ url: 'https://example.com', scripts: null as unknown as string }),
+        ).rejects.toThrow('scripts is required');
       });
 
       it('should handle empty crawl options', async () => {
-        await expect((server as any).crawl(null as any)).rejects.toThrow(
+        await expect(server.crawl(null as unknown as Parameters<typeof server.crawl>[0])).rejects.toThrow(
           'crawl requires options object with at least a url parameter',
         );
       });
@@ -775,7 +812,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
         // Setup the mock to fail - crawlRecursive catches the error internally
         mockPost.mockRejectedValue(new Error('API error'));
 
-        const result = await (server as any).crawlRecursive({ url: 'https://example.com' });
+        const result: ToolResult = await server.crawlRecursive({ url: 'https://example.com' });
 
         // The method catches errors and returns a message about no pages crawled
         expect(result.content[0].text).toContain('Pages crawled: 0');
@@ -785,7 +822,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
       it('should handle parse_sitemap errors', async () => {
         mockGet.mockRejectedValue(new Error('Failed to fetch sitemap'));
 
-        await expect((server as any).parseSitemap({ url: 'https://example.com/sitemap.xml' })).rejects.toThrow(
+        await expect(server.parseSitemap({ url: 'https://example.com/sitemap.xml' })).rejects.toThrow(
           'Failed to parse sitemap: Failed to fetch sitemap',
         );
       });
@@ -799,7 +836,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           },
         });
 
-        const result = await (server as any).batchCrawl({
+        const result: ToolResult = await server.batchCrawl({
           urls: ['https://example.com'],
         });
 
@@ -821,7 +858,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           },
         });
 
-        const result = await (server as any).extractLinks({
+        const result: ToolResult = await server.extractLinks({
           url: 'https://example.com',
         });
 
@@ -830,7 +867,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
       });
 
       it('should handle session not found for clear_session', async () => {
-        const result = await (server as any).clearSession({
+        const result: ToolResult = await server.clearSession({
           session_id: 'non-existent-session',
         });
 
@@ -851,7 +888,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           },
         });
 
-        const result = await (server as any).smartCrawl({
+        const result: ToolResult = await server.smartCrawl({
           url: 'https://example.com',
         });
 
@@ -946,7 +983,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           ],
         });
 
-        const result = await (server as any).crawl({
+        const result: ToolResult = await server.crawl({
           url: 'https://example.com',
           media_handling: { images: true, videos: true },
         });
@@ -979,7 +1016,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           ],
         });
 
-        const result = await (server as any).crawl({
+        const result: ToolResult = await server.crawl({
           url: 'https://example.com',
         });
 
@@ -1005,7 +1042,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           ],
         });
 
-        const result = await (server as any).crawl({
+        const result: ToolResult = await server.crawl({
           url: 'https://example.com',
           network_requests: true,
         });
@@ -1029,7 +1066,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           ],
         });
 
-        const result = await (server as any).crawl({
+        const result: ToolResult = await server.crawl({
           url: 'https://example.com',
           mhtml: true,
         });
@@ -1056,7 +1093,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           ],
         });
 
-        const result = await (server as any).crawl({
+        const result: ToolResult = await server.crawl({
           url: 'https://example.com',
           download_files: true,
         });
@@ -1086,7 +1123,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           ],
         });
 
-        const result = await (server as any).crawl({
+        const result: ToolResult = await server.crawl({
           url: 'https://example.com',
           ssl_certificate: true,
         });
@@ -1109,7 +1146,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           ],
         });
 
-        await (server as any).crawl({
+        await server.crawl({
           url: 'https://example.com',
           wait_for: {
             selector: '.dynamic-content',
@@ -1142,7 +1179,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           ],
         });
 
-        const result = await (server as any).crawl({
+        const result: ToolResult = await server.crawl({
           url: 'https://example.com',
         });
 
@@ -1169,7 +1206,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           },
         });
 
-        const result = await (server as any).extractLinks({
+        const result: ToolResult = await server.extractLinks({
           url: 'https://example.com',
           categorize: true,
         });
@@ -1200,9 +1237,10 @@ describe('Crawl4AIServer Tool Handlers', () => {
             },
           }),
         };
-        (server as any).axiosClient = axiosClientMock;
+        // @ts-expect-error - accessing private property for testing
+        (server as InstanceType<typeof Crawl4AIServer>).axiosClient = axiosClientMock;
 
-        const result = await (server as any).smartCrawl({
+        const result: ToolResult = await server.smartCrawl({
           url: 'https://example.com/sitemap.xml',
         });
 
@@ -1235,9 +1273,10 @@ describe('Crawl4AIServer Tool Handlers', () => {
             },
           }),
         };
-        (server as any).axiosClient = axiosClientMock;
+        // @ts-expect-error - accessing private property for testing
+        (server as InstanceType<typeof Crawl4AIServer>).axiosClient = axiosClientMock;
 
-        const result = await (server as any).smartCrawl({
+        const result: ToolResult = await server.smartCrawl({
           url: 'https://example.com/feed.rss',
         });
 
@@ -1270,9 +1309,10 @@ describe('Crawl4AIServer Tool Handlers', () => {
             },
           }),
         };
-        (server as any).axiosClient = axiosClientMock;
+        // @ts-expect-error - accessing private property for testing
+        (server as InstanceType<typeof Crawl4AIServer>).axiosClient = axiosClientMock;
 
-        const result = await (server as any).smartCrawl({
+        const result: ToolResult = await server.smartCrawl({
           url: 'https://example.com/data.json',
         });
 
@@ -1306,7 +1346,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           },
         });
 
-        const result = await (server as any).extractLinks({
+        const result: ToolResult = await server.extractLinks({
           url: 'https://example.com',
           categorize: true,
         });
@@ -1336,9 +1376,10 @@ describe('Crawl4AIServer Tool Handlers', () => {
             },
           }),
         };
-        (server as any).axiosClient = axiosClientMock;
+        // @ts-expect-error - accessing private property for testing
+        (server as InstanceType<typeof Crawl4AIServer>).axiosClient = axiosClientMock;
 
-        const result = await (server as any).smartCrawl({
+        const result: ToolResult = await server.smartCrawl({
           url: 'https://example.com/file.txt',
         });
 
@@ -1361,12 +1402,13 @@ describe('Crawl4AIServer Tool Handlers', () => {
         });
 
         // parseSitemap now uses the service's parseSitemap method
-        const service = (server as any).service;
+        // @ts-expect-error - accessing private property for testing
+        const service = (server as InstanceType<typeof Crawl4AIServer>).service;
         service.parseSitemap = jest
           .fn()
           .mockResolvedValue(['https://example.com/page1', 'https://example.com/page2', 'https://example.com/page3']);
 
-        const result = await (server as any).parseSitemap({
+        const result: ToolResult = await server.parseSitemap({
           url: 'https://example.com/sitemap.xml',
         });
 
@@ -1379,12 +1421,13 @@ describe('Crawl4AIServer Tool Handlers', () => {
           data: ['https://example.com/blog/post1', 'https://example.com/blog/post2'],
         });
 
-        const service = (server as any).service;
+        // @ts-expect-error - accessing private property for testing
+        const service = (server as InstanceType<typeof Crawl4AIServer>).service;
         service.parseSitemap = jest
           .fn()
           .mockResolvedValue(['https://example.com/blog/post1', 'https://example.com/blog/post2']);
 
-        const result = await (server as any).parseSitemap({
+        const result: ToolResult = await server.parseSitemap({
           url: 'https://example.com/sitemap.xml',
           filter_pattern: '.*blog.*',
         });
@@ -1393,13 +1436,13 @@ describe('Crawl4AIServer Tool Handlers', () => {
       });
 
       it('should handle list_sessions', async () => {
-        const result = await (server as any).listSessions();
+        const result: ToolResult = await server.listSessions();
 
         expect(result.content[0].text).toContain('No active sessions');
       });
 
       it('should handle create_session', async () => {
-        const result = await (server as any).createSession({
+        const result: ToolResult = await server.createSession({
           session_id: 'test-session',
         });
 
@@ -1413,7 +1456,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           results: [{ success: true }],
         });
 
-        const result = await (server as any).createSession({
+        const result: ToolResult = await server.createSession({
           session_id: 'test-session-2',
           initial_url: 'https://example.com',
           browser_type: 'firefox',
@@ -1426,11 +1469,11 @@ describe('Crawl4AIServer Tool Handlers', () => {
 
       it('should handle clear_session', async () => {
         // First create a session
-        await (server as any).createSession({
+        await server.createSession({
           session_id: 'test-to-clear',
         });
 
-        const result = await (server as any).clearSession({
+        const result: ToolResult = await server.clearSession({
           session_id: 'test-to-clear',
         });
 
@@ -1451,7 +1494,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           ],
         });
 
-        const result = await (server as any).crawlRecursive({
+        const result: ToolResult = await server.crawlRecursive({
           url: 'https://example.com',
         });
 
@@ -1459,7 +1502,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
       });
 
       it('should handle clearSession for non-existent session', async () => {
-        const result = await (server as any).clearSession({
+        const result: ToolResult = await server.clearSession({
           session_id: 'non-existent',
         });
 
@@ -1467,11 +1510,12 @@ describe('Crawl4AIServer Tool Handlers', () => {
       });
 
       it('should handle parse_sitemap error', async () => {
-        const service = (server as any).service;
+        // @ts-expect-error - accessing private property for testing
+        const service = (server as InstanceType<typeof Crawl4AIServer>).service;
         service.parseSitemap = jest.fn().mockRejectedValue(new Error('Network error'));
 
         await expect(
-          (server as any).parseSitemap({
+          server.parseSitemap({
             url: 'https://example.com/sitemap.xml',
           }),
         ).rejects.toThrow('Failed to parse sitemap');
@@ -1484,7 +1528,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
         });
 
         await expect(
-          (server as any).crawl({
+          server.crawl({
             url: 'https://example.com',
           }),
         ).rejects.toThrow('Invalid response from server');
@@ -1506,19 +1550,19 @@ describe('Crawl4AIServer Tool Handlers', () => {
           ],
         });
 
-        const result = await (server as any).crawl({
+        const result: ToolResult = await server.crawl({
           url: 'https://example.com',
         });
 
         expect(result.content.length).toBeGreaterThan(1);
-        expect(result.content.some((c: any) => c.text.includes('Metadata'))).toBe(true);
-        expect(result.content.some((c: any) => c.text.includes('Links'))).toBe(true);
-        expect(result.content.some((c: any) => c.text.includes('JavaScript Execution Results'))).toBe(true);
+        expect(result.content.some((c) => c.text?.includes('Metadata'))).toBe(true);
+        expect(result.content.some((c) => c.text?.includes('Links'))).toBe(true);
+        expect(result.content.some((c) => c.text?.includes('JavaScript Execution Results'))).toBe(true);
       });
 
       it('should handle executeJS with no scripts', async () => {
         await expect(
-          (server as any).executeJS({
+          server.executeJS({
             url: 'https://example.com',
             scripts: null,
           }),
@@ -1530,7 +1574,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           content: [{ type: 'text', text: 'JS executed' }],
         });
 
-        const result = await (server as any).executeJS({
+        const result: ToolResult = await server.executeJS({
           url: 'https://example.com',
           scripts: ['return 1', 'return 2'],
         });
@@ -1545,7 +1589,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           },
         });
 
-        const result = await (server as any).batchCrawl({
+        const result: ToolResult = await server.batchCrawl({
           urls: ['https://example.com/1', 'https://example.com/2'],
           bypass_cache: true,
           remove_images: true,
@@ -1581,9 +1625,10 @@ describe('Crawl4AIServer Tool Handlers', () => {
             },
           }),
         };
-        (server as any).axiosClient = axiosClientMock;
+        // @ts-expect-error - accessing private property for testing
+        (server as InstanceType<typeof Crawl4AIServer>).axiosClient = axiosClientMock;
 
-        const result = await (server as any).smartCrawl({
+        const result: ToolResult = await server.smartCrawl({
           url: 'https://example.com/sitemap.xml',
           follow_links: true,
         });
@@ -1610,9 +1655,10 @@ describe('Crawl4AIServer Tool Handlers', () => {
               },
             }),
         };
-        (server as any).axiosClient = axiosClientMock;
+        // @ts-expect-error - accessing private property for testing
+        (server as InstanceType<typeof Crawl4AIServer>).axiosClient = axiosClientMock;
 
-        const result = await (server as any).smartCrawl({
+        const result: ToolResult = await server.smartCrawl({
           url: 'https://example.com',
         });
 
@@ -1630,7 +1676,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           },
         });
 
-        const result = await (server as any).extractLinks({
+        const result: ToolResult = await server.extractLinks({
           url: 'https://example.com',
           categorize: false,
         });
@@ -1649,7 +1695,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           },
         });
 
-        const result = await (server as any).extractLinks({
+        const result: ToolResult = await server.extractLinks({
           url: 'https://example.com',
         });
 
@@ -1708,7 +1754,8 @@ describe('Crawl4AIServer Tool Handlers', () => {
           },
         });
 
-        const service = (server as any).service;
+        // @ts-expect-error - accessing private property for testing
+        const service = (server as InstanceType<typeof Crawl4AIServer>).service;
         service.parseSitemap = jest.fn().mockResolvedValue(['https://example.com/page1']);
 
         // Test each tool
@@ -1789,17 +1836,17 @@ describe('Crawl4AIServer Tool Handlers', () => {
           ],
         });
 
-        const result = await (server as any).crawl({
+        const result: ToolResult = await server.crawl({
           url: 'https://example.com',
           screenshot: true,
           pdf: true,
         });
 
-        expect(result.content.some((c: any) => c.type === 'text')).toBe(true);
-        expect(result.content.some((c: any) => c.type === 'image')).toBe(true);
-        expect(
-          result.content.some((c: any) => c.type === 'resource' && c.resource.mimeType === 'application/pdf'),
-        ).toBe(true);
+        expect(result.content.some((c) => c.type === 'text')).toBe(true);
+        expect(result.content.some((c) => c.type === 'image')).toBe(true);
+        expect(result.content.some((c) => c.type === 'resource' && c.resource?.mimeType === 'application/pdf')).toBe(
+          true,
+        );
       });
     });
 
@@ -1821,7 +1868,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           content: [{ type: 'text', text: 'Page content about products' }],
         });
 
-        const result = await (server as any).getMarkdown({
+        const result: ToolResult = await server.getMarkdown({
           url: 'https://example.com',
           query: 'What products are listed?',
         });

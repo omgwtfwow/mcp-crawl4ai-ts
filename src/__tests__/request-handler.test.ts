@@ -52,7 +52,7 @@ jest.unstable_mockModule('@modelcontextprotocol/sdk/server/index.js', () => ({
     tool: mockTool,
     connect: mockConnect,
   })),
-  CallToolRequestSchema: { parse: (x: any) => x },
+  CallToolRequestSchema: { parse: <T>(x: T) => x },
   ListToolsRequestSchema: { method: 'tools/list' },
 }));
 
@@ -63,9 +63,25 @@ jest.unstable_mockModule('@modelcontextprotocol/sdk/server/stdio.js', () => ({
 // Now import the server after mocks are set up
 const { Crawl4AIServer } = await import('../index.js');
 
+type InstanceType<T> = T extends new (...args: unknown[]) => infer R ? R : never;
+
+interface RequestHandlerParams {
+  method: string;
+  params: {
+    name: string;
+    arguments: Record<string, unknown>;
+  };
+}
+
+interface RequestHandlerResult {
+  content: Array<{
+    text: string;
+  }>;
+}
+
 describe('MCP Request Handler Direct Testing', () => {
-  let server: any;
-  let requestHandler: any;
+  let server: InstanceType<typeof Crawl4AIServer>;
+  let requestHandler: (params: RequestHandlerParams) => Promise<RequestHandlerResult>;
 
   beforeEach(async () => {
     jest.clearAllMocks();
