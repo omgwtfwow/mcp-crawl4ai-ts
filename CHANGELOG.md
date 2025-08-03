@@ -1,5 +1,20 @@
 # Changelog
 
+## Version 2.3.0 (2025-08-03)
+
+### Refactoring
+- Split large 2,366-line index.ts file into modular structure
+  - Created handlers/ directory with operation-specific handlers
+  - Created schemas/ directory for validation schemas
+  - Reduced file sizes to under 1,000 lines each (most under 300)
+  - Maintained backward compatibility with all exports
+  - Improved code organization and maintainability
+
+### Testing
+- Updated tests to work with new modular structure
+- Maintained test coverage at 87.23% (exceeds 86% requirement)
+- All 165 unit tests passing
+
 ## Version 2.2.0 (2025-08-03)
 
 ### Features

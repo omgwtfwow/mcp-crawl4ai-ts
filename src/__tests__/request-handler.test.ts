@@ -120,7 +120,12 @@ describe('MCP Request Handler Direct Testing', () => {
     });
 
     // Create server
-    server = new Crawl4AIServer();
+    server = new Crawl4AIServer(
+      process.env.CRAWL4AI_BASE_URL || 'http://test.example.com',
+      process.env.CRAWL4AI_API_KEY || 'test-api-key',
+      'test-server',
+      '1.0.0',
+    );
     await server.start();
 
     // Get the request handler for CallToolRequestSchema
