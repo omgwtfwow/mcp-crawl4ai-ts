@@ -129,7 +129,7 @@ describe('MCP Request Handler Direct Testing', () => {
 
     // Get the request handler for CallToolRequestSchema
     const handlerCalls = mockSetRequestHandler.mock.calls;
-    
+
     // Find the handler for CallToolRequestSchema (tools/call)
     for (const call of handlerCalls) {
       const [schema, handler] = call;

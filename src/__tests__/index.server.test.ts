@@ -169,7 +169,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
 
     // Get the request handler for CallToolRequestSchema
     const handlerCalls = mockSetRequestHandler.mock.calls;
-    
+
     // Find the handler for CallToolRequestSchema (tools/call)
     for (const call of handlerCalls) {
       const [schema, handler] = call;
@@ -178,7 +178,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
         break;
       }
     }
-    
+
     // Debug: Check if we found the handler
     if (!requestHandler) {
       console.log('Handler calls:', handlerCalls.length);
@@ -1805,7 +1805,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
         });
         expect(unknownResult.content[0].text).toContain('Error: Unknown tool');
 
-        // The handler only handles tools/call requests, 
+        // The handler only handles tools/call requests,
         // so we don't test other methods here
       });
 

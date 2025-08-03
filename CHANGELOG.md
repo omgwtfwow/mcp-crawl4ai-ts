@@ -1,5 +1,38 @@
 # Changelog
 
+## Version 2.2.0 (2025-08-03)
+
+### Features
+- Added comprehensive test coverage infrastructure
+  - Set up Jest code coverage with Istanbul
+  - Added test:coverage and test:ci npm scripts
+  - Configured coverage thresholds (80% for all metrics)
+  - Added coverage badge to README
+  - Achieved 86.51% line coverage, 82.21% statement coverage
+
+### Testing Improvements
+- Added comprehensive unit tests for all tool handlers in index.ts
+  - Tests for success cases, error handling, and edge cases
+  - Tests for MCP protocol request handling
+  - Tests for parameter validation with Zod schemas
+- Added unit tests for JavaScript validation function
+- Added tests for private methods: parseSitemap and detectContentType
+- Fixed integration test reliability issues:
+  - Replaced example.com with httpbin.org in execute-js tests
+  - Fixed test expectations for JavaScript execution results
+  - Fixed MCP request handler test setup
+
+### Bug Fixes
+- Fixed parse_sitemap implementation to use axios.get directly instead of non-existent service method
+- Fixed TypeScript 'any' warnings in test files (eliminated 90+ warnings)
+- Fixed linting errors and formatting issues across the test suite
+- Fixed test URL in batch-crawl test (httpbingo.org → httpbin.org)
+
+### CI/CD Improvements
+- Updated GitHub Actions workflow to include coverage reporting
+- Added Node.js 22.x to the test matrix
+- Fixed all failing CI tests
+
 ## Version 2.1.2 (2025-08-03)
 
 ### Documentation
