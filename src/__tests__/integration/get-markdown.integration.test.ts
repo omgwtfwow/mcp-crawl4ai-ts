@@ -29,7 +29,7 @@ describe('get_markdown Integration Tests', () => {
         const result = await client.callTool({
           name: 'get_markdown',
           arguments: {
-            url: 'https://example.com',
+            url: 'https://httpbin.org/html',
           },
         });
 
@@ -39,7 +39,7 @@ describe('get_markdown Integration Tests', () => {
         expect(content[0].type).toBe('text');
 
         const text = content[0].text || '';
-        expect(text).toContain('URL: https://example.com');
+        expect(text).toContain('URL: https://httpbin.org/html');
         expect(text).toContain('Filter: fit');
         expect(text).toContain('Markdown:');
       },
@@ -52,7 +52,7 @@ describe('get_markdown Integration Tests', () => {
         const result = await client.callTool({
           name: 'get_markdown',
           arguments: {
-            url: 'https://example.com',
+            url: 'https://httpbin.org/html',
             filter: 'raw',
           },
         });
@@ -73,9 +73,9 @@ describe('get_markdown Integration Tests', () => {
         const result = await client.callTool({
           name: 'get_markdown',
           arguments: {
-            url: 'https://example.com',
+            url: 'https://httpbin.org/html',
             filter: 'bm25',
-            query: 'example domain',
+            query: 'Herman Melville',
           },
         });
 
@@ -85,7 +85,7 @@ describe('get_markdown Integration Tests', () => {
 
         const text = content[0].text || '';
         expect(text).toContain('Filter: bm25');
-        expect(text).toContain('Query: example domain');
+        expect(text).toContain('Query: Herman Melville');
       },
       TEST_TIMEOUTS.medium,
     );
@@ -96,7 +96,7 @@ describe('get_markdown Integration Tests', () => {
         const result = await client.callTool({
           name: 'get_markdown',
           arguments: {
-            url: 'https://example.com',
+            url: 'https://httpbin.org/html',
             filter: 'llm',
             query: 'What is this page about?',
           },
@@ -119,7 +119,7 @@ describe('get_markdown Integration Tests', () => {
         const result = await client.callTool({
           name: 'get_markdown',
           arguments: {
-            url: 'https://example.com',
+            url: 'https://httpbin.org/html',
             cache: '1',
           },
         });
@@ -140,7 +140,7 @@ describe('get_markdown Integration Tests', () => {
         const result = await client.callTool({
           name: 'get_markdown',
           arguments: {
-            url: 'https://example.com',
+            url: 'https://httpbin.org/html',
             session_id: 'test-session',
           },
         });
@@ -201,7 +201,7 @@ describe('get_markdown Integration Tests', () => {
         const result = await client.callTool({
           name: 'get_markdown',
           arguments: {
-            url: 'https://example.com',
+            url: 'https://httpbin.org/html',
             filter: 'fit',
             // These should be ignored
             remove_images: true,
