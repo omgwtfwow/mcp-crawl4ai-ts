@@ -6,15 +6,14 @@ import type { Crawl4AIService as Crawl4AIServiceType } from '../crawl4ai-service
 
 // Manual mock for axios
 const mockAxios = {
-  create: jest.fn()
+  create: jest.fn(),
 };
 
 jest.unstable_mockModule('axios', () => ({
-  default: mockAxios
+  default: mockAxios,
 }));
 
 // Import modules after mocking
-const axios = await import('axios');
 const { Crawl4AIService } = await import('../crawl4ai-service.js');
 
 // Helper function to create a complete AxiosResponse object
