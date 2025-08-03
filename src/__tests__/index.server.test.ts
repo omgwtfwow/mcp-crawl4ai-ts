@@ -158,7 +158,12 @@ describe('Crawl4AIServer Tool Handlers', () => {
     mockHead.mockReset();
 
     // Create server instance - the mock will be used automatically
-    server = new Crawl4AIServer() as InstanceType<typeof Crawl4AIServer> & TestServerMethods;
+    server = new Crawl4AIServer(
+      process.env.CRAWL4AI_BASE_URL || 'http://test.example.com',
+      process.env.CRAWL4AI_API_KEY || 'test-api-key',
+      'test-server',
+      '1.0.0',
+    ) as InstanceType<typeof Crawl4AIServer> & TestServerMethods;
 
     // Start the server to register handlers
     await server.start();
@@ -1266,7 +1271,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
             },
           }),
         };
-        server.axiosClient = axiosClientMock;
+        server.axiosClientForTesting = axiosClientMock;
 
         const result: ToolResult = await server.smartCrawl({
           url: 'https://example.com/sitemap.xml',
@@ -1301,7 +1306,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
             },
           }),
         };
-        server.axiosClient = axiosClientMock;
+        server.axiosClientForTesting = axiosClientMock;
 
         const result: ToolResult = await server.smartCrawl({
           url: 'https://example.com/feed.rss',
@@ -1336,7 +1341,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
             },
           }),
         };
-        server.axiosClient = axiosClientMock;
+        server.axiosClientForTesting = axiosClientMock;
 
         const result: ToolResult = await server.smartCrawl({
           url: 'https://example.com/data.json',
@@ -1402,7 +1407,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
             },
           }),
         };
-        server.axiosClient = axiosClientMock;
+        server.axiosClientForTesting = axiosClientMock;
 
         const result: ToolResult = await server.smartCrawl({
           url: 'https://example.com/file.txt',
@@ -1649,7 +1654,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
             },
           }),
         };
-        server.axiosClient = axiosClientMock;
+        server.axiosClientForTesting = axiosClientMock;
 
         const result: ToolResult = await server.smartCrawl({
           url: 'https://example.com/sitemap.xml',
@@ -1664,7 +1669,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           head: jest.fn().mockRejectedValue({ response: { status: 500 } }),
           post: jest.fn(),
         };
-        server.axiosClient = axiosClientMock;
+        server.axiosClientForTesting = axiosClientMock;
 
         await expect(
           server.smartCrawl({
