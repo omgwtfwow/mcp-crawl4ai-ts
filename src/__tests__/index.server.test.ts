@@ -77,11 +77,11 @@ import type {
 } from '../types.js';
 
 describe('Crawl4AIServer Tool Handlers', () => {
-  let server: Crawl4AIServer;
+  let server: InstanceType<typeof Crawl4AIServer>;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     // Reset all mock functions
     mockGetMarkdown.mockReset();
     mockCaptureScreenshot.mockReset();
@@ -94,7 +94,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
     mockPost.mockReset();
     mockGet.mockReset();
     mockHead.mockReset();
-    
+
     // Create server instance - the mock will be used automatically
     server = new Crawl4AIServer();
   });
@@ -363,6 +363,116 @@ describe('Crawl4AIServer Tool Handlers', () => {
         const screenshotContent = result.content.find((c: any) => c.type === 'image');
         expect(screenshotContent?.data).toBe('screenshot-data');
       });
+
+      it('should handle crawl with proxy configuration', async () => {
+        const mockResponse: CrawlEndpointResponse = {
+          success: true,
+          results: [
+            {
+              url: 'https://example.com',
+              markdown: { raw_markdown: 'Proxied content' },
+              success: true,
+              status_code: 200,
+            },
+          ],
+        };
+
+        mockCrawl.mockResolvedValue(mockResponse);
+
+        const result = await (server as any).crawl({
+          url: 'https://example.com',
+          proxy_server: 'http://proxy.example.com:8080',
+          proxy_username: 'user',
+          proxy_password: 'pass',
+        });
+
+        expect(mockCrawl).toHaveBeenCalledWith(
+          expect.objectContaining({
+            browser_config: expect.objectContaining({
+              proxy_config: {
+                server: 'http://proxy.example.com:8080',
+                username: 'user',
+                password: 'pass',
+              },
+            }),
+          }),
+        );
+      });
+
+      it('should handle crawl with cookies and headers', async () => {
+        const mockResponse: CrawlEndpointResponse = {
+          success: true,
+          results: [
+            {
+              url: 'https://example.com',
+              markdown: { raw_markdown: 'Content with auth' },
+              success: true,
+              status_code: 200,
+            },
+          ],
+        };
+
+        mockCrawl.mockResolvedValue(mockResponse);
+
+        const result = await (server as any).crawl({
+          url: 'https://example.com',
+          cookies: [{ name: 'session', value: 'abc123' }],
+          headers: { 'Authorization': 'Bearer token123' },
+        });
+
+        expect(mockCrawl).toHaveBeenCalledWith(
+          expect.objectContaining({
+            browser_config: expect.objectContaining({
+              cookies: [{ name: 'session', value: 'abc123' }],
+              headers: { 'Authorization': 'Bearer token123' },
+            }),
+          }),
+        );
+      });
+
+      it('should handle virtual scroll configuration', async () => {
+        const mockResponse: CrawlEndpointResponse = {
+          success: true,
+          results: [
+            {
+              url: 'https://example.com',
+              markdown: { raw_markdown: 'Scrolled content' },
+              success: true,
+              status_code: 200,
+            },
+          ],
+        };
+
+        mockCrawl.mockResolvedValue(mockResponse);
+
+        const result = await (server as any).crawl({
+          url: 'https://example.com',
+          virtual_scroll_config: {
+            enabled: true,
+            scroll_step: 100,
+            max_scrolls: 10,
+          },
+        });
+
+        expect(mockCrawl).toHaveBeenCalledWith(
+          expect.objectContaining({
+            crawler_config: expect.objectContaining({
+              virtual_scroll_config: {
+                enabled: true,
+                scroll_step: 100,
+                max_scrolls: 10,
+              },
+            }),
+          }),
+        );
+      });
+
+      it('should handle js_code as null error', async () => {
+        await expect((server as any).crawl({
+          url: 'https://example.com',
+          js_code: null,
+        })).rejects.toThrow('js_code parameter is null');
+      });
     });
 
     describe('Session management', () => {
@@ -429,9 +539,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
                     { href: '/page1', text: 'Page 1' },
                     { href: '/page2', text: 'Page 2' },
                   ],
-                  external: [
-                    { href: 'https://external.com', text: 'External' },
-                  ],
+                  external: [{ href: 'https://external.com', text: 'External' }],
                 },
               },
             ],
@@ -454,7 +562,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
       it('should crawl recursively with depth limit', async () => {
         // Ensure mock is clean before setting up
         mockPost.mockReset();
-        
+
         mockPost
           .mockResolvedValueOnce({
             data: {
@@ -462,9 +570,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
                 {
                   url: 'https://example.com',
                   links: {
-                    internal: [
-                      { href: 'https://example.com/page1', text: 'Page 1' },
-                    ],
+                    internal: [{ href: 'https://example.com/page1', text: 'Page 1' }],
                   },
                   markdown: { raw_markdown: 'Home page' },
                   success: true,
@@ -547,7 +653,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
         mockHead.mockResolvedValue({
           headers: { 'content-type': 'application/pdf' },
         });
-        
+
         // Mock the crawl response for PDF
         mockPost.mockResolvedValue({
           data: {
@@ -575,8 +681,9 @@ describe('Crawl4AIServer Tool Handlers', () => {
       it('should handle service error for get_markdown', async () => {
         mockGetMarkdown.mockRejectedValue(new Error('Network error'));
 
-        await expect((server as any).getMarkdown({ url: 'https://example.com' }))
-          .rejects.toThrow('Failed to get markdown: Network error');
+        await expect((server as any).getMarkdown({ url: 'https://example.com' })).rejects.toThrow(
+          'Failed to get markdown: Network error',
+        );
       });
 
       it('should handle axios error with response detail', async () => {
@@ -589,8 +696,9 @@ describe('Crawl4AIServer Tool Handlers', () => {
         };
         mockCaptureScreenshot.mockRejectedValue(axiosError);
 
-        await expect((server as any).captureScreenshot({ url: 'https://example.com' }))
-          .rejects.toThrow('Failed to capture screenshot: Invalid API key');
+        await expect((server as any).captureScreenshot({ url: 'https://example.com' })).rejects.toThrow(
+          'Failed to capture screenshot: Invalid API key',
+        );
       });
 
       it('should handle missing screenshot data', async () => {
@@ -599,8 +707,9 @@ describe('Crawl4AIServer Tool Handlers', () => {
           screenshot: '',
         });
 
-        await expect((server as any).captureScreenshot({ url: 'https://example.com' }))
-          .rejects.toThrow('Screenshot capture failed - no screenshot data in response');
+        await expect((server as any).captureScreenshot({ url: 'https://example.com' })).rejects.toThrow(
+          'Screenshot capture failed - no screenshot data in response',
+        );
       });
 
       it('should handle missing PDF data', async () => {
@@ -609,20 +718,23 @@ describe('Crawl4AIServer Tool Handlers', () => {
           pdf: '',
         });
 
-        await expect((server as any).generatePDF({ url: 'https://example.com' }))
-          .rejects.toThrow('PDF generation failed - no PDF data in response');
+        await expect((server as any).generatePDF({ url: 'https://example.com' })).rejects.toThrow(
+          'PDF generation failed - no PDF data in response',
+        );
       });
     });
 
     describe('Validation errors', () => {
       it('should handle missing scripts for execute_js', async () => {
-        await expect((server as any).executeJS({ url: 'https://example.com', scripts: null as any }))
-          .rejects.toThrow('scripts is required');
+        await expect((server as any).executeJS({ url: 'https://example.com', scripts: null as any })).rejects.toThrow(
+          'scripts is required',
+        );
       });
 
       it('should handle empty crawl options', async () => {
-        await expect((server as any).crawl(null as any))
-          .rejects.toThrow('crawl requires options object with at least a url parameter');
+        await expect((server as any).crawl(null as any)).rejects.toThrow(
+          'crawl requires options object with at least a url parameter',
+        );
       });
 
       it('should handle crawl_recursive errors', async () => {
@@ -630,7 +742,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
         mockPost.mockRejectedValue(new Error('API error'));
 
         const result = await (server as any).crawlRecursive({ url: 'https://example.com' });
-        
+
         // The method catches errors and returns a message about no pages crawled
         expect(result.content[0].text).toContain('Pages crawled: 0');
         expect(result.content[0].text).toContain('No pages could be crawled');
@@ -639,8 +751,9 @@ describe('Crawl4AIServer Tool Handlers', () => {
       it('should handle parse_sitemap errors', async () => {
         mockGet.mockRejectedValue(new Error('Failed to fetch sitemap'));
 
-        await expect((server as any).parseSitemap({ url: 'https://example.com/sitemap.xml' }))
-          .rejects.toThrow('Failed to parse sitemap: Failed to fetch sitemap');
+        await expect((server as any).parseSitemap({ url: 'https://example.com/sitemap.xml' })).rejects.toThrow(
+          'Failed to parse sitemap: Failed to fetch sitemap',
+        );
       });
     });
 

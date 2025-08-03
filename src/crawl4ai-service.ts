@@ -142,13 +142,15 @@ export class Crawl4AIService {
   }
 
   async parseSitemap(url: string) {
-    const response = await this.axiosClient.get(url);
+    // Use axios directly without baseURL for fetching external URLs
+    const response = await axios.get(url);
     return response.data;
   }
 
   async detectContentType(url: string): Promise<string> {
     try {
-      const response = await this.axiosClient.head(url);
+      // Use axios directly without baseURL for external URLs
+      const response = await axios.head(url);
       return response.headers['content-type'] || '';
     } catch {
       return '';

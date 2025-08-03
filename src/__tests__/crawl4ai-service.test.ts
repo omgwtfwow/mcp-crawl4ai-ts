@@ -231,6 +231,24 @@ describe('Crawl4AIService', () => {
       expect(result).toEqual(mockResponse);
     });
 
+    it('should reject invalid JavaScript in crawler_config', async () => {
+      await expect(service.crawl({
+        url: 'https://example.com',
+        crawler_config: {
+          js_code: 'console.log(&quot;test&quot;)',
+        },
+      })).rejects.toThrow('Invalid JavaScript: Contains HTML entities');
+    });
+
+    it('should handle js_code as array with invalid script', async () => {
+      await expect(service.crawl({
+        url: 'https://example.com',
+        crawler_config: {
+          js_code: ['valid code', '<script>alert("test")</script>'],
+        },
+      })).rejects.toThrow('Invalid JavaScript: Contains HTML entities');
+    });
+
     // Timeout testing is better suited for integration tests
     // where we can test against real API behavior
   });
@@ -312,6 +330,34 @@ describe('Crawl4AIService', () => {
       });
 
       expect(result).toEqual(mockResponse);
+    });
+
+    it('should reject scripts with HTML entities', async () => {
+      await expect(service.executeJS({
+        url: 'https://httpbin.org/html',
+        scripts: 'console.log(&quot;test&quot;)',
+      })).rejects.toThrow('Invalid JavaScript: Contains HTML entities');
+    });
+
+    it('should reject scripts with HTML tags', async () => {
+      await expect(service.executeJS({
+        url: 'https://httpbin.org/html',
+        scripts: '<script>alert("test")</script>',
+      })).rejects.toThrow('Invalid JavaScript: Contains HTML entities');
+    });
+
+    it('should reject scripts with literal \\n', async () => {
+      await expect(service.executeJS({
+        url: 'https://httpbin.org/html',
+        scripts: 'console.log("test");\\nconsole.log("test2");',
+      })).rejects.toThrow('Invalid JavaScript: Contains HTML entities');
+    });
+
+    it('should reject array with invalid scripts', async () => {
+      await expect(service.executeJS({
+        url: 'https://httpbin.org/html',
+        scripts: ['valid script', 'console.log(&amp;&amp; true)'],
+      })).rejects.toThrow('Invalid JavaScript: Contains HTML entities');
     });
   });
 
@@ -931,6 +977,63 @@ describe('Crawl4AIService', () => {
 
       expect(result.success).toBe(true);
       expect(result.results[0].console_messages).toBeDefined();
+    });
+  });
+
+  describe('parseSitemap', () => {
+    it('should fetch and return sitemap content', async () => {
+      const mockSitemapXML = `<?xml version="1.0" encoding="UTF-8"?>
+        <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+          <url><loc>https://example.com/page1</loc></url>
+          <url><loc>https://example.com/page2</loc></url>
+        </urlset>`;
+      
+      // parseSitemap now uses axios directly without baseURL
+      nock('https://example.com')
+        .get('/sitemap.xml')
+        .reply(200, mockSitemapXML);
+
+      const response = await service.parseSitemap('https://example.com/sitemap.xml');
+      expect(response).toBe(mockSitemapXML);
+    });
+
+    it('should handle sitemap fetch errors', async () => {
+      nock('https://example.com')
+        .get('/sitemap.xml')
+        .reply(404, 'Not Found');
+
+      await expect(service.parseSitemap('https://example.com/sitemap.xml'))
+        .rejects.toThrow();
+    });
+  });
+
+  describe('detectContentType', () => {
+    it('should return content type from HEAD request', async () => {
+      // detectContentType now uses axios directly without baseURL
+      nock('https://example.com')
+        .head('/document.pdf')
+        .reply(200, '', { 'content-type': 'application/pdf' });
+
+      const contentType = await service.detectContentType('https://example.com/document.pdf');
+      expect(contentType).toBe('application/pdf');
+    });
+
+    it('should return empty string when content-type header is missing', async () => {
+      nock('https://example.com')
+        .head('/file')
+        .reply(200, '');
+
+      const contentType = await service.detectContentType('https://example.com/file');
+      expect(contentType).toBe('');
+    });
+
+    it('should return empty string on HEAD request failure', async () => {
+      nock('https://example.com')
+        .head('/file')
+        .reply(404, 'Not Found');
+
+      const contentType = await service.detectContentType('https://example.com/file');
+      expect(contentType).toBe('');
     });
   });
 });
