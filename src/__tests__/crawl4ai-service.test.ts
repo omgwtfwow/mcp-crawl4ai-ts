@@ -8,6 +8,15 @@ import type {
   CrawlEndpointResponse,
 } from '../types.js';
 
+/**
+ * Unit tests for Crawl4AIService using nock for HTTP mocking
+ *
+ * Mock Maintenance:
+ * - These mocks are maintained manually based on the actual API responses
+ * - When the API changes, update the mock responses to match
+ * - Integration tests validate against the real API
+ */
+
 describe('Crawl4AIService', () => {
   let service: Crawl4AIService;
   const baseURL = 'https://api.crawl4ai.com';

@@ -55,7 +55,7 @@ export default [
     },
   },
   {
-    files: ['src/**/*.test.ts', 'src/**/*.integration.test.ts', 'src/**/test-utils.ts'],
+    files: ['src/**/*.test.ts', 'src/**/*.integration.test.ts', 'src/**/test-utils.ts', 'src/__tests__/types/*.ts'],
     languageOptions: {
       globals: {
         describe: 'readonly',

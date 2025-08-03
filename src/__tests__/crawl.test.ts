@@ -1,12 +1,39 @@
 /* eslint-env jest */
-import { Crawl4AIService } from '../crawl4ai-service.js';
-import axios from 'axios';
+import { jest } from '@jest/globals';
+import type { AxiosResponse } from 'axios';
+import type { MockAxiosInstance } from './types/mocks.js';
+import type { Crawl4AIService as Crawl4AIServiceType } from '../crawl4ai-service.js';
 
-jest.mock('axios');
+// Manual mock for axios
+const mockAxios = {
+  create: jest.fn(),
+};
+
+jest.unstable_mockModule('axios', () => ({
+  default: mockAxios,
+}));
+
+// Import modules after mocking
+const { Crawl4AIService } = await import('../crawl4ai-service.js');
+
+// Helper function to create a complete AxiosResponse object
+function createMockAxiosResponse<T>(data: T): AxiosResponse<T> {
+  return {
+    data,
+    status: 200,
+    statusText: 'OK',
+    headers: {},
+    config: {
+      url: '',
+      method: 'post',
+      headers: {},
+    },
+  } as AxiosResponse<T>;
+}
 
 describe('crawl parameter mapping', () => {
-  let service: Crawl4AIService;
-  let mockAxiosInstance: any;
+  let service: Crawl4AIServiceType;
+  let mockAxiosInstance: MockAxiosInstance;
 
   beforeEach(() => {
     mockAxiosInstance = {
@@ -14,7 +41,7 @@ describe('crawl parameter mapping', () => {
       get: jest.fn(),
       head: jest.fn(),
     };
-    (axios.create as jest.Mock).mockReturnValue(mockAxiosInstance);
+    mockAxios.create.mockReturnValue(mockAxiosInstance);
     service = new Crawl4AIService('http://test.com', 'test-key');
   });
 
@@ -24,7 +51,7 @@ describe('crawl parameter mapping', () => {
 
   describe('Browser configuration mapping', () => {
     it('should map all browser config parameters correctly', async () => {
-      const mockResponse = { data: { results: [{ markdown: 'test' }] } };
+      const mockResponse = createMockAxiosResponse({ results: [{ markdown: 'test' }] });
       mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
 
       await service.crawl({
@@ -70,7 +97,7 @@ describe('crawl parameter mapping', () => {
 
   describe('Crawler configuration mapping', () => {
     it('should map content filtering parameters', async () => {
-      const mockResponse = { data: { results: [{ markdown: 'test' }] } };
+      const mockResponse = createMockAxiosResponse({ results: [{ markdown: 'test' }] });
       mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
 
       await service.crawl({
@@ -102,7 +129,7 @@ describe('crawl parameter mapping', () => {
     });
 
     it('should map JavaScript execution parameters', async () => {
-      const mockResponse = { data: { results: [{ markdown: 'test' }] } };
+      const mockResponse = createMockAxiosResponse({ results: [{ markdown: 'test' }] });
       mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
 
       await service.crawl({
@@ -128,7 +155,7 @@ describe('crawl parameter mapping', () => {
     });
 
     it('should map page navigation and timing parameters', async () => {
-      const mockResponse = { data: { results: [{ markdown: 'test' }] } };
+      const mockResponse = createMockAxiosResponse({ results: [{ markdown: 'test' }] });
       mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
 
       await service.crawl({
@@ -160,7 +187,7 @@ describe('crawl parameter mapping', () => {
     });
 
     it('should map media handling parameters', async () => {
-      const mockResponse = { data: { results: [{ markdown: 'test' }] } };
+      const mockResponse = createMockAxiosResponse({ results: [{ markdown: 'test' }] });
       mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
 
       await service.crawl({
@@ -192,7 +219,7 @@ describe('crawl parameter mapping', () => {
     });
 
     it('should map link filtering parameters', async () => {
-      const mockResponse = { data: { results: [{ markdown: 'test' }] } };
+      const mockResponse = createMockAxiosResponse({ results: [{ markdown: 'test' }] });
       mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
 
       await service.crawl({
@@ -216,7 +243,7 @@ describe('crawl parameter mapping', () => {
     });
 
     it('should map page interaction parameters', async () => {
-      const mockResponse = { data: { results: [{ markdown: 'test' }] } };
+      const mockResponse = createMockAxiosResponse({ results: [{ markdown: 'test' }] });
       mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
 
       await service.crawl({
@@ -242,7 +269,7 @@ describe('crawl parameter mapping', () => {
     });
 
     it('should map virtual scroll configuration', async () => {
-      const mockResponse = { data: { results: [{ markdown: 'test' }] } };
+      const mockResponse = createMockAxiosResponse({ results: [{ markdown: 'test' }] });
       mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
 
       await service.crawl({
@@ -275,7 +302,7 @@ describe('crawl parameter mapping', () => {
     // Use extract_with_llm tool instead for structured data extraction
 
     it('should map session and cache parameters', async () => {
-      const mockResponse = { data: { results: [{ markdown: 'test' }] } };
+      const mockResponse = createMockAxiosResponse({ results: [{ markdown: 'test' }] });
       mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
 
       await service.crawl({
@@ -297,7 +324,7 @@ describe('crawl parameter mapping', () => {
     });
 
     it('should map performance and debug parameters', async () => {
-      const mockResponse = { data: { results: [{ markdown: 'test' }] } };
+      const mockResponse = createMockAxiosResponse({ results: [{ markdown: 'test' }] });
       mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
 
       await service.crawl({
@@ -323,7 +350,7 @@ describe('crawl parameter mapping', () => {
 
   describe('Combined configurations', () => {
     it('should handle both browser and crawler configs together', async () => {
-      const mockResponse = { data: { results: [{ markdown: 'test' }] } };
+      const mockResponse = createMockAxiosResponse({ results: [{ markdown: 'test' }] });
       mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
 
       await service.crawl({
@@ -364,7 +391,7 @@ describe('crawl parameter mapping', () => {
 
   describe('Edge cases', () => {
     it('should handle undefined values correctly', async () => {
-      const mockResponse = { data: { results: [{ markdown: 'test' }] } };
+      const mockResponse = createMockAxiosResponse({ results: [{ markdown: 'test' }] });
       mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
 
       await service.crawl({
@@ -390,7 +417,7 @@ describe('crawl parameter mapping', () => {
     });
 
     it('should handle empty arrays correctly', async () => {
-      const mockResponse = { data: { results: [{ markdown: 'test' }] } };
+      const mockResponse = createMockAxiosResponse({ results: [{ markdown: 'test' }] });
       mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
 
       await service.crawl({

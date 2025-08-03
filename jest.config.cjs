@@ -1,6 +1,6 @@
 /** @type {import('jest').Config} */
 module.exports = {
-  preset: 'ts-jest',
+  preset: 'ts-jest/presets/default-esm',
   testEnvironment: 'node',
   roots: ['<rootDir>/src'],
   testMatch: ['**/__tests__/**/*.test.ts'],
@@ -17,12 +17,10 @@ module.exports = {
       'ts-jest',
       {
         useESM: true,
-        tsconfig: {
-          module: 'commonjs',
-          esModuleInterop: true,
-        },
       },
     ],
   },
   extensionsToTreatAsEsm: ['.ts'],
+  // Limit parallelization for integration tests to avoid overwhelming the server
+  ...(process.env.NODE_ENV === 'test' && process.argv.some(arg => arg.includes('integration')) ? { maxWorkers: 2 } : {}),
 };

@@ -103,7 +103,7 @@ export class Crawl4AIService {
 
     const response = await this.axiosClient.post('/execute_js', {
       url: options.url,
-      scripts: scripts,
+      scripts: scripts, // Always send as array
       // Only url and scripts are supported by the endpoint
     });
 

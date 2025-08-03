@@ -39,7 +39,7 @@ describe('crawl Advanced Features Integration Tests', () => {
         });
 
         await expectSuccessfulCrawl(result);
-        const textContent = (result as ToolResult).content.find((c: any) => c.type === 'text');
+        const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
         expect(textContent?.text).toBeTruthy();
         // Should have extracted content
         expect(textContent?.text).toContain('Herman Melville');
@@ -60,7 +60,7 @@ describe('crawl Advanced Features Integration Tests', () => {
         });
 
         await expectSuccessfulCrawl(result);
-        const textContent = (result as ToolResult).content.find((c: any) => c.type === 'text');
+        const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
         expect(textContent?.text).toBeTruthy();
         // MHTML should be captured but not in the text output
         expect(textContent?.text).toContain('Example Domain');
@@ -81,7 +81,7 @@ describe('crawl Advanced Features Integration Tests', () => {
         });
 
         await expectSuccessfulCrawl(result);
-        const textContent = (result as ToolResult).content.find((c: any) => c.type === 'text');
+        const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
         expect(textContent?.text).toBeTruthy();
         // Should contain country data
         expect(textContent?.text).toMatch(/China|India|United States/);
@@ -106,7 +106,7 @@ describe('crawl Advanced Features Integration Tests', () => {
         });
 
         await expectSuccessfulCrawl(result);
-        const textContent = (result as ToolResult).content.find((c: any) => c.type === 'text');
+        const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
         expect(textContent?.text).toBeTruthy();
         // Should have news content but no social media references in extracted links
         expect(textContent?.text).toContain('BBC');

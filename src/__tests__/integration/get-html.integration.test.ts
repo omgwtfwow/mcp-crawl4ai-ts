@@ -29,7 +29,7 @@ describe('get_html Integration Tests', () => {
         const result = await client.callTool({
           name: 'get_html',
           arguments: {
-            url: 'https://example.com',
+            url: 'https://httpbin.org/html',
           },
         });
 

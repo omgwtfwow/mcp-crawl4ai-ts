@@ -29,7 +29,7 @@ describe('MCP Server Validation', () => {
         .passthrough()
         .and(schema)
         .transform((data) => {
-          const { session_id, ...rest } = data as any;
+          const { session_id, ...rest } = data as Record<string, unknown> & { session_id?: unknown };
           if (session_id !== undefined) {
             throw new Error(message);
           }

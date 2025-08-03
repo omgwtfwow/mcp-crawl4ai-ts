@@ -29,7 +29,7 @@ describe('crawl_recursive Integration Tests', () => {
         const result = await client.callTool({
           name: 'crawl_recursive',
           arguments: {
-            url: 'https://httpbin.org/links/5',
+            url: 'https://httpbin.org/links/5/0',
           },
         });
 
@@ -45,7 +45,7 @@ describe('crawl_recursive Integration Tests', () => {
         expect(textContent?.text).toContain('Pages crawled:');
         expect(textContent?.text).toContain('Max depth reached:');
         expect(textContent?.text).toContain('Only internal links');
-        // Should have found multiple pages since httpbin.org/links/5 has internal links
+        // Should have found multiple pages since httpbin.org/links/5/0 has internal links
         expect(textContent?.text).toMatch(/Pages crawled: [2-9]|[1-9][0-9]/);
       },
       TEST_TIMEOUTS.long,
@@ -57,7 +57,7 @@ describe('crawl_recursive Integration Tests', () => {
         const result = await client.callTool({
           name: 'crawl_recursive',
           arguments: {
-            url: 'https://httpbin.org/links/10',
+            url: 'https://httpbin.org/links/10/0',
             max_depth: 1,
             max_pages: 5,
           },

@@ -31,7 +31,7 @@ describe('capture_screenshot Integration Tests', () => {
         const result = await client.callTool({
           name: 'capture_screenshot',
           arguments: {
-            url: 'https://example.com',
+            url: 'https://httpbin.org/html',
           },
         });
 
@@ -47,7 +47,7 @@ describe('capture_screenshot Integration Tests', () => {
 
         // Second item should be text description
         expect(content[1].type).toBe('text');
-        expect(content[1].text).toContain('Screenshot captured for: https://example.com');
+        expect(content[1].text).toContain('Screenshot captured for: https://httpbin.org/html');
       },
       TEST_TIMEOUTS.short,
     );
@@ -58,8 +58,8 @@ describe('capture_screenshot Integration Tests', () => {
         const result = await client.callTool({
           name: 'capture_screenshot',
           arguments: {
-            url: 'https://example.com',
-            screenshot_wait_for: 3,
+            url: 'https://httpbin.org/html',
+            screenshot_wait_for: 0.5, // Reduced from 3 seconds
           },
         });
 
@@ -74,9 +74,9 @@ describe('capture_screenshot Integration Tests', () => {
 
         // Second item should be text description
         expect(content[1].type).toBe('text');
-        expect(content[1].text).toContain('Screenshot captured for: https://example.com');
+        expect(content[1].text).toContain('Screenshot captured for: https://httpbin.org/html');
       },
-      TEST_TIMEOUTS.short,
+      TEST_TIMEOUTS.medium,
     );
 
     it(

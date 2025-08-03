@@ -102,13 +102,13 @@ describe('Session Management Integration Tests', () => {
           name: 'create_session',
           arguments: {
             initial_url: 'https://example.com',
-            browser_type: 'firefox',
+            browser_type: 'chromium',
           },
         });
 
         const typedResult = result as ToolResult;
         expect(typedResult.session_id).toBeDefined();
-        expect(typedResult.browser_type).toBe('firefox');
+        expect(typedResult.browser_type).toBe('chromium');
         expect(typedResult.initial_url).toBe('https://example.com');
 
         const textContent = typedResult.content.find((c) => c.type === 'text');
@@ -257,7 +257,7 @@ describe('Session Management Integration Tests', () => {
           arguments: {
             session_id: 'lifecycle-test',
             initial_url: 'https://example.com',
-            browser_type: 'webkit',
+            browser_type: 'chromium',
           },
         });
 
@@ -271,7 +271,7 @@ describe('Session Management Integration Tests', () => {
         });
         const listText = (listResult as ToolResult).content.find((c) => c.type === 'text')?.text;
         expect(listText).toContain('lifecycle-test');
-        expect(listText).toContain('webkit');
+        expect(listText).toContain('chromium');
 
         // 3. Use the session with crawl tool
         const crawlResult = await client.callTool({

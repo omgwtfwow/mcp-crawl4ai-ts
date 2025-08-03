@@ -7,6 +7,7 @@ import axios, { AxiosInstance } from 'axios';
 import dotenv from 'dotenv';
 import { z } from 'zod';
 import {
+  AdvancedCrawlConfig,
   BatchCrawlOptions,
   CrawlEndpointResponse,
   CrawlResultItem,
@@ -43,7 +44,17 @@ interface SessionInfo {
   created_at: Date;
   last_used: Date;
   initial_url?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
+}
+
+// Error handling types
+interface ErrorWithResponse {
+  response?: {
+    data?: {
+      detail?: string;
+    };
+  };
+  message?: string;
 }
 
 // Validation schemas
@@ -91,7 +102,7 @@ const JsCodeSchema = z
   .describe('JavaScript code as string or array of strings');
 
 // Helper to create schema that rejects session_id
-const createStatelessSchema = <T extends z.ZodTypeAny>(schema: T, toolName: string) => {
+const createStatelessSchema = <T extends z.ZodObject<z.ZodRawShape>>(schema: T, toolName: string) => {
   // Tool-specific guidance for common scenarios
   const toolGuidance: Record<string, string> = {
     capture_screenshot: 'To capture screenshots with sessions, use crawl(session_id, screenshot: true)',
@@ -102,7 +113,7 @@ const createStatelessSchema = <T extends z.ZodTypeAny>(schema: T, toolName: stri
   };
 
   const message = `${toolName} does not support session_id. This tool is stateless - each call creates a new browser. ${
-    toolGuidance[toolName] || 'For persistent operations, use crawlg with session_id.'
+    toolGuidance[toolName] || 'For persistent operations, use crawl with session_id.'
   }`;
 
   return z
@@ -112,11 +123,11 @@ const createStatelessSchema = <T extends z.ZodTypeAny>(schema: T, toolName: stri
     .passthrough()
     .and(schema)
     .transform((data) => {
-      const { session_id, ...rest } = data as any;
+      const { session_id, ...rest } = data;
       if (session_id !== undefined) {
         throw new Error(message);
       }
-      return rest;
+      return rest as z.infer<T>;
     });
 };
 
@@ -128,28 +139,25 @@ const ExecuteJsSchema = createStatelessSchema(
   'execute_js',
 );
 
-const GetMarkdownSchema = createStatelessSchema(
-  z
-    .object({
-      url: z.string().url(),
-      filter: z.enum(['raw', 'fit', 'bm25', 'llm']).optional().default('fit'),
-      query: z.string().optional(),
-      cache: z.string().optional().default('0'),
-    })
-    .refine(
-      (data) => {
-        // If filter is bm25 or llm, query is required
-        if ((data.filter === 'bm25' || data.filter === 'llm') && !data.query) {
-          return false;
-        }
-        return true;
-      },
-      {
-        message: 'Query parameter is required when using bm25 or llm filter',
-        path: ['query'],
-      },
-    ),
-  'get_markdown',
+const GetMarkdownBaseSchema = z.object({
+  url: z.string().url(),
+  filter: z.enum(['raw', 'fit', 'bm25', 'llm']).optional().default('fit'),
+  query: z.string().optional(),
+  cache: z.string().optional().default('0'),
+});
+
+const GetMarkdownSchema = createStatelessSchema(GetMarkdownBaseSchema, 'get_markdown').refine(
+  (data) => {
+    // If filter is bm25 or llm, query is required
+    if ((data.filter === 'bm25' || data.filter === 'llm') && !data.query) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: 'Query parameter is required when using bm25 or llm filter',
+    path: ['query'],
+  },
 );
 
 const VirtualScrollConfigSchema = z.object({
@@ -1095,7 +1103,7 @@ class Crawl4AIServer {
           case 'get_markdown':
             try {
               const validatedArgs = GetMarkdownSchema.parse(args);
-              return await this.getMarkdown(validatedArgs);
+              return await this.getMarkdown(validatedArgs as z.infer<typeof GetMarkdownBaseSchema>);
             } catch (error) {
               if (error instanceof z.ZodError) {
                 const details = error.errors
@@ -1299,7 +1307,7 @@ class Crawl4AIServer {
           content: [
             {
               type: 'text',
-              text: `Error: ${error.message}`,
+              text: `Error: ${error instanceof Error ? error.message : String(error)}`,
             },
           ],
         };
@@ -1338,7 +1346,7 @@ class Crawl4AIServer {
       };
     } catch (error) {
       throw new Error(
-        `Failed to get markdown: ${(error as any).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
+        `Failed to get markdown: ${(error as ErrorWithResponse).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
       );
     }
   }
@@ -1367,7 +1375,7 @@ class Crawl4AIServer {
       };
     } catch (error) {
       throw new Error(
-        `Failed to capture screenshot: ${(error as any).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
+        `Failed to capture screenshot: ${(error as ErrorWithResponse).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
       );
     }
   }
@@ -1386,7 +1394,7 @@ class Crawl4AIServer {
           {
             type: 'resource',
             resource: {
-              uri: `data:application/pdf;name=${encodeURIComponent(new URL(options.url).hostname)}.pdf;base64,${result.pdf}`,
+              uri: `data:application/pdf;name=${encodeURIComponent(new URL(String(options.url)).hostname)}.pdf;base64,${result.pdf}`,
               mimeType: 'application/pdf',
               blob: result.pdf,
             },
@@ -1399,7 +1407,7 @@ class Crawl4AIServer {
       };
     } catch (error) {
       throw new Error(
-        `Failed to generate PDF: ${(error as any).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
+        `Failed to generate PDF: ${(error as ErrorWithResponse).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
       );
     }
   }
@@ -1430,9 +1438,10 @@ class Crawl4AIServer {
             let resultStr = '';
             if (res && typeof res === 'object' && 'success' in res) {
               // This is a status object (e.g., from null return or execution without return)
-              resultStr = res.success
+              const statusObj = res as { success: unknown; error?: unknown };
+              resultStr = statusObj.success
                 ? 'Executed successfully (no return value)'
-                : `Error: ${res.error || 'Unknown error'}`;
+                : `Error: ${statusObj.error || 'Unknown error'}`;
             } else {
               // This is an actual return value
               resultStr = JSON.stringify(res, null, 2);
@@ -1454,7 +1463,7 @@ class Crawl4AIServer {
       };
     } catch (error) {
       throw new Error(
-        `Failed to execute JavaScript: ${(error as any).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
+        `Failed to execute JavaScript: ${(error as ErrorWithResponse).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
       );
     }
   }
@@ -1495,7 +1504,7 @@ class Crawl4AIServer {
       };
     } catch (error) {
       throw new Error(
-        `Failed to batch crawl: ${(error as any).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
+        `Failed to batch crawl: ${(error as ErrorWithResponse).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
       );
     }
   }
@@ -1583,7 +1592,7 @@ class Crawl4AIServer {
             content: [
               {
                 type: 'text',
-                text: `Smart crawl detected content type: ${strategy}\n\nMain content:\n${result.markdown || result.content || 'No content extracted'}\n\n---\nFollowed ${urlsToFollow.length} links:\n${urlsToFollow.map((url, i) => `${i + 1}. ${url}`).join('\n')}`,
+                text: `Smart crawl detected content type: ${strategy}\n\nMain content:\n${result.markdown?.raw_markdown || result.html || 'No content extracted'}\n\n---\nFollowed ${urlsToFollow.length} links:\n${urlsToFollow.map((url, i) => `${i + 1}. ${url}`).join('\n')}`,
               },
               ...(result.metadata
                 ? [
@@ -1602,7 +1611,7 @@ class Crawl4AIServer {
         content: [
           {
             type: 'text',
-            text: `Smart crawl detected content type: ${strategy}\n\n${result.markdown || result.content || 'No content extracted'}`,
+            text: `Smart crawl detected content type: ${strategy}\n\n${result.markdown?.raw_markdown || result.html || 'No content extracted'}`,
           },
           ...(result.metadata
             ? [
@@ -1616,7 +1625,7 @@ class Crawl4AIServer {
       };
     } catch (error) {
       throw new Error(
-        `Failed to smart crawl: ${(error as any).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
+        `Failed to smart crawl: ${(error as ErrorWithResponse).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
       );
     }
   }
@@ -1636,7 +1645,7 @@ class Crawl4AIServer {
       };
     } catch (error) {
       throw new Error(
-        `Failed to get HTML: ${(error as any).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
+        `Failed to get HTML: ${(error as ErrorWithResponse).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
       );
     }
   }
@@ -1785,7 +1794,7 @@ class Crawl4AIServer {
               type: 'text',
               text: `Link analysis for ${options.url}:\n\n${Object.entries(categorized)
                 .map(
-                  ([category, links]: [string, any]) =>
+                  ([category, links]: [string, string[]]) =>
                     `${category} (${links.length}):\n${links.slice(0, 10).join('\n')}${links.length > 10 ? '\n...' : ''}`,
                 )
                 .join('\n\n')}`,
@@ -1806,7 +1815,7 @@ class Crawl4AIServer {
       }
     } catch (error) {
       throw new Error(
-        `Failed to extract links: ${(error as any).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
+        `Failed to extract links: ${(error as ErrorWithResponse).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
       );
     }
   }
@@ -1881,7 +1890,7 @@ class Crawl4AIServer {
           }
         } catch (error) {
           // Log but continue crawling other pages
-          console.error(`Failed to crawl ${current.url}:`, error.message || error);
+          console.error(`Failed to crawl ${current.url}:`, error instanceof Error ? error.message : error);
         }
       }
 
@@ -1903,7 +1912,7 @@ class Crawl4AIServer {
         ],
       };
     } catch (error) {
-      throw new Error(`Failed to crawl recursively: ${error.message}`);
+      throw new Error(`Failed to crawl recursively: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -1940,7 +1949,7 @@ class Crawl4AIServer {
       };
     } catch (error) {
       throw new Error(
-        `Failed to parse sitemap: ${(error as any).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
+        `Failed to parse sitemap: ${(error as ErrorWithResponse).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
       );
     }
   }
@@ -2009,12 +2018,12 @@ class Crawl4AIServer {
       if (options.session_id) {
         crawler_config.session_id = options.session_id;
         // Update session last_used time
-        const session = this.sessions.get(options.session_id);
+        const session = this.sessions.get(String(options.session_id));
         if (session) {
           session.last_used = new Date();
         }
       }
-      if (options.cache_mode) crawler_config.cache_mode = options.cache_mode.toLowerCase();
+      if (options.cache_mode) crawler_config.cache_mode = String(options.cache_mode).toLowerCase();
 
       // Performance
       if (options.timeout) crawler_config.timeout = options.timeout;
@@ -2060,11 +2069,17 @@ class Crawl4AIServer {
       if (options.log_console) crawler_config.log_console = options.log_console;
 
       // Call service with proper configuration
-      const response: CrawlEndpointResponse = await this.service.crawl({
-        url: options.url,
-        browser_config,
+      const crawlConfig: AdvancedCrawlConfig = {
+        url: options.url ? String(options.url) : undefined,
         crawler_config,
-      });
+      };
+
+      // Only include browser_config if we're not using a session
+      if (!options.session_id) {
+        crawlConfig.browser_config = browser_config;
+      }
+
+      const response: CrawlEndpointResponse = await this.service.crawl(crawlConfig);
 
       // Validate response structure
       if (!response || !response.results || response.results.length === 0) {
@@ -2113,7 +2128,7 @@ class Crawl4AIServer {
         content.push({
           type: 'resource',
           resource: {
-            uri: `data:application/pdf;name=${encodeURIComponent(new URL(options.url).hostname)}.pdf;base64,${result.pdf}`,
+            uri: `data:application/pdf;name=${encodeURIComponent(new URL(String(options.url)).hostname)}.pdf;base64,${result.pdf}`,
             mimeType: 'application/pdf',
             blob: result.pdf,
           },
@@ -2152,7 +2167,7 @@ class Crawl4AIServer {
       return { content };
     } catch (error) {
       throw new Error(
-        `Failed to crawl: ${(error as any).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
+        `Failed to crawl: ${(error as ErrorWithResponse).response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
       );
     }
   }
@@ -2213,7 +2228,7 @@ class Crawl4AIServer {
         created_at: this.sessions.get(sessionId)?.created_at.toISOString(),
       };
     } catch (error) {
-      throw new Error(`Failed to create session: ${error.message}`);
+      throw new Error(`Failed to create session: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -2236,7 +2251,7 @@ class Crawl4AIServer {
         ],
       };
     } catch (error) {
-      throw new Error(`Failed to clear session: ${error.message}`);
+      throw new Error(`Failed to clear session: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -2285,7 +2300,7 @@ class Crawl4AIServer {
         ],
       };
     } catch (error) {
-      throw new Error(`Failed to list sessions: ${error.message}`);
+      throw new Error(`Failed to list sessions: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -2302,7 +2317,7 @@ class Crawl4AIServer {
         ],
       };
     } catch (error) {
-      throw new Error(`Failed to extract with LLM: ${error.message}`);
+      throw new Error(`Failed to extract with LLM: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

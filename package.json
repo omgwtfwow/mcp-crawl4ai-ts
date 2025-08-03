@@ -1,6 +1,6 @@
 {
   "name": "mcp-crawl4ai-ts",
-  "version": "2.0.2",
+  "version": "2.1.0",
   "description": "TypeScript MCP server for Crawl4AI - web crawling and content extraction",
   "main": "dist/index.js",
   "bin": {
@@ -8,19 +8,21 @@
   },
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -p tsconfig.build.json",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "test:unit": "jest --testPathIgnorePatterns=integration --testPathIgnorePatterns=examples",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
+    "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
+    "test:unit": "NODE_OPTIONS=--experimental-vm-modules jest --testPathIgnorePatterns=integration --testPathIgnorePatterns=examples",
     "test:integration": "jest src/__tests__/integration --testTimeout=180000",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
-    "check": "npm run lint && npm run format:check && npm run build"
+    "check": "npm run lint && npm run format:check && npm run build",
+    "view-mocks": "tsx scripts/view-api-responses.ts",
+    "generate-mocks": "tsx scripts/generate-mock-code.ts"
   },
   "keywords": [
     "mcp",

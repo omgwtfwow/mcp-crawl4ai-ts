@@ -1,8 +1,14 @@
 # Changelog
 
-## Version 2.0.2 (2025-08-03)
+## Version 2.1 (2025-08-03)
 
 ### Bug Fixes
+- Fixed `smart_crawl` bug where markdown object was incorrectly printed as `[object Object]`
+  - Now correctly accesses `result.markdown.raw_markdown` for content display
+- Fixed integration test timeout issues:
+  - Replaced example.com with httpbin.org/html in tests to avoid "domcontentloaded" timeout issues
+  - Fixed httpbin.org URLs by adding proper path suffixes (e.g., /links/5/0)
+  - Limited Jest parallelization for integration tests to prevent server overload
 - Fixed parameter mapping in `get_markdown` tool - now correctly maps schema properties (`filter`, `query`, `cache`) to API parameters (`f`, `q`, `c`)
 - Fixed `smart_crawl` schema to use `follow_links` parameter instead of `remove_images`
 - Fixed `extract_links` schema mismatch - corrected schema to use `categorize` parameter as defined in tool
@@ -19,6 +25,11 @@
 - Fixed `crawl` and `generate_pdf` tools PDF response to use proper MCP SDK embedded resource format with blob field
 
 ### Improvements
+- Added comprehensive integration tests for `batch_crawl` tool (7 tests)
+- Added comprehensive integration tests for `smart_crawl` tool (8 tests)
+- Fixed all ESLint formatting issues across the codebase
+- Enhanced error handling for empty URL arrays in batch_crawl
+- Improved test reliability by replacing problematic test URLs
 - Updated tool descriptions to accurately reflect actual behavior
 - Added proper TypeScript types for getMarkdown function
 - Enhanced test coverage for batch_crawl parameter handling
@@ -45,6 +56,14 @@
   - Renamed test file for clarity
   - Improved unit test performance from 92s to ~1s by removing timeout tests
   - Cleaned up test organization and removed test README
+- Added GitHub Actions CI workflow:
+  - Automatic testing on push to main and pull requests
+  - Tests run on Node.js 18.x and 20.x
+  - Includes linting, formatting checks, and build verification
+- Added mock helper scripts:
+  - `npm run generate-mocks`: Generate nock mock code from real API
+  - `npm run view-mocks`: View and save API responses for reference
+  - Both scripts help maintain accurate test mocks
 
 ## Version 2.0.1 (2025-08-02)
 Update README

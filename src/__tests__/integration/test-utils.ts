@@ -78,31 +78,60 @@ export function generateTestUrl(type: 'simple' | 'dynamic' | 'infinite-scroll' |
   return urls[type];
 }
 
+// Test result types
+export interface TestContentItem {
+  type: string;
+  text?: string;
+  data?: string;
+  mimeType?: string;
+}
+
+export interface TestResult {
+  content: TestContentItem[];
+}
+
+export interface ToolResult {
+  content: TestContentItem[];
+  isError?: boolean;
+}
+
 // Assertion helpers
-export async function expectSuccessfulCrawl(result: any): Promise<void> {
+export async function expectSuccessfulCrawl(result: unknown): Promise<void> {
   expect(result).toBeDefined();
-  expect(result.content).toBeInstanceOf(Array);
-  expect(result.content.length).toBeGreaterThan(0);
 
-  const textContent = result.content.find((c: any) => c.type === 'text');
+  // Type guard to check if result has content property
+  const typedResult = result as { content?: unknown };
+  expect(typedResult.content).toBeDefined();
+  expect(typedResult.content).toBeInstanceOf(Array);
+
+  const contentArray = typedResult.content as TestContentItem[];
+  expect(contentArray.length).toBeGreaterThan(0);
+
+  const textContent = contentArray.find((c) => c.type === 'text');
   expect(textContent).toBeDefined();
-  expect(textContent.text).toBeTruthy();
+  expect(textContent?.text).toBeTruthy();
 }
 
-export async function expectScreenshot(result: any): Promise<void> {
-  const imageContent = result.content.find((c: any) => c.type === 'image');
+export async function expectScreenshot(result: unknown): Promise<void> {
+  const typedResult = result as { content?: TestContentItem[] };
+  expect(typedResult.content).toBeDefined();
+
+  const imageContent = typedResult.content?.find((c) => c.type === 'image');
   expect(imageContent).toBeDefined();
-  expect(imageContent.data).toBeTruthy();
-  expect(imageContent.mimeType).toBe('image/png');
+  expect(imageContent?.data).toBeTruthy();
+  expect(imageContent?.mimeType).toBe('image/png');
 }
 
-export async function expectExtractedData(result: any, expectedKeys: string[]): Promise<void> {
-  const textContent = result.content.find((c: any) => c.type === 'text');
+export async function expectExtractedData(result: unknown, expectedKeys: string[]): Promise<void> {
+  const typedResult = result as { content?: TestContentItem[] };
+  expect(typedResult.content).toBeDefined();
+
+  const textContent = typedResult.content?.find((c) => c.type === 'text');
   expect(textContent).toBeDefined();
 
   // Check if extracted data contains expected keys
   for (const key of expectedKeys) {
-    expect(textContent.text).toContain(key);
+    expect(textContent?.text).toContain(key);
   }
 }
 

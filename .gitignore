@@ -35,6 +35,7 @@ logs/
 # Testing
 coverage/
 .nyc_output/
+src/__tests__/mock-responses.json
 
 # Temporary files
 tmp/

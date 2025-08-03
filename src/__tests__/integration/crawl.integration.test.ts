@@ -86,7 +86,7 @@ describe('crawl Integration Tests', () => {
         });
 
         await expectSuccessfulCrawl(result);
-        const textContent = (result as ToolResult).content.find((c: any) => c.type === 'text');
+        const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
         expect(textContent?.text).toBeTruthy();
         // httpbin.org/html contains links and a title
         expect(textContent?.text?.toLowerCase()).toMatch(/herman|melville|moby/); // Content from the page
@@ -132,7 +132,7 @@ describe('crawl Integration Tests', () => {
         });
 
         await expectSuccessfulCrawl(result);
-        const textContent = (result as ToolResult).content.find((c: any) => c.type === 'text');
+        const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
         // Should have captured multiple trending repos after scrolling
         expect(textContent?.text).toBeTruthy();
         expect(textContent?.text?.length).toBeGreaterThan(1000);
@@ -224,7 +224,7 @@ describe('crawl Integration Tests', () => {
         });
 
         await expectSuccessfulCrawl(result);
-        const textContent = (result as ToolResult).content.find((c: any) => c.type === 'text');
+        const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
         expect(textContent?.text).toBeTruthy();
       },
       TEST_TIMEOUTS.short,
@@ -244,7 +244,7 @@ describe('crawl Integration Tests', () => {
           });
 
           expect(result).toBeTruthy();
-          const textContent = (result as ToolResult).content.find((c: any) => c.type === 'text');
+          const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
           expect(textContent?.text).toBeTruthy();
 
           // The response should be JSON with an "answer" field
@@ -257,9 +257,9 @@ describe('crawl Integration Tests', () => {
             // If parsing fails, at least check we got text
             expect(textContent?.text?.length || 0).toBeGreaterThan(0);
           }
-        } catch (error: any) {
+        } catch (error) {
           // If the server doesn't have LLM configured, it will return an error
-          if (error.message?.includes('No LLM provider configured')) {
+          if (error instanceof Error && error.message?.includes('No LLM provider configured')) {
             console.log('⚠️  LLM extraction test skipped: Server needs LLM provider configured');
             return;
           }
@@ -304,7 +304,7 @@ describe('crawl Integration Tests', () => {
 
         await expectSuccessfulCrawl(result);
         // PDF generation should return some content
-        const textContent = (result as ToolResult).content.find((c: any) => c.type === 'text');
+        const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
         expect(textContent?.text).toBeTruthy();
         // Should contain some content from the page
         expect(textContent?.text?.toLowerCase()).toContain('herman');
@@ -348,7 +348,7 @@ describe('crawl Integration Tests', () => {
           },
         });
         await expectSuccessfulCrawl(result1);
-        const content1 = (result1 as ToolResult).content.find((c: any) => c.type === 'text')?.text;
+        const content1 = (result1 as ToolResult).content.find((c) => c.type === 'text')?.text;
 
         // Wait a bit to ensure cache is saved
         await delay(500);
@@ -365,7 +365,7 @@ describe('crawl Integration Tests', () => {
         });
         const cacheTime = Date.now() - startTime;
         await expectSuccessfulCrawl(result2);
-        const content2 = (result2 as ToolResult).content.find((c: any) => c.type === 'text')?.text;
+        const content2 = (result2 as ToolResult).content.find((c) => c.type === 'text')?.text;
 
         // Content should be identical if cache was used
         expect(content2).toBe(content1);
@@ -438,7 +438,7 @@ describe('crawl Integration Tests', () => {
         });
 
         await expectSuccessfulCrawl(result);
-        const textContent = (result as ToolResult).content.find((c: any) => c.type === 'text');
+        const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
         expect(textContent?.text).toBeTruthy();
 
         // Just verify we got content back - the server's filtering behavior may vary
@@ -483,7 +483,7 @@ describe('crawl Integration Tests', () => {
         });
 
         await expectSuccessfulCrawl(result);
-        const textContent = (result as ToolResult).content.find((c: any) => c.type === 'text');
+        const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
         // Should not contain social media domains
         expect(textContent?.text).not.toMatch(/twitter\.com|facebook\.com/);
       },
@@ -531,7 +531,7 @@ describe('crawl Integration Tests', () => {
         });
 
         await expectSuccessfulCrawl(result);
-        const textContent = (result as ToolResult).content.find((c: any) => c.type === 'text');
+        const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
         // httpbin returns headers in response
         expect(textContent?.text).toContain('MCP Test Bot');
         expect(textContent?.text).toContain('X-Custom-Header');
@@ -552,7 +552,7 @@ describe('crawl Integration Tests', () => {
           },
         });
 
-        const textContent = (result as ToolResult).content.find((c: any) => c.type === 'text');
+        const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
         expect(textContent?.text).toContain('Error');
       },
       TEST_TIMEOUTS.short,
@@ -569,7 +569,7 @@ describe('crawl Integration Tests', () => {
           },
         });
 
-        const textContent = (result as ToolResult).content.find((c: any) => c.type === 'text');
+        const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
         expect(textContent?.text?.toLowerCase()).toMatch(/error|failed/);
       },
       TEST_TIMEOUTS.short,
@@ -588,7 +588,7 @@ describe('crawl Integration Tests', () => {
         });
 
         // Should still return content even if JS fails
-        const textContent = (result as ToolResult).content.find((c: any) => c.type === 'text');
+        const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
         expect(textContent).toBeDefined();
       },
       TEST_TIMEOUTS.short,
@@ -633,7 +633,7 @@ describe('crawl Integration Tests', () => {
         await expectSuccessfulCrawl(result);
         // Screenshot might not always be returned in complex multi-feature crawls
         // especially with httpbin.org which is a simple HTML page
-        const textContent = (result as ToolResult).content.find((c: any) => c.type === 'text');
+        const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
         expect(textContent).toBeDefined();
       },
       TEST_TIMEOUTS.long,
@@ -657,7 +657,7 @@ describe('crawl Integration Tests', () => {
 
         // The request should complete (even if proxy doesn't exist, the config should be accepted)
         expect(result).toBeDefined();
-        const textContent = (result as ToolResult).content.find((c: any) => c.type === 'text');
+        const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
         expect(textContent).toBeDefined();
       },
       TEST_TIMEOUTS.medium,
