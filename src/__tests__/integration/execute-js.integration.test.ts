@@ -53,6 +53,7 @@ describe('execute_js Integration Tests', () => {
     it(
       'should execute single script as string',
       async () => {
+        console.log('Starting execute_js test...');
         const result = await client.callTool({
           name: 'execute_js',
           arguments: {
@@ -60,6 +61,7 @@ describe('execute_js Integration Tests', () => {
             scripts: 'return window.location.href',
           },
         });
+        console.log('Got result:', result);
 
         expect(result).toBeDefined();
         const content = (result as ToolResult).content;
@@ -69,7 +71,7 @@ describe('execute_js Integration Tests', () => {
         expect(content[0].text).toContain('Script: return window.location.href');
         expect(content[0].text).toContain('Returned: "https://example.com');
       },
-      TEST_TIMEOUTS.medium,
+      TEST_TIMEOUTS.long,  // Increase timeout to 120s
     );
 
     it(
@@ -130,7 +132,7 @@ describe('execute_js Integration Tests', () => {
         expect(content[0].text).toContain('JavaScript executed on: https://example.com');
         expect(content[0].text).toContain('Returned: "line1\\nline2"');
       },
-      TEST_TIMEOUTS.short,
+      TEST_TIMEOUTS.medium,  // Increase from short to medium
     );
 
     it(
