@@ -37,7 +37,6 @@ jest.unstable_mockModule('axios', () => ({
   },
 }));
 
-
 // Mock MCP SDK
 const mockSetRequestHandler = jest.fn();
 const mockTool = jest.fn();
