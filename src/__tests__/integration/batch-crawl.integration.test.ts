@@ -129,7 +129,7 @@ describe('batch_crawl Integration Tests', () => {
 
         const text = content[0].text || '';
         expect(text).toContain('Processed 3 URLs');
-        expect(text).toContain('https://httpbingo.org/html: Success');
+        expect(text).toContain('https://httpbin.org/html: Success');
         expect(text).toContain('https://httpbin.org/json: Success');
         expect(text).toContain('https://httpbin.org/xml: Success');
       },

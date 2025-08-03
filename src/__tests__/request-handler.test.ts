@@ -52,8 +52,15 @@ jest.unstable_mockModule('@modelcontextprotocol/sdk/server/index.js', () => ({
     tool: mockTool,
     connect: mockConnect,
   })),
-  CallToolRequestSchema: { parse: <T>(x: T) => x },
-  ListToolsRequestSchema: { method: 'tools/list' },
+}));
+
+// Mock the types module that exports the schemas
+const CallToolRequestSchema = { method: 'tools/call' };
+const ListToolsRequestSchema = { method: 'tools/list' };
+
+jest.unstable_mockModule('@modelcontextprotocol/sdk/types.js', () => ({
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
 }));
 
 jest.unstable_mockModule('@modelcontextprotocol/sdk/server/stdio.js', () => ({
@@ -120,8 +127,17 @@ describe('MCP Request Handler Direct Testing', () => {
     server = new Crawl4AIServer();
     await server.start();
 
-    // Get the request handler - it's the second call to setRequestHandler
-    requestHandler = mockSetRequestHandler.mock.calls[1]?.[1];
+    // Get the request handler for CallToolRequestSchema
+    const handlerCalls = mockSetRequestHandler.mock.calls;
+    
+    // Find the handler for CallToolRequestSchema (tools/call)
+    for (const call of handlerCalls) {
+      const [schema, handler] = call;
+      if (schema && schema.method === 'tools/call') {
+        requestHandler = handler;
+        break;
+      }
+    }
   });
 
   describe('Tool Handler Coverage', () => {

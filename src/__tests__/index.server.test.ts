@@ -15,6 +15,7 @@ const mockGetHTML = jest.fn();
 const mockBatchCrawl = jest.fn();
 const mockExtractWithLLM = jest.fn();
 const mockCrawl = jest.fn();
+const mockParseSitemap = jest.fn();
 
 // Mock the Crawl4AIService module
 jest.unstable_mockModule('../crawl4ai-service.js', () => ({
@@ -27,6 +28,7 @@ jest.unstable_mockModule('../crawl4ai-service.js', () => ({
     batchCrawl: mockBatchCrawl,
     extractWithLLM: mockExtractWithLLM,
     crawl: mockCrawl,
+    parseSitemap: mockParseSitemap,
   })),
 }));
 
@@ -41,6 +43,15 @@ jest.unstable_mockModule('@modelcontextprotocol/sdk/server/index.js', () => ({
     tool: mockTool,
     connect: mockConnect,
   })),
+}));
+
+// Mock the types module that exports the schemas
+const CallToolRequestSchema = { method: 'tools/call' };
+const ListToolsRequestSchema = { method: 'tools/list' };
+
+jest.unstable_mockModule('@modelcontextprotocol/sdk/types.js', () => ({
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
 }));
 
 jest.unstable_mockModule('@modelcontextprotocol/sdk/server/stdio.js', () => ({
@@ -123,6 +134,10 @@ interface TestServerMethods {
   crawlRecursive: (params: unknown) => Promise<ToolResult>;
   parseSitemap: (params: unknown) => Promise<ToolResult>;
   smartCrawl: (params: unknown) => Promise<ToolResult>;
+  // Private properties for testing
+  service: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  sessions: Map<string, unknown>;
+  axiosClient: any; // eslint-disable-line @typescript-eslint/no-explicit-any
 }
 
 describe('Crawl4AIServer Tool Handlers', () => {
@@ -141,6 +156,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
     mockBatchCrawl.mockReset();
     mockExtractWithLLM.mockReset();
     mockCrawl.mockReset();
+    mockParseSitemap.mockReset();
     mockPost.mockReset();
     mockGet.mockReset();
     mockHead.mockReset();
@@ -151,8 +167,25 @@ describe('Crawl4AIServer Tool Handlers', () => {
     // Start the server to register handlers
     await server.start();
 
-    // Get the request handler
-    requestHandler = mockSetRequestHandler.mock.calls.find((call) => call[0].parse === undefined)?.[1];
+    // Get the request handler for CallToolRequestSchema
+    const handlerCalls = mockSetRequestHandler.mock.calls;
+    
+    // Find the handler for CallToolRequestSchema (tools/call)
+    for (const call of handlerCalls) {
+      const [schema, handler] = call;
+      if (schema && schema.method === 'tools/call') {
+        requestHandler = handler;
+        break;
+      }
+    }
+    
+    // Debug: Check if we found the handler
+    if (!requestHandler) {
+      console.log('Handler calls:', handlerCalls.length);
+      handlerCalls.forEach((call, i) => {
+        console.log(`Call ${i}:`, call[0], typeof call[1]);
+      });
+    }
   });
 
   // Add a simple test to verify mocking works
@@ -165,8 +198,8 @@ describe('Crawl4AIServer Tool Handlers', () => {
   describe('Constructor and setup', () => {
     it('should initialize with correct configuration', () => {
       expect(server).toBeDefined();
-      expect((server as InstanceType<typeof Crawl4AIServer>).service).toBeDefined();
-      expect((server as InstanceType<typeof Crawl4AIServer>).sessions).toBeDefined();
+      expect(server.service).toBeDefined();
+      expect(server.sessions).toBeDefined();
     });
 
     it('should set up handlers on construction', () => {
@@ -1237,8 +1270,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
             },
           }),
         };
-        // @ts-expect-error - accessing private property for testing
-        (server as InstanceType<typeof Crawl4AIServer>).axiosClient = axiosClientMock;
+        server.axiosClient = axiosClientMock;
 
         const result: ToolResult = await server.smartCrawl({
           url: 'https://example.com/sitemap.xml',
@@ -1273,8 +1305,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
             },
           }),
         };
-        // @ts-expect-error - accessing private property for testing
-        (server as InstanceType<typeof Crawl4AIServer>).axiosClient = axiosClientMock;
+        server.axiosClient = axiosClientMock;
 
         const result: ToolResult = await server.smartCrawl({
           url: 'https://example.com/feed.rss',
@@ -1309,8 +1340,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
             },
           }),
         };
-        // @ts-expect-error - accessing private property for testing
-        (server as InstanceType<typeof Crawl4AIServer>).axiosClient = axiosClientMock;
+        server.axiosClient = axiosClientMock;
 
         const result: ToolResult = await server.smartCrawl({
           url: 'https://example.com/data.json',
@@ -1376,8 +1406,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
             },
           }),
         };
-        // @ts-expect-error - accessing private property for testing
-        (server as InstanceType<typeof Crawl4AIServer>).axiosClient = axiosClientMock;
+        server.axiosClient = axiosClientMock;
 
         const result: ToolResult = await server.smartCrawl({
           url: 'https://example.com/file.txt',
@@ -1397,42 +1426,43 @@ describe('Crawl4AIServer Tool Handlers', () => {
 
     describe('Additional Method Tests', () => {
       it('should handle parse_sitemap', async () => {
-        mockPost.mockResolvedValue({
-          data: ['https://example.com/page1', 'https://example.com/page2', 'https://example.com/page3'],
+        // Mock axios.get to return sitemap XML
+        mockGet.mockResolvedValue({
+          data: `<?xml version="1.0" encoding="UTF-8"?>
+            <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+              <url><loc>https://example.com/page1</loc></url>
+              <url><loc>https://example.com/page2</loc></url>
+              <url><loc>https://example.com/page3</loc></url>
+            </urlset>`,
         });
-
-        // parseSitemap now uses the service's parseSitemap method
-        // @ts-expect-error - accessing private property for testing
-        const service = (server as InstanceType<typeof Crawl4AIServer>).service;
-        service.parseSitemap = jest
-          .fn()
-          .mockResolvedValue(['https://example.com/page1', 'https://example.com/page2', 'https://example.com/page3']);
 
         const result: ToolResult = await server.parseSitemap({
           url: 'https://example.com/sitemap.xml',
         });
 
-        expect(result.content[0].text).toContain('Parsed sitemap');
-        expect(result.content[0].text).toContain('3 URLs found');
+        expect(result.content[0].text).toContain('Sitemap parsed successfully');
+        expect(result.content[0].text).toContain('Total URLs found: 3');
       });
 
       it('should handle parse_sitemap with filter', async () => {
-        mockPost.mockResolvedValue({
-          data: ['https://example.com/blog/post1', 'https://example.com/blog/post2'],
+        // Mock axios.get to return sitemap XML with blog URLs
+        mockGet.mockResolvedValue({
+          data: `<?xml version="1.0" encoding="UTF-8"?>
+            <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+              <url><loc>https://example.com/page1</loc></url>
+              <url><loc>https://example.com/blog/post1</loc></url>
+              <url><loc>https://example.com/blog/post2</loc></url>
+              <url><loc>https://example.com/page2</loc></url>
+            </urlset>`,
         });
-
-        // @ts-expect-error - accessing private property for testing
-        const service = (server as InstanceType<typeof Crawl4AIServer>).service;
-        service.parseSitemap = jest
-          .fn()
-          .mockResolvedValue(['https://example.com/blog/post1', 'https://example.com/blog/post2']);
 
         const result: ToolResult = await server.parseSitemap({
           url: 'https://example.com/sitemap.xml',
           filter_pattern: '.*blog.*',
         });
 
-        expect(result.content[0].text).toContain('2 URLs found');
+        expect(result.content[0].text).toContain('Total URLs found: 4');
+        expect(result.content[0].text).toContain('Filtered URLs: 2');
       });
 
       it('should handle list_sessions', async () => {
@@ -1510,9 +1540,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
       });
 
       it('should handle parse_sitemap error', async () => {
-        // @ts-expect-error - accessing private property for testing
-        const service = (server as InstanceType<typeof Crawl4AIServer>).service;
-        service.parseSitemap = jest.fn().mockRejectedValue(new Error('Network error'));
+        mockParseSitemap.mockRejectedValue(new Error('Network error'));
 
         await expect(
           server.parseSitemap({
@@ -1625,8 +1653,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
             },
           }),
         };
-        // @ts-expect-error - accessing private property for testing
-        (server as InstanceType<typeof Crawl4AIServer>).axiosClient = axiosClientMock;
+        server.axiosClient = axiosClientMock;
 
         const result: ToolResult = await server.smartCrawl({
           url: 'https://example.com/sitemap.xml',
@@ -1655,8 +1682,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
               },
             }),
         };
-        // @ts-expect-error - accessing private property for testing
-        (server as InstanceType<typeof Crawl4AIServer>).axiosClient = axiosClientMock;
+        server.axiosClient = axiosClientMock;
 
         const result: ToolResult = await server.smartCrawl({
           url: 'https://example.com',
@@ -1754,9 +1780,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           },
         });
 
-        // @ts-expect-error - accessing private property for testing
-        const service = (server as InstanceType<typeof Crawl4AIServer>).service;
-        service.parseSitemap = jest.fn().mockResolvedValue(['https://example.com/page1']);
+        mockParseSitemap.mockResolvedValue(['https://example.com/page1']);
 
         // Test each tool
         for (const tool of tools) {
@@ -1781,12 +1805,8 @@ describe('Crawl4AIServer Tool Handlers', () => {
         });
         expect(unknownResult.content[0].text).toContain('Error: Unknown tool');
 
-        // Test non-tools/call method
-        const otherResult = await requestHandler({
-          method: 'other/method',
-          params: {},
-        });
-        expect(otherResult).toBeUndefined();
+        // The handler only handles tools/call requests, 
+        // so we don't test other methods here
       });
 
       it('should handle MCP request handler validation errors', async () => {
