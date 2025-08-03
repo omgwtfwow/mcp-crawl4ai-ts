@@ -1,10 +1,5 @@
 /* eslint-env jest */
 import { describe, it, expect } from '@jest/globals';
-
-// Set up environment variables before importing
-process.env.CRAWL4AI_BASE_URL = 'http://test.example.com';
-process.env.CRAWL4AI_API_KEY = 'test-api-key';
-
 import { validateJavaScriptCode } from '../../index.js';
 
 describe('JavaScript Code Validation', () => {

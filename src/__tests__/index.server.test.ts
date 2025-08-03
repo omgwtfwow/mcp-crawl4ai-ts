@@ -2,10 +2,6 @@
 import { jest } from '@jest/globals';
 import { describe, it, expect, beforeEach } from '@jest/globals';
 
-// Set up environment variables before any imports
-process.env.CRAWL4AI_BASE_URL = 'http://test.example.com';
-process.env.CRAWL4AI_API_KEY = 'test-api-key';
-
 // Create mock functions
 const mockGetMarkdown = jest.fn();
 const mockCaptureScreenshot = jest.fn();
