@@ -43,52 +43,46 @@ export class CrawlHandlers extends BaseHandler {
 
   async smartCrawl(options: { url: string; max_depth?: number; follow_links?: boolean; bypass_cache?: boolean }) {
     try {
-      // First, detect the content type
-      const headResponse = await this.axiosClient.head(options.url).catch((error) => {
-        // If server returns 500, provide helpful message
-        if (error.response?.status === 500) {
-          throw new Error(
-            `Server error (500) at ${options.url}. The server may be experiencing temporary issues. Please try again later.`,
-          );
-        }
-        return null;
-      });
-      const contentType = headResponse?.headers['content-type'] || '';
-
-      let strategy = 'html';
-      if (options.url.includes('sitemap') || options.url.endsWith('.xml')) {
-        strategy = 'sitemap';
-      } else if (options.url.includes('rss') || options.url.includes('feed')) {
-        strategy = 'rss';
-      } else if (contentType.includes('text/plain') || options.url.endsWith('.txt')) {
-        strategy = 'text';
+      // First, try to detect the content type from URL or HEAD request
+      let contentType = '';
+      try {
+        const headResponse = await this.axiosClient.head(options.url);
+        contentType = headResponse.headers['content-type'] || '';
+      } catch {
+        // If HEAD request fails, continue anyway - we'll detect from the crawl response
+        console.debug('HEAD request failed, will detect content type from response');
       }
 
-      // Use the smart crawl endpoint if available, otherwise fallback to regular crawl
-      const response = await this.axiosClient
-        .post('/crawl', {
-          urls: [options.url],
-          strategy,
-          max_depth: options.max_depth,
-          bypass_cache: options.bypass_cache,
-        })
-        .catch((error) => {
-          if (error.response?.status === 500) {
-            // Fallback to basic crawl if smart features fail
-            console.error('Smart crawl failed with 500, falling back to basic crawl');
-            return this.axiosClient.post('/crawl', {
-              urls: [options.url],
-              bypass_cache: options.bypass_cache,
-            });
-          }
-          throw error;
-        });
+      let detectedType = 'html';
+      if (options.url.includes('sitemap') || options.url.endsWith('.xml')) {
+        detectedType = 'sitemap';
+      } else if (options.url.includes('rss') || options.url.includes('feed')) {
+        detectedType = 'rss';
+      } else if (contentType.includes('text/plain') || options.url.endsWith('.txt')) {
+        detectedType = 'text';
+      } else if (contentType.includes('application/xml') || contentType.includes('text/xml')) {
+        detectedType = 'xml';
+      } else if (contentType.includes('application/json')) {
+        detectedType = 'json';
+      }
+
+      // Crawl without the unsupported 'strategy' parameter
+      const response = await this.axiosClient.post('/crawl', {
+        urls: [options.url],
+        crawler_config: {
+          cache_mode: options.bypass_cache ? 'BYPASS' : 'ENABLED',
+        },
+        browser_config: {
+          headless: true,
+          browser_type: 'chromium',
+        },
+      });
 
       const results = response.data.results || [];
       const result = results[0] || {};
 
       // Handle follow_links for sitemaps and RSS feeds
-      if (options.follow_links && (strategy === 'sitemap' || strategy === 'rss')) {
+      if (options.follow_links && (detectedType === 'sitemap' || detectedType === 'rss' || detectedType === 'xml')) {
         // Extract URLs from the content
         const urlPattern = /<loc>(.*?)<\/loc>|<link[^>]*>(.*?)<\/link>|href=["']([^"']+)["']/gi;
         const content = result.markdown || result.html || '';
@@ -117,7 +111,7 @@ export class CrawlHandlers extends BaseHandler {
             content: [
               {
                 type: 'text',
-                text: `Smart crawl detected content type: ${strategy}\n\nMain content:\n${result.markdown?.raw_markdown || result.html || 'No content extracted'}\n\n---\nFollowed ${urlsToFollow.length} links:\n${urlsToFollow.map((url, i) => `${i + 1}. ${url}`).join('\n')}`,
+                text: `Smart crawl detected content type: ${detectedType}\n\nMain content:\n${result.markdown?.raw_markdown || result.html || 'No content extracted'}\n\n---\nFollowed ${urlsToFollow.length} links:\n${urlsToFollow.map((url, i) => `${i + 1}. ${url}`).join('\n')}`,
               },
               ...(result.metadata
                 ? [
@@ -136,7 +130,7 @@ export class CrawlHandlers extends BaseHandler {
         content: [
           {
             type: 'text',
-            text: `Smart crawl detected content type: ${strategy}\n\n${result.markdown?.raw_markdown || result.html || 'No content extracted'}`,
+            text: `Smart crawl detected content type: ${detectedType}\n\n${result.markdown?.raw_markdown || result.html || 'No content extracted'}`,
           },
           ...(result.metadata
             ? [

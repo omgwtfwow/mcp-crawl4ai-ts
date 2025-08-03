@@ -1283,7 +1283,13 @@ describe('Crawl4AIServer Tool Handlers', () => {
           '/crawl',
           expect.objectContaining({
             urls: ['https://example.com/sitemap.xml'],
-            strategy: 'sitemap',
+            crawler_config: expect.objectContaining({
+              cache_mode: 'ENABLED',
+            }),
+            browser_config: expect.objectContaining({
+              headless: true,
+              browser_type: 'chromium',
+            }),
           }),
         );
       });
@@ -1318,7 +1324,13 @@ describe('Crawl4AIServer Tool Handlers', () => {
           '/crawl',
           expect.objectContaining({
             urls: ['https://example.com/feed.rss'],
-            strategy: 'rss',
+            crawler_config: expect.objectContaining({
+              cache_mode: 'ENABLED',
+            }),
+            browser_config: expect.objectContaining({
+              headless: true,
+              browser_type: 'chromium',
+            }),
           }),
         );
       });
@@ -1347,13 +1359,19 @@ describe('Crawl4AIServer Tool Handlers', () => {
           url: 'https://example.com/data.json',
         });
 
-        expect(result.content[0].text).toContain('Smart crawl detected content type: html');
+        expect(result.content[0].text).toContain('Smart crawl detected content type: json');
         expect(result.content[0].text).toContain('JSON content');
         expect(axiosClientMock.post).toHaveBeenCalledWith(
           '/crawl',
           expect.objectContaining({
             urls: ['https://example.com/data.json'],
-            strategy: 'html',
+            crawler_config: expect.objectContaining({
+              cache_mode: 'ENABLED',
+            }),
+            browser_config: expect.objectContaining({
+              headless: true,
+              browser_type: 'chromium',
+            }),
           }),
         );
       });
@@ -1419,7 +1437,13 @@ describe('Crawl4AIServer Tool Handlers', () => {
           '/crawl',
           expect.objectContaining({
             urls: ['https://example.com/file.txt'],
-            strategy: 'text',
+            crawler_config: expect.objectContaining({
+              cache_mode: 'ENABLED',
+            }),
+            browser_config: expect.objectContaining({
+              headless: true,
+              browser_type: 'chromium',
+            }),
           }),
         );
       });
@@ -1664,18 +1688,31 @@ describe('Crawl4AIServer Tool Handlers', () => {
         expect(result.content[0].text).toContain('Smart crawl detected content type: sitemap');
       });
 
-      it('should handle smart_crawl with server error fallback', async () => {
+      it('should handle smart_crawl with HEAD request failure', async () => {
         const axiosClientMock = {
           head: jest.fn().mockRejectedValue({ response: { status: 500 } }),
-          post: jest.fn(),
+          post: jest.fn().mockResolvedValue({
+            data: {
+              results: [
+                {
+                  url: 'https://example.com',
+                  markdown: { raw_markdown: 'Content from crawl' },
+                  success: true,
+                  status_code: 200,
+                },
+              ],
+            },
+          }),
         };
         server.axiosClientForTesting = axiosClientMock;
 
-        await expect(
-          server.smartCrawl({
-            url: 'https://example.com',
-          }),
-        ).rejects.toThrow('Server error (500) at https://example.com');
+        const result: ToolResult = await server.smartCrawl({
+          url: 'https://example.com',
+        });
+
+        // Should continue despite HEAD failure
+        expect(result.content[0].text).toContain('Smart crawl detected content type: html');
+        expect(result.content[0].text).toContain('Content from crawl');
       });
 
       it('should handle extractLinks with no links', async () => {
