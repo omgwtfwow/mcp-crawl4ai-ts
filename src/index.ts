@@ -1592,7 +1592,7 @@ class Crawl4AIServer {
             content: [
               {
                 type: 'text',
-                text: `Smart crawl detected content type: ${strategy}\n\nMain content:\n${result.markdown || result.content || 'No content extracted'}\n\n---\nFollowed ${urlsToFollow.length} links:\n${urlsToFollow.map((url, i) => `${i + 1}. ${url}`).join('\n')}`,
+                text: `Smart crawl detected content type: ${strategy}\n\nMain content:\n${result.markdown?.raw_markdown || result.html || 'No content extracted'}\n\n---\nFollowed ${urlsToFollow.length} links:\n${urlsToFollow.map((url, i) => `${i + 1}. ${url}`).join('\n')}`,
               },
               ...(result.metadata
                 ? [
@@ -1611,7 +1611,7 @@ class Crawl4AIServer {
         content: [
           {
             type: 'text',
-            text: `Smart crawl detected content type: ${strategy}\n\n${result.markdown || result.content || 'No content extracted'}`,
+            text: `Smart crawl detected content type: ${strategy}\n\n${result.markdown?.raw_markdown || result.html || 'No content extracted'}`,
           },
           ...(result.metadata
             ? [
