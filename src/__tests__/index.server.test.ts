@@ -188,7 +188,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
   it('should use the mocked service', () => {
     const MockedService = Crawl4AIService as jest.MockedClass<typeof Crawl4AIService>;
     expect(MockedService).toHaveBeenCalledTimes(1);
-    expect(MockedService).toHaveBeenCalledWith('http://test.example.com', 'test-api-key');
+    expect(MockedService).toHaveBeenCalledWith('http://localhost:11235', 'test-api-key');
   });
 
   describe('Constructor and setup', () => {
