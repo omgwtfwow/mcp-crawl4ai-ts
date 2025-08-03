@@ -39,6 +39,12 @@
   - Created `LinkItem` interface for better type safety
   - Fixed all production code `any` types
   - Removed unused legacy `CrawlResult` interface
+- Consolidated unit tests to use nock for HTTP mocking:
+  - Removed redundant Jest mock test file
+  - Removed unused mocks directory
+  - Renamed test file for clarity
+  - Improved unit test performance from 92s to ~1s by removing timeout tests
+  - Cleaned up test organization and removed test README
 
 ## Version 2.0.1 (2025-08-02)
 Update README

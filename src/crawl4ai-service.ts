@@ -191,7 +191,7 @@ export class Crawl4AIService {
       const response = await this.axiosClient.get(`/llm/${encodedUrl}?q=${encodedQuery}`);
       return response.data;
     } catch (error) {
-      const axiosError = error as { code?: string; response?: { status?: number } };
+      const axiosError = error as { code?: string; response?: { status?: number; data?: { detail?: string } } };
       if (axiosError.code === 'ECONNABORTED' || axiosError.response?.status === 504) {
         throw new Error('LLM extraction timed out. Try a simpler query or different URL.');
       }
@@ -200,7 +200,9 @@ export class Crawl4AIService {
           'LLM extraction failed: No LLM provider configured on server. Please ensure the server has an API key set.',
         );
       }
-      throw new Error(`LLM extraction failed: ${error.response?.data?.detail || error.message}`);
+      throw new Error(
+        `LLM extraction failed: ${axiosError.response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
+      );
     }
   }
 }
