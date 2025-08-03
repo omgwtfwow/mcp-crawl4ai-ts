@@ -707,10 +707,7 @@ describe('Crawl4AIService', () => {
         },
       };
 
-      nock(baseURL)
-        .post('/crawl', complexConfig)
-        .matchHeader('x-api-key', apiKey)
-        .reply(200, mockResponse);
+      nock(baseURL).post('/crawl', complexConfig).matchHeader('x-api-key', apiKey).reply(200, mockResponse);
 
       const result = await service.crawl(complexConfig);
 

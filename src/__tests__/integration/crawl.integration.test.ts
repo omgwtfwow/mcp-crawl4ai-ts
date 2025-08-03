@@ -822,12 +822,12 @@ describe('crawl Integration Tests', () => {
 
           await expectSuccessfulCrawl(result);
           await expectScreenshot(result);
-          
+
           // Check screenshot was captured
           const imageContent = (result as ToolResult).content.find((c) => c.type === 'image');
           expect(imageContent).toBeDefined();
           expect(imageContent?.data).toBeTruthy();
-          
+
           // Verify reasonable data size for mobile screenshot
           const dataLength = imageContent?.data?.length || 0;
           expect(dataLength).toBeGreaterThan(10000); // At least 10KB
@@ -853,12 +853,12 @@ describe('crawl Integration Tests', () => {
 
           await expectSuccessfulCrawl(result);
           await expectScreenshot(result);
-          
+
           // Check screenshot was captured
           const imageContent = (result as ToolResult).content.find((c) => c.type === 'image');
           expect(imageContent).toBeDefined();
           expect(imageContent?.data).toBeTruthy();
-          
+
           // Verify reasonable data size for tablet screenshot
           const dataLength = imageContent?.data?.length || 0;
           expect(dataLength).toBeGreaterThan(15000); // At least 15KB
@@ -884,12 +884,12 @@ describe('crawl Integration Tests', () => {
 
           await expectSuccessfulCrawl(result);
           await expectScreenshot(result);
-          
+
           // Check screenshot was captured
           const imageContent = (result as ToolResult).content.find((c) => c.type === 'image');
           expect(imageContent).toBeDefined();
           expect(imageContent?.data).toBeTruthy();
-          
+
           // Verify reasonable data size for HD screenshot
           const dataLength = imageContent?.data?.length || 0;
           expect(dataLength).toBeGreaterThan(20000); // At least 20KB
@@ -917,7 +917,7 @@ describe('crawl Integration Tests', () => {
           // We expect either an error or no screenshot data
           const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
           const imageContent = (result as ToolResult).content.find((c) => c.type === 'image');
-          
+
           // If we got text but no image, that's expected for large viewports
           if (textContent && !imageContent) {
             expect(textContent).toBeDefined();
@@ -959,7 +959,7 @@ describe('crawl Integration Tests', () => {
           await expectSuccessfulCrawl(result);
           const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
           expect(textContent?.text).toBeTruthy();
-          
+
           // httpbin/anything endpoint returns all request data
           // Verify all configurations were applied
           expect(textContent?.text).toContain('MCP-Test-Bot/2.0');
