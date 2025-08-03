@@ -715,4 +715,222 @@ describe('Crawl4AIService', () => {
       expect(result.results).toHaveLength(1);
     });
   });
+
+  describe('Crawler Configuration Advanced Parameters', () => {
+    it('should send content filtering parameters correctly', async () => {
+      const mockResponse: CrawlEndpointResponse = {
+        success: true,
+        results: [
+          {
+            url: 'https://httpbin.org/forms/post',
+            html: '<html>...</html>',
+            cleaned_html: '<html>...</html>',
+            fit_html: '<html>...</html>',
+            success: true,
+            status_code: 200,
+            response_headers: {},
+            session_id: null,
+            metadata: {},
+            links: { internal: [], external: [] },
+            media: { images: [], videos: [], audios: [] },
+            markdown: {
+              raw_markdown: 'Form content without forms',
+              markdown_with_citations: '',
+              references_markdown: '',
+              fit_markdown: 'Form content without forms',
+              fit_html: '',
+            },
+            tables: [],
+            extracted_content: null,
+            screenshot: null,
+            pdf: null,
+            mhtml: null,
+            js_execution_result: null,
+            downloaded_files: null,
+            network_requests: null,
+            console_messages: null,
+            ssl_certificate: null,
+            dispatch_result: null,
+          },
+        ],
+        server_processing_time_s: 1.0,
+        server_memory_delta_mb: 5,
+        server_peak_memory_mb: 50,
+      };
+
+      nock(baseURL)
+        .post('/crawl', {
+          urls: ['https://httpbin.org/forms/post'],
+          browser_config: {
+            headless: true,
+          },
+          crawler_config: {
+            remove_forms: true,
+            keep_data_attributes: true,
+            exclude_external_images: true,
+          },
+        })
+        .matchHeader('x-api-key', apiKey)
+        .reply(200, mockResponse);
+
+      const result = await service.crawl({
+        urls: ['https://httpbin.org/forms/post'],
+        browser_config: {
+          headless: true,
+        },
+        crawler_config: {
+          remove_forms: true,
+          keep_data_attributes: true,
+          exclude_external_images: true,
+        },
+      });
+
+      expect(result.success).toBe(true);
+    });
+
+    it('should send js_only parameter correctly', async () => {
+      const mockResponse: CrawlEndpointResponse = {
+        success: true,
+        results: [
+          {
+            url: 'https://httpbin.org/html',
+            html: '',
+            cleaned_html: '',
+            fit_html: '',
+            success: true,
+            status_code: 200,
+            response_headers: {},
+            session_id: null,
+            metadata: {},
+            links: { internal: [], external: [] },
+            media: { images: [], videos: [], audios: [] },
+            markdown: {
+              raw_markdown: '',
+              markdown_with_citations: '',
+              references_markdown: '',
+              fit_markdown: '',
+              fit_html: '',
+            },
+            tables: [],
+            extracted_content: null,
+            screenshot: null,
+            pdf: null,
+            mhtml: null,
+            js_execution_result: {
+              success: true,
+              results: ['Page Title', '5'],
+            },
+            downloaded_files: null,
+            network_requests: null,
+            console_messages: null,
+            ssl_certificate: null,
+            dispatch_result: null,
+          },
+        ],
+        server_processing_time_s: 1.0,
+        server_memory_delta_mb: 5,
+        server_peak_memory_mb: 50,
+      };
+
+      nock(baseURL)
+        .post('/crawl', {
+          urls: ['https://httpbin.org/html'],
+          browser_config: {
+            headless: true,
+          },
+          crawler_config: {
+            js_code: ['return document.title', 'return document.querySelectorAll("p").length'],
+            js_only: true,
+          },
+        })
+        .matchHeader('x-api-key', apiKey)
+        .reply(200, mockResponse);
+
+      const result = await service.crawl({
+        urls: ['https://httpbin.org/html'],
+        browser_config: {
+          headless: true,
+        },
+        crawler_config: {
+          js_code: ['return document.title', 'return document.querySelectorAll("p").length'],
+          js_only: true,
+        },
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.results[0].js_execution_result).toBeDefined();
+    });
+
+    it('should send visibility and debug parameters correctly', async () => {
+      const mockResponse: CrawlEndpointResponse = {
+        success: true,
+        results: [
+          {
+            url: 'https://httpbin.org/html',
+            html: '<html>...</html>',
+            cleaned_html: '<html>...</html>',
+            fit_html: '<html>...</html>',
+            success: true,
+            status_code: 200,
+            response_headers: {},
+            session_id: null,
+            metadata: {},
+            links: { internal: [], external: [] },
+            media: { images: [], videos: [], audios: [] },
+            markdown: {
+              raw_markdown: 'Content',
+              markdown_with_citations: '',
+              references_markdown: '',
+              fit_markdown: 'Content',
+              fit_html: '',
+            },
+            tables: [],
+            extracted_content: null,
+            screenshot: null,
+            pdf: null,
+            mhtml: null,
+            js_execution_result: null,
+            downloaded_files: null,
+            network_requests: null,
+            console_messages: ['Test log message 1', 'Test warning', 'Test error'],
+            ssl_certificate: null,
+            dispatch_result: null,
+          },
+        ],
+        server_processing_time_s: 1.5,
+        server_memory_delta_mb: 8,
+        server_peak_memory_mb: 80,
+      };
+
+      nock(baseURL)
+        .post('/crawl', {
+          urls: ['https://httpbin.org/html'],
+          browser_config: {
+            headless: true,
+          },
+          crawler_config: {
+            ignore_body_visibility: true,
+            verbose: true,
+            log_console: true,
+          },
+        })
+        .matchHeader('x-api-key', apiKey)
+        .reply(200, mockResponse);
+
+      const result = await service.crawl({
+        urls: ['https://httpbin.org/html'],
+        browser_config: {
+          headless: true,
+        },
+        crawler_config: {
+          ignore_body_visibility: true,
+          verbose: true,
+          log_console: true,
+        },
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.results[0].console_messages).toBeDefined();
+    });
+  });
 });
