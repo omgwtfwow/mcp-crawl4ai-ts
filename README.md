@@ -340,6 +340,10 @@ For detailed information about all available configuration options, extraction s
 - [Crawl4AI Documentation](https://docs.crawl4ai.com/)
 - [Crawl4AI GitHub Repository](https://github.com/unclecode/crawl4ai)
 
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for detailed version history and recent updates.
+
 ## Development
 
 ### Setup

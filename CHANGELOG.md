@@ -1,6 +1,6 @@
 # Changelog
 
-## Version 2.0.3 (2025-08-03)
+## Version 2.1 (2025-08-03)
 
 ### Bug Fixes
 - Fixed `smart_crawl` bug where markdown object was incorrectly printed as `[object Object]`
@@ -18,8 +18,6 @@
 - Fixed all ESLint formatting issues across the codebase
 - Enhanced error handling for empty URL arrays in batch_crawl
 - Improved test reliability by replacing problematic test URLs
-
-## Version 2.0.2 (2025-08-03)
 
 ### Bug Fixes
 - Fixed parameter mapping in `get_markdown` tool - now correctly maps schema properties (`filter`, `query`, `cache`) to API parameters (`f`, `q`, `c`)
