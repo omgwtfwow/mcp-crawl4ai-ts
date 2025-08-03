@@ -1666,29 +1666,15 @@ describe('Crawl4AIServer Tool Handlers', () => {
       it('should handle smart_crawl with server error fallback', async () => {
         const axiosClientMock = {
           head: jest.fn().mockRejectedValue({ response: { status: 500 } }),
-          post: jest
-            .fn()
-            .mockRejectedValueOnce({ response: { status: 500 } })
-            .mockResolvedValueOnce({
-              data: {
-                results: [
-                  {
-                    url: 'https://example.com',
-                    markdown: { raw_markdown: 'Fallback content' },
-                    success: true,
-                    status_code: 200,
-                  },
-                ],
-              },
-            }),
+          post: jest.fn(),
         };
         server.axiosClient = axiosClientMock;
 
-        const result: ToolResult = await server.smartCrawl({
-          url: 'https://example.com',
-        });
-
-        expect(result.content[0].text).toContain('Fallback content');
+        await expect(
+          server.smartCrawl({
+            url: 'https://example.com',
+          }),
+        ).rejects.toThrow('Server error (500) at https://example.com');
       });
 
       it('should handle extractLinks with no links', async () => {
@@ -1885,7 +1871,12 @@ describe('Crawl4AIServer Tool Handlers', () => {
 
       it('should handle get_markdown query functionality', async () => {
         mockGetMarkdown.mockResolvedValue({
-          content: [{ type: 'text', text: 'Page content about products' }],
+          url: 'https://example.com',
+          filter: 'fit',
+          query: 'What products are listed?',
+          cache: 'false',
+          markdown: 'Page content about products',
+          success: true,
         });
 
         const result: ToolResult = await server.getMarkdown({
