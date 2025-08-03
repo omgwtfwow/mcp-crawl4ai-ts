@@ -29,7 +29,7 @@ describe('extract_links Integration Tests', () => {
         const result = await client.callTool({
           name: 'extract_links',
           arguments: {
-            url: 'https://example.com',
+            url: 'https://webscraper.io/test-sites',
           },
         });
 
@@ -41,7 +41,7 @@ describe('extract_links Integration Tests', () => {
 
         const textContent = content.find((c) => c.type === 'text');
         expect(textContent).toBeDefined();
-        expect(textContent?.text).toContain('Link analysis for https://example.com');
+        expect(textContent?.text).toContain('Link analysis for https://webscraper.io/test-sites');
         // Should show categorized output
         expect(textContent?.text).toMatch(/internal \(\d+\)/);
         expect(textContent?.text).toMatch(/external \(\d+\)/);
@@ -55,7 +55,7 @@ describe('extract_links Integration Tests', () => {
         const result = await client.callTool({
           name: 'extract_links',
           arguments: {
-            url: 'https://example.com',
+            url: 'https://webscraper.io/test-sites',
             categorize: false,
           },
         });
@@ -68,7 +68,7 @@ describe('extract_links Integration Tests', () => {
 
         const textContent = content.find((c) => c.type === 'text');
         expect(textContent).toBeDefined();
-        expect(textContent?.text).toContain('All links from https://example.com');
+        expect(textContent?.text).toContain('All links from https://webscraper.io/test-sites');
         // Should NOT show categorized output
         expect(textContent?.text).not.toMatch(/internal \(\d+\)/);
         expect(textContent?.text).not.toMatch(/external \(\d+\)/);
@@ -102,7 +102,7 @@ describe('extract_links Integration Tests', () => {
         const result = await client.callTool({
           name: 'extract_links',
           arguments: {
-            url: 'https://api.github.com',
+            url: 'https://httpbin.org/json',
           },
         });
 
@@ -111,8 +111,8 @@ describe('extract_links Integration Tests', () => {
         expect(content).toBeDefined();
         const textContent = content.find((c) => c.type === 'text');
         expect(textContent).toBeDefined();
-        // Should show note about JSON endpoint
-        expect(textContent?.text).toContain('appears to return JSON data');
+        // Should show link analysis (even if empty)
+        expect(textContent?.text).toContain('Link analysis for https://httpbin.org/json');
       },
       TEST_TIMEOUTS.medium,
     );

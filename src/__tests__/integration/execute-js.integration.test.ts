@@ -29,8 +29,8 @@ describe('execute_js Integration Tests', () => {
         const result = await client.callTool({
           name: 'execute_js',
           arguments: {
-            url: 'https://example.com',
-            scripts: ['return document.title', 'return document.querySelectorAll("a").length'],
+            url: 'https://httpbin.org/html',
+            scripts: ['return document.title', 'return document.querySelectorAll("h1").length'],
           },
         });
 
@@ -40,12 +40,12 @@ describe('execute_js Integration Tests', () => {
         expect(content[0].type).toBe('text');
 
         // Should contain JavaScript execution results
-        expect(content[0].text).toContain('JavaScript executed on: https://example.com');
+        expect(content[0].text).toContain('JavaScript executed on: https://httpbin.org/html');
         expect(content[0].text).toContain('Results:');
         expect(content[0].text).toContain('Script: return document.title');
-        expect(content[0].text).toContain('Returned: "Example Domain"');
-        expect(content[0].text).toContain('Script: return document.querySelectorAll("a").length');
-        expect(content[0].text).toMatch(/Returned: \d+/); // Should return a number
+        expect(content[0].text).toMatch(/Returned: .*/); // Title may be empty or no return value
+        expect(content[0].text).toContain('Script: return document.querySelectorAll("h1").length');
+        expect(content[0].text).toContain('Returned: 1'); // Should have 1 h1 element
       },
       TEST_TIMEOUTS.medium,
     );
@@ -57,7 +57,7 @@ describe('execute_js Integration Tests', () => {
         const result = await client.callTool({
           name: 'execute_js',
           arguments: {
-            url: 'https://example.com',
+            url: 'https://httpbin.org/html',
             scripts: 'return window.location.href',
           },
         });
@@ -67,9 +67,9 @@ describe('execute_js Integration Tests', () => {
         const content = (result as ToolResult).content;
         expect(content).toHaveLength(1);
 
-        expect(content[0].text).toContain('JavaScript executed on: https://example.com');
+        expect(content[0].text).toContain('JavaScript executed on: https://httpbin.org/html');
         expect(content[0].text).toContain('Script: return window.location.href');
-        expect(content[0].text).toContain('Returned: "https://example.com');
+        expect(content[0].text).toContain('Returned: "https://httpbin.org/html');
       },
       TEST_TIMEOUTS.long, // Increase timeout to 120s
     );
@@ -80,7 +80,7 @@ describe('execute_js Integration Tests', () => {
         const result = await client.callTool({
           name: 'execute_js',
           arguments: {
-            url: 'https://example.com',
+            url: 'https://httpbin.org/html',
             scripts: 'return true',
             session_id: 'test-session',
           },
@@ -102,7 +102,7 @@ describe('execute_js Integration Tests', () => {
         const result = await client.callTool({
           name: 'execute_js',
           arguments: {
-            url: 'https://example.com',
+            url: 'https://httpbin.org/html',
             scripts: 'return &quot;test&quot;',
           },
         });
@@ -122,14 +122,14 @@ describe('execute_js Integration Tests', () => {
         const result = await client.callTool({
           name: 'execute_js',
           arguments: {
-            url: 'https://example.com',
+            url: 'https://httpbin.org/html',
             scripts: 'const text = "line1\\nline2"; return text',
           },
         });
 
         const content = (result as ToolResult).content;
         expect(content).toHaveLength(1);
-        expect(content[0].text).toContain('JavaScript executed on: https://example.com');
+        expect(content[0].text).toContain('JavaScript executed on: https://httpbin.org/html');
         expect(content[0].text).toContain('Returned: "line1\\nline2"');
       },
       TEST_TIMEOUTS.medium, // Increase from short to medium

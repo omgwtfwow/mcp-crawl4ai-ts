@@ -59,7 +59,7 @@ interface ErrorWithResponse {
 
 // Validation schemas
 // Helper to validate JavaScript code
-const validateJavaScriptCode = (code: string): boolean => {
+export const validateJavaScriptCode = (code: string): boolean => {
   // Check for common HTML entities that shouldn't be in JS
   if (/&quot;|&amp;|&lt;|&gt;|&#\d+;|&\w+;/.test(code)) {
     return false;
@@ -373,10 +373,24 @@ const CrawlSchema = z
     },
   );
 
-class Crawl4AIServer {
+// Export schemas for testing
+export {
+  GetMarkdownSchema,
+  CrawlSchema,
+  BatchCrawlSchema,
+  CreateSessionSchema,
+  CaptureScreenshotSchema,
+  GeneratePdfSchema,
+  ExecuteJsSchema,
+  ExtractWithLlmSchema,
+  SmartCrawlSchema,
+  CrawlRecursiveSchema,
+};
+
+export class Crawl4AIServer {
   private server: Server;
   private axiosClient: AxiosInstance;
-  private service: Crawl4AIService;
+  protected service: Crawl4AIService;
   private sessions: Map<string, SessionInfo> = new Map();
 
   constructor() {
@@ -1315,7 +1329,7 @@ class Crawl4AIServer {
     });
   }
 
-  private async getMarkdown(
+  protected async getMarkdown(
     options: Omit<MarkdownEndpointOptions, 'f' | 'q' | 'c'> & { filter?: string; query?: string; cache?: string },
   ) {
     try {
@@ -1351,7 +1365,7 @@ class Crawl4AIServer {
     }
   }
 
-  private async captureScreenshot(options: ScreenshotEndpointOptions) {
+  protected async captureScreenshot(options: ScreenshotEndpointOptions) {
     try {
       const result: ScreenshotEndpointResponse = await this.service.captureScreenshot(options);
 
@@ -1380,7 +1394,7 @@ class Crawl4AIServer {
     }
   }
 
-  private async generatePDF(options: PDFEndpointOptions) {
+  protected async generatePDF(options: PDFEndpointOptions) {
     try {
       const result: PDFEndpointResponse = await this.service.generatePDF(options);
 
@@ -1412,7 +1426,7 @@ class Crawl4AIServer {
     }
   }
 
-  private async executeJS(options: JSExecuteEndpointOptions) {
+  protected async executeJS(options: JSExecuteEndpointOptions) {
     try {
       // Check if scripts is provided
       if (!options.scripts || options.scripts === null) {
@@ -1468,7 +1482,7 @@ class Crawl4AIServer {
     }
   }
 
-  private async batchCrawl(options: BatchCrawlOptions) {
+  protected async batchCrawl(options: BatchCrawlOptions) {
     try {
       // Build crawler config if needed
       const crawler_config: Record<string, unknown> = {};
@@ -1509,7 +1523,7 @@ class Crawl4AIServer {
     }
   }
 
-  private async smartCrawl(options: {
+  protected async smartCrawl(options: {
     url: string;
     max_depth?: number;
     follow_links?: boolean;
@@ -1630,7 +1644,7 @@ class Crawl4AIServer {
     }
   }
 
-  private async getHTML(options: HTMLEndpointOptions) {
+  protected async getHTML(options: HTMLEndpointOptions) {
     try {
       const result: HTMLEndpointResponse = await this.service.getHTML(options);
 
@@ -1650,7 +1664,7 @@ class Crawl4AIServer {
     }
   }
 
-  private async extractLinks(options: { url: string; categorize?: boolean }) {
+  protected async extractLinks(options: { url: string; categorize?: boolean }) {
     try {
       // Use crawl endpoint instead of md to get full link data
       const response = await this.axiosClient.post('/crawl', {
@@ -1760,20 +1774,34 @@ class Crawl4AIServer {
 
       // Categorize links
       const categorized: Record<string, string[]> = {
-        internal: internalUrls,
-        external: externalUrls,
+        internal: [],
+        external: [],
         social: [],
         documents: [],
         images: [],
         scripts: [],
       };
 
-      // Further categorize external links
+      // Further categorize links
       const socialDomains = ['facebook.com', 'twitter.com', 'linkedin.com', 'instagram.com', 'youtube.com'];
       const docExtensions = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx'];
       const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp'];
       const scriptExtensions = ['.js', '.css'];
 
+      // Categorize internal URLs
+      internalUrls.forEach((href: string) => {
+        if (docExtensions.some((ext) => href.toLowerCase().endsWith(ext))) {
+          categorized.documents.push(href);
+        } else if (imageExtensions.some((ext) => href.toLowerCase().endsWith(ext))) {
+          categorized.images.push(href);
+        } else if (scriptExtensions.some((ext) => href.toLowerCase().endsWith(ext))) {
+          categorized.scripts.push(href);
+        } else {
+          categorized.internal.push(href);
+        }
+      });
+
+      // Categorize external URLs
       externalUrls.forEach((href: string) => {
         if (socialDomains.some((domain) => href.includes(domain))) {
           categorized.social.push(href);
@@ -1783,6 +1811,8 @@ class Crawl4AIServer {
           categorized.images.push(href);
         } else if (scriptExtensions.some((ext) => href.toLowerCase().endsWith(ext))) {
           categorized.scripts.push(href);
+        } else {
+          categorized.external.push(href);
         }
       });
 
@@ -1820,7 +1850,7 @@ class Crawl4AIServer {
     }
   }
 
-  private async crawlRecursive(options: {
+  protected async crawlRecursive(options: {
     url: string;
     max_depth?: number;
     max_pages?: number;
@@ -1916,7 +1946,7 @@ class Crawl4AIServer {
     }
   }
 
-  private async parseSitemap(options: { url: string; filter_pattern?: string }) {
+  protected async parseSitemap(options: { url: string; filter_pattern?: string }) {
     try {
       // Fetch the sitemap directly (not through Crawl4AI server)
       const axios = (await import('axios')).default;
@@ -1954,7 +1984,7 @@ class Crawl4AIServer {
     }
   }
 
-  private async crawl(options: Record<string, unknown>) {
+  protected async crawl(options: Record<string, unknown>) {
     try {
       // Ensure options is an object
       if (!options || typeof options !== 'object') {
@@ -2172,7 +2202,7 @@ class Crawl4AIServer {
     }
   }
 
-  private async createSession(options: { session_id?: string; initial_url?: string; browser_type?: string }) {
+  protected async createSession(options: { session_id?: string; initial_url?: string; browser_type?: string }) {
     try {
       // Generate session ID if not provided
       const sessionId = options.session_id || `session-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
@@ -2232,7 +2262,7 @@ class Crawl4AIServer {
     }
   }
 
-  private async clearSession(options: { session_id: string }) {
+  protected async clearSession(options: { session_id: string }) {
     try {
       // Remove from local store
       const deleted = this.sessions.delete(options.session_id);
@@ -2255,7 +2285,7 @@ class Crawl4AIServer {
     }
   }
 
-  private async listSessions() {
+  protected async listSessions() {
     try {
       // Return locally stored sessions
       const sessions = Array.from(this.sessions.entries()).map(([id, info]) => {
@@ -2304,7 +2334,7 @@ class Crawl4AIServer {
     }
   }
 
-  private async extractWithLLM(options: { url: string; query: string }) {
+  protected async extractWithLLM(options: { url: string; query: string }) {
     try {
       const result = await this.service.extractWithLLM(options);
 
@@ -2321,6 +2351,7 @@ class Crawl4AIServer {
     }
   }
 
+  /* istanbul ignore next */
   async start() {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
@@ -2328,6 +2359,8 @@ class Crawl4AIServer {
   }
 }
 
+/* istanbul ignore next */
 // Start the server
 const server = new Crawl4AIServer();
+/* istanbul ignore next */
 server.start().catch(console.error);

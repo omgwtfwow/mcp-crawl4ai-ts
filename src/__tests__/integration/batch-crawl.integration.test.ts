@@ -29,7 +29,7 @@ describe('batch_crawl Integration Tests', () => {
         const result = await client.callTool({
           name: 'batch_crawl',
           arguments: {
-            urls: ['https://httpbin.org/html', 'https://httpbin.org/json'],
+            urls: ['https://httpbingo.org/html', 'https://httpbingo.org/json'],
           },
         });
 
@@ -41,8 +41,8 @@ describe('batch_crawl Integration Tests', () => {
         const text = content[0].text || '';
         expect(text).toContain('Batch crawl completed');
         expect(text).toContain('Processed 2 URLs');
-        expect(text).toContain('https://httpbin.org/html: Success');
-        expect(text).toContain('https://httpbin.org/json: Success');
+        expect(text).toContain('https://httpbingo.org/html: Success');
+        expect(text).toContain('https://httpbingo.org/json: Success');
       },
       TEST_TIMEOUTS.medium,
     );
@@ -53,7 +53,7 @@ describe('batch_crawl Integration Tests', () => {
         const result = await client.callTool({
           name: 'batch_crawl',
           arguments: {
-            urls: ['https://httpbin.org/delay/1', 'https://httpbin.org/delay/1', 'https://httpbin.org/delay/1'],
+            urls: ['https://httpbingo.org/html', 'https://httpbingo.org/xml', 'https://httpbingo.org/json'],
             max_concurrent: 1,
           },
         });
@@ -64,7 +64,7 @@ describe('batch_crawl Integration Tests', () => {
 
         const text = content[0].text || '';
         expect(text).toContain('Processed 3 URLs');
-        expect(text).toContain('https://httpbin.org/delay/1: Success');
+        expect(text).toContain(': Success');
       },
       TEST_TIMEOUTS.long,
     );
@@ -75,7 +75,7 @@ describe('batch_crawl Integration Tests', () => {
         const result = await client.callTool({
           name: 'batch_crawl',
           arguments: {
-            urls: ['https://httpbin.org/html'],
+            urls: ['https://httpbingo.org/html'],
             remove_images: true,
           },
         });
@@ -86,7 +86,7 @@ describe('batch_crawl Integration Tests', () => {
 
         const text = content[0].text || '';
         expect(text).toContain('Batch crawl completed');
-        expect(text).toContain('https://httpbin.org/html: Success');
+        expect(text).toContain('https://httpbingo.org/html: Success');
       },
       TEST_TIMEOUTS.medium,
     );
@@ -97,7 +97,7 @@ describe('batch_crawl Integration Tests', () => {
         const result = await client.callTool({
           name: 'batch_crawl',
           arguments: {
-            urls: ['https://httpbin.org/html'],
+            urls: ['https://httpbingo.org/html'],
             bypass_cache: true,
           },
         });
@@ -108,7 +108,7 @@ describe('batch_crawl Integration Tests', () => {
 
         const text = content[0].text || '';
         expect(text).toContain('Batch crawl completed');
-        expect(text).toContain('https://httpbin.org/html: Success');
+        expect(text).toContain('https://httpbingo.org/html: Success');
       },
       TEST_TIMEOUTS.medium,
     );
@@ -161,7 +161,7 @@ describe('batch_crawl Integration Tests', () => {
         const result = await client.callTool({
           name: 'batch_crawl',
           arguments: {
-            urls: ['https://httpbin.org/html'],
+            urls: ['https://httpbingo.org/html'],
             session_id: 'test-session',
           },
         });

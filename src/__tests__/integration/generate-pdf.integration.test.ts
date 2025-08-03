@@ -34,7 +34,7 @@ describe('generate_pdf Integration Tests', () => {
         const result = await client.callTool({
           name: 'generate_pdf',
           arguments: {
-            url: 'https://example.com', // Use example.com which we know works
+            url: 'https://httpbin.org/html',
           },
         });
 
@@ -52,7 +52,7 @@ describe('generate_pdf Integration Tests', () => {
 
         // Second item should be text description
         expect(content[1].type).toBe('text');
-        expect(content[1].text).toContain('PDF generated for: https://example.com');
+        expect(content[1].text).toContain('PDF generated for: https://httpbin.org/html');
       },
       TEST_TIMEOUTS.long,
     );
@@ -63,7 +63,7 @@ describe('generate_pdf Integration Tests', () => {
         const result = await client.callTool({
           name: 'generate_pdf',
           arguments: {
-            url: 'https://example.com',
+            url: 'https://httpbin.org/html',
             session_id: 'test-session',
           },
         });

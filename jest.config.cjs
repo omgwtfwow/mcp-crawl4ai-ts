@@ -4,8 +4,12 @@ module.exports = {
   testEnvironment: 'node',
   roots: ['<rootDir>/src'],
   testMatch: ['**/__tests__/**/*.test.ts'],
+  setupFiles: ['<rootDir>/jest.setup.cjs'],
   collectCoverageFrom: [
-    'src/crawl4ai-service.ts',
+    'src/**/*.ts',
+    '!src/**/__tests__/**',
+    '!src/**/*.test.ts',
+    '!src/**/types/**',
   ],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],
@@ -21,6 +25,7 @@ module.exports = {
     ],
   },
   extensionsToTreatAsEsm: ['.ts'],
+  clearMocks: true,
   // Limit parallelization for integration tests to avoid overwhelming the server
   ...(process.env.NODE_ENV === 'test' && process.argv.some(arg => arg.includes('integration')) ? { maxWorkers: 2 } : {}),
 };
