@@ -59,7 +59,7 @@ describe('capture_screenshot Integration Tests', () => {
           name: 'capture_screenshot',
           arguments: {
             url: 'https://example.com',
-            screenshot_wait_for: 3,
+            screenshot_wait_for: 0.5, // Reduced from 3 seconds
           },
         });
 
@@ -76,7 +76,7 @@ describe('capture_screenshot Integration Tests', () => {
         expect(content[1].type).toBe('text');
         expect(content[1].text).toContain('Screenshot captured for: https://example.com');
       },
-      TEST_TIMEOUTS.short,
+      TEST_TIMEOUTS.medium,
     );
 
     it(

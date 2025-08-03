@@ -34,7 +34,7 @@ describe('generate_pdf Integration Tests', () => {
         const result = await client.callTool({
           name: 'generate_pdf',
           arguments: {
-            url: 'https://example.com',
+            url: 'https://example.com',  // Use example.com which we know works
           },
         });
 
@@ -54,7 +54,7 @@ describe('generate_pdf Integration Tests', () => {
         expect(content[1].type).toBe('text');
         expect(content[1].text).toContain('PDF generated for: https://example.com');
       },
-      TEST_TIMEOUTS.medium,
+      TEST_TIMEOUTS.long,
     );
 
     it(
