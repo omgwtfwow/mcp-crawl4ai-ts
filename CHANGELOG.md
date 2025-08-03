@@ -1,5 +1,24 @@
 # Changelog
 
+## Version 2.0.3 (2025-08-03)
+
+### Bug Fixes
+- Fixed `smart_crawl` bug where markdown object was incorrectly printed as `[object Object]`
+  - Now correctly accesses `result.markdown.raw_markdown` for content display
+- Fixed integration test timeout issues:
+  - Replaced example.com with httpbin.org/html in tests to avoid "domcontentloaded" timeout issues
+  - Fixed httpbin.org URLs by adding proper path suffixes (e.g., /links/5/0)
+  - Limited Jest parallelization for integration tests to prevent server overload
+
+### Features
+- Added comprehensive integration tests for `batch_crawl` tool (7 tests)
+- Added comprehensive integration tests for `smart_crawl` tool (8 tests)
+
+### Improvements
+- Fixed all ESLint formatting issues across the codebase
+- Enhanced error handling for empty URL arrays in batch_crawl
+- Improved test reliability by replacing problematic test URLs
+
 ## Version 2.0.2 (2025-08-03)
 
 ### Bug Fixes

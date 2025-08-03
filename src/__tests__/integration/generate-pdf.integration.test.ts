@@ -34,7 +34,7 @@ describe('generate_pdf Integration Tests', () => {
         const result = await client.callTool({
           name: 'generate_pdf',
           arguments: {
-            url: 'https://example.com',  // Use example.com which we know works
+            url: 'https://example.com', // Use example.com which we know works
           },
         });
 

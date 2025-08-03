@@ -29,10 +29,7 @@ describe('batch_crawl Integration Tests', () => {
         const result = await client.callTool({
           name: 'batch_crawl',
           arguments: {
-            urls: [
-              'https://httpbin.org/html',
-              'https://httpbin.org/json',
-            ],
+            urls: ['https://httpbin.org/html', 'https://httpbin.org/json'],
           },
         });
 
@@ -56,11 +53,7 @@ describe('batch_crawl Integration Tests', () => {
         const result = await client.callTool({
           name: 'batch_crawl',
           arguments: {
-            urls: [
-              'https://httpbin.org/delay/1',
-              'https://httpbin.org/delay/1',
-              'https://httpbin.org/delay/1',
-            ],
+            urls: ['https://httpbin.org/delay/1', 'https://httpbin.org/delay/1', 'https://httpbin.org/delay/1'],
             max_concurrent: 1,
           },
         });
@@ -126,11 +119,7 @@ describe('batch_crawl Integration Tests', () => {
         const result = await client.callTool({
           name: 'batch_crawl',
           arguments: {
-            urls: [
-              'https://httpbin.org/html',
-              'https://httpbin.org/json',
-              'https://httpbin.org/xml',
-            ],
+            urls: ['https://httpbin.org/html', 'https://httpbin.org/json', 'https://httpbin.org/xml'],
           },
         });
 

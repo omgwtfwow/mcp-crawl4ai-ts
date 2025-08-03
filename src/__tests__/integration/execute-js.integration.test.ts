@@ -45,7 +45,7 @@ describe('execute_js Integration Tests', () => {
         expect(content[0].text).toContain('Script: return document.title');
         expect(content[0].text).toContain('Returned: "Example Domain"');
         expect(content[0].text).toContain('Script: return document.querySelectorAll("a").length');
-        expect(content[0].text).toMatch(/Returned: \d+/);  // Should return a number
+        expect(content[0].text).toMatch(/Returned: \d+/); // Should return a number
       },
       TEST_TIMEOUTS.medium,
     );

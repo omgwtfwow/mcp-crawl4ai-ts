@@ -160,7 +160,7 @@ describe('smart_crawl Integration Tests', () => {
         const content = (result as ToolResult).content;
         expect(content.length).toBeGreaterThanOrEqual(1);
         expect(content[0].type).toBe('text');
-        
+
         const text = content[0].text || '';
         // Non-existent domains cause 500 errors
         expect(text).toContain('Error');
