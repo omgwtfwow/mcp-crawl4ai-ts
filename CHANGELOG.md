@@ -1,5 +1,13 @@
 # Changelog
 
+## Version 2.1.2 (2025-08-03)
+
+### Documentation
+- Updated Node.js requirement from 16+ to 18+ to reflect actual testing and support
+  - Node.js 16 reached End-of-Life in September 2023
+  - CI only tests on Node.js 18.x and 20.x
+  - Added `engines` field to package.json to enforce Node.js 18+ requirement
+
 ## Version 2.1.1 (2025-08-03)
 
 ### Bug Fixes

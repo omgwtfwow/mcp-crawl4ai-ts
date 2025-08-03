@@ -2,7 +2,7 @@
 
 [![npm version](https://img.shields.io/npm/v/mcp-crawl4ai-ts.svg)](https://www.npmjs.com/package/mcp-crawl4ai-ts)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Node.js CI](https://img.shields.io/badge/Node.js-16+-green.svg)](https://nodejs.org/)
+[![Node.js CI](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
 
 TypeScript implementation of an MCP server for Crawl4AI. Provides tools for web crawling, content extraction, and browser automation.
 
@@ -34,7 +34,7 @@ TypeScript implementation of an MCP server for Crawl4AI. Provides tools for web 
 
 ## Prerequisites
 
-- Node.js 16+ and npm
+- Node.js 18+ and npm
 - A running Crawl4AI server
 
 ## Quick Start
