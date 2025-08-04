@@ -343,6 +343,29 @@ describe('Crawl4AIServer Tool Handlers', () => {
         expect(result.content[0].text).toContain('JavaScript executed on: https://example.com');
         expect(result.content[0].text).toContain('No results returned');
       });
+
+      it('should handle JS execution with error status', async () => {
+        const mockResponse = {
+          markdown: 'Page content',
+          js_execution_result: {
+            success: true,
+            results: [
+              { success: false, error: 'Script execution failed' },
+            ],
+          },
+        };
+
+        mockExecuteJS.mockResolvedValue(mockResponse);
+
+        const result: ToolResult = await server.executeJS({
+          url: 'https://example.com',
+          scripts: 'throw new Error("test error")',
+        });
+
+        expect(result.content[0].text).toContain('JavaScript executed on: https://example.com');
+        expect(result.content[0].text).toContain('Script: throw new Error("test error")');
+        expect(result.content[0].text).toContain('Returned: Error: Script execution failed');
+      });
     });
 
     describe('get_html', () => {
@@ -660,6 +683,35 @@ describe('Crawl4AIServer Tool Handlers', () => {
         expect(result.content[0].text).toContain('internal (2)');
         expect(result.content[0].text).toContain('/page1');
         expect(result.content[0].text).toContain('external (1)');
+      });
+
+      it('should categorize external links (social, images, scripts)', async () => {
+        mockPost.mockResolvedValue({
+          data: {
+            results: [
+              {
+                links: {
+                  internal: [],
+                  external: [
+                    'https://facebook.com/profile',
+                    'https://example.com/image.jpg',
+                    'https://cdn.com/script.js',
+                  ],
+                },
+              },
+            ],
+          },
+        });
+
+        const result: ToolResult = await server.extractLinks({
+          url: 'https://example.com',
+          categorize: true,
+        });
+
+        expect(result.content[0].text).toContain('social (1)');
+        expect(result.content[0].text).toContain('images (1)');
+        expect(result.content[0].text).toContain('scripts (1)');
+        expect(result.content[0].text).toContain('external (0)');
       });
     });
 
