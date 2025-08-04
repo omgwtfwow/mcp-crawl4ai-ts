@@ -49,14 +49,22 @@ jobs:
         name: coverage-report
         path: coverage/
     
-    - name: Upload coverage to Codecov
+    - name: Update coverage gist
       if: matrix.node-version == '18.x'
-      uses: codecov/codecov-action@v5
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        files: ./coverage/lcov.info,./coverage/coverage-final.json
-        flags: unittests
-        name: node-${{ matrix.node-version }}
-        fail_ci_if_error: true
-        verbose: true
-        codecov_yml_path: ./.codecov.yml
+      env:
+        GIST_SECRET: ${{ secrets.GIST_SECRET }}
+      run: |
+        # Extract coverage percentage
+        COVERAGE=$(node -e "const cov=require('./coverage/coverage-summary.json'); console.log(Math.round(cov.total.lines.pct))")
+        
+        # Determine color based on coverage
+        if [ $COVERAGE -ge 90 ]; then COLOR="brightgreen"
+        elif [ $COVERAGE -ge 70 ]; then COLOR="green"
+        elif [ $COVERAGE -ge 50 ]; then COLOR="yellow"
+        elif [ $COVERAGE -ge 30 ]; then COLOR="orange"
+        else COLOR="red"; fi
+        
+        # Update gist
+        echo "{\"schemaVersion\":1,\"label\":\"coverage\",\"message\":\"${COVERAGE}%\",\"color\":\"${COLOR}\"}" > coverage.json
+        gh auth login --with-token <<< "$GIST_SECRET"
+        gh gist edit e2abffb0deb25afa2bf9185f440dae81 coverage.json
