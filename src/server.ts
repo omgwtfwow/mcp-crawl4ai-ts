@@ -9,6 +9,17 @@ import { ContentHandlers } from './handlers/content-handlers.js';
 import { SessionHandlers } from './handlers/session-handlers.js';
 import { UtilityHandlers } from './handlers/utility-handlers.js';
 import { CrawlHandlers } from './handlers/crawl-handlers.js';
+// Define the tool call result type
+type ToolCallResult = {
+  content: Array<{
+    type: string;
+    text?: string;
+    data?: string;
+    mimeType?: string;
+  }>;
+  session_id?: string;
+  browser_type?: string;
+};
 import {
   GetMarkdownSchema,
   CaptureScreenshotSchema,
@@ -75,6 +86,31 @@ export class Crawl4AIServer {
     this.crawlHandlers = new CrawlHandlers(this.service, this.axiosClient, this.sessions);
 
     this.setupHandlers();
+  }
+
+  /**
+   * Helper method to validate arguments and execute handler with consistent error formatting
+   * Preserves the exact error message format that LLMs rely on
+   */
+  private async validateAndExecute<T>(
+    toolName: string,
+    args: unknown,
+    schema: z.ZodSchema<T>,
+    handler: (validatedArgs: T) => Promise<ToolCallResult>,
+  ): Promise<ToolCallResult> {
+    try {
+      const validatedArgs = schema.parse(args);
+      return await handler(validatedArgs);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        // EXACT same formatting as before - critical for LLM understanding
+        const details = error.errors
+          .map((e) => (e.path.length > 0 ? `${e.path.join('.')}: ${e.message}` : e.message))
+          .join(', ');
+        throw new Error(`Invalid parameters for ${toolName}: ${details}`);
+      }
+      throw error;
+    }
   }
 
   private setupHandlers() {
@@ -770,203 +806,89 @@ export class Crawl4AIServer {
       try {
         switch (name) {
           case 'get_markdown':
-            try {
-              const validatedArgs = GetMarkdownSchema.parse(args);
-              return await this.contentHandlers.getMarkdown(validatedArgs as z.infer<typeof GetMarkdownSchema>);
-            } catch (error) {
-              if (error instanceof z.ZodError) {
-                const details = error.errors
-                  .map((e) => (e.path.length > 0 ? `${e.path.join('.')}: ${e.message}` : e.message))
-                  .join(', ');
-                throw new Error(`Invalid parameters for get_markdown: ${details}`);
-              }
-              throw error;
-            }
+            return await this.validateAndExecute(
+              'get_markdown',
+              args,
+              GetMarkdownSchema as z.ZodSchema<z.infer<typeof GetMarkdownSchema>>,
+              async (validatedArgs) => this.contentHandlers.getMarkdown(validatedArgs),
+            );
 
           case 'capture_screenshot':
-            try {
-              const validatedArgs = CaptureScreenshotSchema.parse(args);
-              return await this.contentHandlers.captureScreenshot(validatedArgs);
-            } catch (error) {
-              if (error instanceof z.ZodError) {
-                const details = error.errors
-                  .map((e) => (e.path.length > 0 ? `${e.path.join('.')}: ${e.message}` : e.message))
-                  .join(', ');
-                throw new Error(`Invalid parameters for capture_screenshot: ${details}`);
-              }
-              throw error;
-            }
+            return await this.validateAndExecute(
+              'capture_screenshot',
+              args,
+              CaptureScreenshotSchema,
+              async (validatedArgs) => this.contentHandlers.captureScreenshot(validatedArgs),
+            );
 
           case 'generate_pdf':
-            try {
-              const validatedArgs = GeneratePdfSchema.parse(args);
-              return await this.contentHandlers.generatePDF(validatedArgs);
-            } catch (error) {
-              if (error instanceof z.ZodError) {
-                const details = error.errors
-                  .map((e) => (e.path.length > 0 ? `${e.path.join('.')}: ${e.message}` : e.message))
-                  .join(', ');
-                throw new Error(`Invalid parameters for generate_pdf: ${details}`);
-              }
-              throw error;
-            }
+            return await this.validateAndExecute('generate_pdf', args, GeneratePdfSchema, async (validatedArgs) =>
+              this.contentHandlers.generatePDF(validatedArgs),
+            );
 
           case 'execute_js':
-            try {
-              const validatedArgs = ExecuteJsSchema.parse(args);
-              return await this.utilityHandlers.executeJS(validatedArgs);
-            } catch (error) {
-              if (error instanceof z.ZodError) {
-                const details = error.errors
-                  .map((e) => (e.path.length > 0 ? `${e.path.join('.')}: ${e.message}` : e.message))
-                  .join(', ');
-                throw new Error(`Invalid parameters for execute_js: ${details}`);
-              }
-              throw error;
-            }
+            return await this.validateAndExecute('execute_js', args, ExecuteJsSchema, async (validatedArgs) =>
+              this.utilityHandlers.executeJS(validatedArgs),
+            );
 
           case 'batch_crawl':
-            try {
-              const validatedArgs = BatchCrawlSchema.parse(args);
-              return await this.crawlHandlers.batchCrawl(validatedArgs);
-            } catch (error) {
-              if (error instanceof z.ZodError) {
-                const details = error.errors
-                  .map((e) => (e.path.length > 0 ? `${e.path.join('.')}: ${e.message}` : e.message))
-                  .join(', ');
-                throw new Error(`Invalid parameters for batch_crawl: ${details}`);
-              }
-              throw error;
-            }
+            return await this.validateAndExecute('batch_crawl', args, BatchCrawlSchema, async (validatedArgs) =>
+              this.crawlHandlers.batchCrawl(validatedArgs),
+            );
 
           case 'smart_crawl':
-            try {
-              const validatedArgs = SmartCrawlSchema.parse(args);
-              return await this.crawlHandlers.smartCrawl(validatedArgs);
-            } catch (error) {
-              if (error instanceof z.ZodError) {
-                const details = error.errors
-                  .map((e) => (e.path.length > 0 ? `${e.path.join('.')}: ${e.message}` : e.message))
-                  .join(', ');
-                throw new Error(`Invalid parameters for smart_crawl: ${details}`);
-              }
-              throw error;
-            }
+            return await this.validateAndExecute('smart_crawl', args, SmartCrawlSchema, async (validatedArgs) =>
+              this.crawlHandlers.smartCrawl(validatedArgs),
+            );
 
           case 'get_html':
-            try {
-              const validatedArgs = GetHtmlSchema.parse(args);
-              return await this.contentHandlers.getHTML(validatedArgs);
-            } catch (error) {
-              if (error instanceof z.ZodError) {
-                const details = error.errors
-                  .map((e) => (e.path.length > 0 ? `${e.path.join('.')}: ${e.message}` : e.message))
-                  .join(', ');
-                throw new Error(`Invalid parameters for get_html: ${details}`);
-              }
-              throw error;
-            }
+            return await this.validateAndExecute('get_html', args, GetHtmlSchema, async (validatedArgs) =>
+              this.contentHandlers.getHTML(validatedArgs),
+            );
 
           case 'extract_links':
-            try {
-              const validatedArgs = ExtractLinksSchema.parse(args);
-              return await this.utilityHandlers.extractLinks(validatedArgs);
-            } catch (error) {
-              if (error instanceof z.ZodError) {
-                const details = error.errors
-                  .map((e) => (e.path.length > 0 ? `${e.path.join('.')}: ${e.message}` : e.message))
-                  .join(', ');
-                throw new Error(`Invalid parameters for extract_links: ${details}`);
-              }
-              throw error;
-            }
+            return await this.validateAndExecute(
+              'extract_links',
+              args,
+              ExtractLinksSchema as z.ZodSchema<z.infer<typeof ExtractLinksSchema>>,
+              async (validatedArgs) => this.utilityHandlers.extractLinks(validatedArgs),
+            );
 
           case 'crawl_recursive':
-            try {
-              const validatedArgs = CrawlRecursiveSchema.parse(args);
-              return await this.crawlHandlers.crawlRecursive(validatedArgs);
-            } catch (error) {
-              if (error instanceof z.ZodError) {
-                const details = error.errors
-                  .map((e) => (e.path.length > 0 ? `${e.path.join('.')}: ${e.message}` : e.message))
-                  .join(', ');
-                throw new Error(`Invalid parameters for crawl_recursive: ${details}`);
-              }
-              throw error;
-            }
+            return await this.validateAndExecute('crawl_recursive', args, CrawlRecursiveSchema, async (validatedArgs) =>
+              this.crawlHandlers.crawlRecursive(validatedArgs),
+            );
 
           case 'parse_sitemap':
-            try {
-              const validatedArgs = ParseSitemapSchema.parse(args);
-              return await this.crawlHandlers.parseSitemap(validatedArgs);
-            } catch (error) {
-              if (error instanceof z.ZodError) {
-                const details = error.errors
-                  .map((e) => (e.path.length > 0 ? `${e.path.join('.')}: ${e.message}` : e.message))
-                  .join(', ');
-                throw new Error(`Invalid parameters for parse_sitemap: ${details}`);
-              }
-              throw error;
-            }
+            return await this.validateAndExecute('parse_sitemap', args, ParseSitemapSchema, async (validatedArgs) =>
+              this.crawlHandlers.parseSitemap(validatedArgs),
+            );
 
           case 'crawl':
-            try {
-              const validatedArgs = CrawlSchema.parse(args);
-              return await this.crawlHandlers.crawl(validatedArgs);
-            } catch (error) {
-              if (error instanceof z.ZodError) {
-                const details = error.errors
-                  .map((e) => (e.path.length > 0 ? `${e.path.join('.')}: ${e.message}` : e.message))
-                  .join(', ');
-                throw new Error(`Invalid parameters for crawl: ${details}`);
-              }
-              throw error;
-            }
+            return await this.validateAndExecute('crawl', args, CrawlSchema, async (validatedArgs) =>
+              this.crawlHandlers.crawl(validatedArgs),
+            );
 
           case 'create_session':
-            try {
-              const validatedArgs = CreateSessionSchema.parse(args);
-              return await this.sessionHandlers.createSession(validatedArgs);
-            } catch (error) {
-              if (error instanceof z.ZodError) {
-                const details = error.errors
-                  .map((e) => (e.path.length > 0 ? `${e.path.join('.')}: ${e.message}` : e.message))
-                  .join(', ');
-                throw new Error(`Invalid parameters for create_session: ${details}`);
-              }
-              throw error;
-            }
+            return await this.validateAndExecute('create_session', args, CreateSessionSchema, async (validatedArgs) =>
+              this.sessionHandlers.createSession(validatedArgs),
+            );
 
           case 'clear_session':
-            try {
-              const validatedArgs = ClearSessionSchema.parse(args);
-              return await this.sessionHandlers.clearSession(validatedArgs);
-            } catch (error) {
-              if (error instanceof z.ZodError) {
-                const details = error.errors
-                  .map((e) => (e.path.length > 0 ? `${e.path.join('.')}: ${e.message}` : e.message))
-                  .join(', ');
-                throw new Error(`Invalid parameters for clear_session: ${details}`);
-              }
-              throw error;
-            }
+            return await this.validateAndExecute('clear_session', args, ClearSessionSchema, async (validatedArgs) =>
+              this.sessionHandlers.clearSession(validatedArgs),
+            );
 
           case 'list_sessions':
             return await this.sessionHandlers.listSessions();
 
           case 'extract_with_llm':
-            try {
-              const validatedArgs = ExtractWithLlmSchema.parse(args);
-              return await this.contentHandlers.extractWithLLM(validatedArgs);
-            } catch (error) {
-              if (error instanceof z.ZodError) {
-                const details = error.errors
-                  .map((e) => (e.path.length > 0 ? `${e.path.join('.')}: ${e.message}` : e.message))
-                  .join(', ');
-                throw new Error(`Invalid parameters for extract_with_llm: ${details}`);
-              }
-              throw error;
-            }
+            return await this.validateAndExecute(
+              'extract_with_llm',
+              args,
+              ExtractWithLlmSchema,
+              async (validatedArgs) => this.contentHandlers.extractWithLLM(validatedArgs),
+            );
 
           default:
             throw new Error(`Unknown tool: ${name}`);
