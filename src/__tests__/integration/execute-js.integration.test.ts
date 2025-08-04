@@ -136,6 +136,40 @@ describe('execute_js Integration Tests', () => {
     );
 
     it(
+      'should handle JavaScript execution errors',
+      async () => {
+        const result = await client.callTool({
+          name: 'execute_js',
+          arguments: {
+            url: 'https://httpbin.org/html',
+            scripts: [
+              'return "This works"',
+              'throw new Error("This is a test error")',
+              'nonExistentVariable.someMethod()',
+            ],
+          },
+        });
+
+        const content = (result as ToolResult).content;
+        expect(content).toHaveLength(1);
+        expect(content[0].text).toContain('JavaScript executed on: https://httpbin.org/html');
+        
+        // First script should succeed
+        expect(content[0].text).toContain('Script: return "This works"');
+        expect(content[0].text).toContain('Returned: "This works"');
+        
+        // Second script should show error
+        expect(content[0].text).toContain('Script: throw new Error("This is a test error")');
+        expect(content[0].text).toContain('Returned: Error: Error: This is a test error');
+        
+        // Third script should show reference error
+        expect(content[0].text).toContain('Script: nonExistentVariable.someMethod()');
+        expect(content[0].text).toContain('Returned: Error: ReferenceError: nonExistentVariable is not defined');
+      },
+      TEST_TIMEOUTS.medium,
+    );
+
+    it(
       'should handle invalid URLs gracefully',
       async () => {
         const result = await client.callTool({

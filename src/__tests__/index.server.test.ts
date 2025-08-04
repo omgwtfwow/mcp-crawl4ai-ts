@@ -350,7 +350,11 @@ describe('Crawl4AIServer Tool Handlers', () => {
           js_execution_result: {
             success: true,
             results: [
-              { success: false, error: 'Script execution failed' },
+              { 
+                success: false, 
+                error: 'Error: Test error',
+                stack: 'Error: Test error\n    at eval (eval at evaluate (:291:30), <anonymous>:4:43)'
+              },
             ],
           },
         };
@@ -359,12 +363,34 @@ describe('Crawl4AIServer Tool Handlers', () => {
 
         const result: ToolResult = await server.executeJS({
           url: 'https://example.com',
-          scripts: 'throw new Error("test error")',
+          scripts: 'throw new Error("Test error")',
         });
 
         expect(result.content[0].text).toContain('JavaScript executed on: https://example.com');
-        expect(result.content[0].text).toContain('Script: throw new Error("test error")');
-        expect(result.content[0].text).toContain('Returned: Error: Script execution failed');
+        expect(result.content[0].text).toContain('Script: throw new Error("Test error")');
+        expect(result.content[0].text).toContain('Returned: Error: Error: Test error');
+      });
+
+      it('should handle JS execution with no return value', async () => {
+        const mockResponse = {
+          markdown: 'Page content',
+          js_execution_result: {
+            success: true,
+            results: [
+              { success: true },
+            ],
+          },
+        };
+
+        mockExecuteJS.mockResolvedValue(mockResponse);
+
+        const result: ToolResult = await server.executeJS({
+          url: 'https://example.com',
+          scripts: 'console.log("hello")',
+        });
+
+        expect(result.content[0].text).toContain('JavaScript executed on: https://example.com');
+        expect(result.content[0].text).toContain('Returned: Executed successfully (no return value)');
       });
     });
 
