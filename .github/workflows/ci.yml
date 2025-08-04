@@ -68,3 +68,11 @@ jobs:
         echo "{\"schemaVersion\":1,\"label\":\"coverage\",\"message\":\"${COVERAGE}%\",\"color\":\"${COLOR}\"}" > coverage.json
         gh auth login --with-token <<< "$GIST_SECRET"
         gh gist edit e2abffb0deb25afa2bf9185f440dae81 coverage.json
+    
+    - name: Deploy coverage to GitHub Pages
+      if: matrix.node-version == '18.x' && github.ref == 'refs/heads/main'
+      uses: peaceiris/actions-gh-pages@v4
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./coverage/lcov-report
+        destination_dir: coverage
