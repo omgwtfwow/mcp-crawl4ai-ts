@@ -1,5 +1,14 @@
 # Changelog
 
+## Version 2.6.2 (2025-08-04)
+
+### Refactoring
+- Consolidated error handling in server.ts with validateAndExecute helper
+  - Reduced ~90 lines of duplicate code  
+  - Preserved exact error message format for LLM compatibility
+  - Improved maintainability while keeping behavior identical
+  - Server.ts coverage improved from ~90% to 98.66%
+
 ## Version 2.6.1 (2025-08-04)
 
 ### Testing
