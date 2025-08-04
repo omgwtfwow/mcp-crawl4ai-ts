@@ -1,5 +1,25 @@
 # Changelog
 
+## Version 2.6.0 (2025-08-04)
+
+### Testing
+- Added comprehensive test coverage for error handling paths
+  - Session creation with failed initial crawl
+  - JavaScript execution error handling with accurate API response formats
+  - Extract links manual extraction fallback when API returns empty links
+  - Improved coverage from 87.23% to 89.71% lines
+- Added integration tests for crawl error handling
+  - Invalid URL validation
+  - Non-existent domain handling
+- Added unit tests for utility handlers
+  - Manual link extraction from markdown
+  - Malformed URL handling
+  - Empty results scenarios
+
+### Improvements
+- Better error resilience in session creation when initial crawl fails
+- More accurate test mocks based on real API responses
+
 ## Version 2.5.0 (2025-08-04)
 
 ### Refactoring
