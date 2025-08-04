@@ -64,7 +64,7 @@ jest.unstable_mockModule('@modelcontextprotocol/sdk/server/stdio.js', () => ({
 }));
 
 // Now import the server after mocks are set up
-const { Crawl4AIServer } = await import('../index.js');
+const { Crawl4AIServer } = await import('../server.js');
 
 type InstanceType<T> = T extends new (...args: unknown[]) => infer R ? R : never;
 

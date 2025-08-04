@@ -1,6 +1,6 @@
 /* eslint-env jest */
 import { describe, it, expect } from '@jest/globals';
-import { validateJavaScriptCode } from '../../index.js';
+import { validateJavaScriptCode } from '../../schemas/helpers.js';
 
 describe('JavaScript Code Validation', () => {
   describe('Valid JavaScript', () => {

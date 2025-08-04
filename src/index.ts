@@ -17,30 +17,6 @@ if (!CRAWL4AI_BASE_URL) {
   process.exit(1);
 }
 
-// Re-export everything for backward compatibility
-export { Crawl4AIServer } from './server.js';
-export { Crawl4AIService } from './crawl4ai-service.js';
-export {
-  GetMarkdownSchema,
-  ExecuteJsSchema,
-  GetHtmlSchema,
-  CaptureScreenshotSchema,
-  GeneratePdfSchema,
-  ExtractWithLlmSchema,
-  BatchCrawlSchema,
-  SmartCrawlSchema,
-  ExtractLinksSchema,
-  CrawlRecursiveSchema,
-  ParseSitemapSchema,
-  CreateSessionSchema,
-  ClearSessionSchema,
-  CrawlSchema,
-  JsCodeSchema,
-  VirtualScrollConfigSchema,
-} from './schemas/validation-schemas.js';
-export { validateJavaScriptCode, createStatelessSchema } from './schemas/helpers.js';
-export type { SessionInfo, ErrorWithResponse } from './handlers/base-handler.js';
-
 /* istanbul ignore next */
 // Start the server if run directly
 if (import.meta.url === `file://${process.argv[1]}`) {

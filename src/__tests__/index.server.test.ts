@@ -71,8 +71,8 @@ jest.unstable_mockModule('axios', () => ({
 }));
 
 // Now dynamically import the modules after mocks are set up
+const { Crawl4AIServer } = await import('../server.js');
 const {
-  Crawl4AIServer,
   GetMarkdownSchema,
   CrawlSchema,
   BatchCrawlSchema,
@@ -83,7 +83,7 @@ const {
   ExtractWithLlmSchema: _ExtractWithLlmSchema,
   SmartCrawlSchema: _SmartCrawlSchema,
   CrawlRecursiveSchema: _CrawlRecursiveSchema,
-} = await import('../index.js');
+} = await import('../schemas/validation-schemas.js');
 const { Crawl4AIService } = await import('../crawl4ai-service.js');
 
 // Import types statically (these are removed at compile time)

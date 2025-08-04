@@ -1,5 +1,17 @@
 # Changelog
 
+## Version 2.5.0 (2025-08-04)
+
+### Refactoring
+- Removed backward compatibility exports from index.ts
+- Updated test imports to use direct module paths
+- Cleaned up index.ts to focus solely on CLI entry point
+
+### Testing
+- Updated jest.setup.cjs to load .env for integration tests
+- Unit tests continue using localhost:11235
+- Integration tests now use values from .env file
+
 ## Version 2.4.0 (2025-08-04)
 
 ### Features
