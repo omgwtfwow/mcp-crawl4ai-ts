@@ -323,5 +323,41 @@ describe('Session Management Integration Tests', () => {
       },
       TEST_TIMEOUTS.short,
     );
+
+    it(
+      'should create session even if initial crawl fails',
+      async () => {
+        // Use a URL that will fail to crawl (non-existent domain)
+        const result = await client.callTool({
+          name: 'create_session',
+          arguments: {
+            initial_url: 'https://this-domain-definitely-does-not-exist-12345.com',
+            browser_type: 'chromium',
+          },
+        });
+
+        // Session should still be created successfully
+        expect(result).toBeDefined();
+        const typedResult = result as ToolResult;
+        expect(typedResult.session_id).toBeDefined();
+        expect(typedResult.browser_type).toBe('chromium');
+        
+        const textContent = typedResult.content.find((c) => c.type === 'text');
+        expect(textContent?.text).toContain('Session created successfully');
+        expect(textContent?.text).toContain('Pre-warmed with: https://this-domain-definitely-does-not-exist-12345.com');
+
+        // Verify session exists in list
+        const listResult = await client.callTool({
+          name: 'list_sessions',
+          arguments: {},
+        });
+        const listText = (listResult as ToolResult).content.find((c) => c.type === 'text')?.text;
+        expect(listText).toContain(typedResult.session_id);
+
+        // Track for cleanup
+        createdSessions.push(typedResult.session_id!);
+      },
+      TEST_TIMEOUTS.medium,
+    );
   });
 });
