@@ -164,9 +164,12 @@ export class CrawlHandlers extends BaseHandler {
       const includeRegex = options.include_pattern ? new RegExp(options.include_pattern) : null;
       const excludeRegex = options.exclude_pattern ? new RegExp(options.exclude_pattern) : null;
 
-      while (toVisit.length > 0 && results.length < (options.max_pages || 50)) {
+      const maxDepth = options.max_depth !== undefined ? options.max_depth : 3;
+      const maxPages = options.max_pages || 50;
+
+      while (toVisit.length > 0 && results.length < maxPages) {
         const current = toVisit.shift();
-        if (!current || visited.has(current.url) || current.depth > (options.max_depth || 3)) {
+        if (!current || visited.has(current.url) || current.depth > maxDepth) {
           continue;
         }
 
@@ -200,7 +203,7 @@ export class CrawlHandlers extends BaseHandler {
             });
 
             // Add internal links to crawl queue
-            if (current.depth < (options.max_depth || 3) && result.links?.internal) {
+            if (current.depth < maxDepth && result.links?.internal) {
               for (const linkObj of result.links.internal) {
                 const linkUrl = linkObj.href || linkObj;
                 try {
@@ -225,7 +228,7 @@ export class CrawlHandlers extends BaseHandler {
       let outputText = `Recursive crawl completed:\n\nPages crawled: ${results.length}\nStarting URL: ${options.url}\n`;
 
       if (results.length > 0) {
-        outputText += `Max depth reached: ${maxDepthReached} (limit: ${options.max_depth || 3})\n\nNote: Only internal links (same domain) are followed during recursive crawling.\n\nPages found:\n${results.map((r) => `- [Depth ${r.depth}] ${r.url}\n  Content: ${r.content.length} chars\n  Internal links found: ${r.internal_links_found}`).join('\n')}`;
+        outputText += `Max depth reached: ${maxDepthReached} (limit: ${maxDepth})\n\nNote: Only internal links (same domain) are followed during recursive crawling.\n\nPages found:\n${results.map((r) => `- [Depth ${r.depth}] ${r.url}\n  Content: ${r.content.length} chars\n  Internal links found: ${r.internal_links_found}`).join('\n')}`;
       } else {
         outputText += `\nNo pages could be crawled. This might be due to:\n- The starting URL returned an error\n- No internal links were found\n- All discovered links were filtered out by include/exclude patterns`;
       }

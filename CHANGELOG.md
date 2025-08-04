@@ -12,6 +12,11 @@
   - Improved cross-references between related tools
   - Removed problematic one-shot form pattern that assumed element existence
 
+### Bug Fixes
+- Fixed crawl_recursive max_depth behavior
+  - max_depth: 0 now correctly crawls only the initial page
+  - Previously, max_depth: 0 would crawl pages at depth 0 and depth 1
+
 ## Version 2.6.2 (2025-08-04)
 
 ### Refactoring
