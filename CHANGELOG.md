@@ -1,5 +1,30 @@
 # Changelog
 
+## Version 2.4.0 (2025-08-04)
+
+### Features
+- Replaced Codecov with GitHub Actions-based coverage badge
+  - Coverage badge now uses GitHub Gist for storage
+  - No external dependencies for coverage tracking
+  - Badge updates automatically with each CI run
+  - Coverage reports published to GitHub Pages
+  - Interactive HTML coverage report available at https://omgwtfwow.github.io/mcp-crawl4ai-ts/coverage/
+
+### Bug Fixes
+- Fixed smart_crawl implementation to remove unsupported 'strategy' parameter
+- Fixed coverage extraction in CI to use lcov.info format
+- Added proper URL encoding for Shields.io endpoint badge
+
+### CI/CD Improvements
+- Added GitHub Pages deployment for coverage reports
+- Added write permissions for GitHub Actions to create gh-pages branch
+- Removed Codecov integration completely
+
+### Maintenance
+- Removed .codecov.yml configuration file
+- Removed CODECOV_TOKEN from repository secrets
+- Updated README.md with new coverage badge
+
 ## Version 2.3.0 (2025-08-03)
 
 ### Refactoring
