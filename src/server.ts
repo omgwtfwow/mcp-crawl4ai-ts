@@ -150,7 +150,7 @@ export class Crawl4AIServer {
         {
           name: 'capture_screenshot',
           description:
-            "[STATELESS] Capture webpage screenshot. Returns base64-encoded PNG data. Creates new browser each time. IMPORTANT: Chained calls (execute_js then capture_screenshot) will NOT work - the screenshot won't see JS changes! For JS changes + screenshot use create_session + crawl(session_id, js_code, screenshot:true) in ONE call.",
+            "[STATELESS] Capture webpage screenshot. Returns base64-encoded PNG data. Creates new browser each time. Optionally saves screenshot to local directory. IMPORTANT: Chained calls (execute_js then capture_screenshot) will NOT work - the screenshot won't see JS changes! For JS changes + screenshot use create_session + crawl(session_id, js_code, screenshot:true) in ONE call.",
           inputSchema: {
             type: 'object',
             properties: {
@@ -162,6 +162,10 @@ export class Crawl4AIServer {
                 type: 'number',
                 description: 'Seconds to wait before taking screenshot (allows page loading/animations)',
                 default: 2,
+              },
+              save_to_directory: {
+                type: 'string',
+                description: 'Optional local directory path to save the screenshot file',
               },
             },
             required: ['url'],
@@ -546,6 +550,10 @@ export class Crawl4AIServer {
                 type: 'boolean',
                 description: 'Capture full-page screenshot as base64 PNG',
                 default: false,
+              },
+              screenshot_directory: {
+                type: 'string',
+                description: 'Optional local directory path to save the screenshot file when screenshot=true',
               },
               pdf: {
                 type: 'boolean',

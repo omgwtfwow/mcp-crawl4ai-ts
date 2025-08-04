@@ -31,6 +31,7 @@ export interface JSExecuteEndpointResponse {
 export interface ScreenshotEndpointOptions {
   url: string;
   screenshot_wait_for?: number;
+  save_to_directory?: string;
   // output_path is omitted to get base64 response
 }
 

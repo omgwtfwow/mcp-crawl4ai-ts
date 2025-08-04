@@ -63,6 +63,7 @@ export const CaptureScreenshotSchema = createStatelessSchema(
   z.object({
     url: z.string().url(),
     screenshot_wait_for: z.number().optional(),
+    save_to_directory: z.string().optional().describe('Local directory to save screenshot file'),
     // output_path not exposed as MCP needs base64 data
   }),
   'capture_screenshot',
@@ -201,6 +202,10 @@ export const CrawlSchema = z
     // Media handling
     screenshot: z.boolean().optional(),
     screenshot_wait_for: z.number().optional(),
+    screenshot_directory: z
+      .string()
+      .optional()
+      .describe('Local directory to save screenshot file when screenshot=true'),
     pdf: z.boolean().optional(),
     capture_mhtml: z.boolean().optional(),
     image_description_min_word_threshold: z.number().optional(),

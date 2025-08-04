@@ -1,5 +1,16 @@
 # Changelog
 
+## Version 2.6.4 (2025-08-04)
+
+### Features
+- Added local screenshot storage support
+  - capture_screenshot: New save_to_directory parameter saves screenshots locally while returning as MCP resource
+  - crawl: New screenshot_directory parameter saves screenshots when screenshot=true
+  - Automatic filename generation using URL hostname and timestamp
+  - Creates directories if they don't exist
+  - Graceful error handling - failures don't interrupt the crawl operation
+  - Added comprehensive unit tests for file saving functionality
+
 ## Version 2.6.3 (2025-08-04)
 
 ### Enhancements

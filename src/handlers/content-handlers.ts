@@ -10,6 +10,8 @@ import {
   HTMLEndpointResponse,
   FilterType,
 } from '../types.js';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 
 export class ContentHandlers extends BaseHandler {
   async getMarkdown(
@@ -55,6 +57,35 @@ export class ContentHandlers extends BaseHandler {
         throw new Error('Screenshot capture failed - no screenshot data in response');
       }
 
+      let savedFilePath: string | undefined;
+
+      // Save to local directory if requested
+      if (options.save_to_directory) {
+        try {
+          // Ensure directory exists
+          await fs.mkdir(options.save_to_directory, { recursive: true });
+
+          // Generate filename from URL and timestamp
+          const url = new URL(options.url);
+          const hostname = url.hostname.replace(/[^a-z0-9]/gi, '-');
+          const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+          const filename = `${hostname}-${timestamp}.png`;
+
+          savedFilePath = path.join(options.save_to_directory, filename);
+
+          // Convert base64 to buffer and save
+          const buffer = Buffer.from(result.screenshot, 'base64');
+          await fs.writeFile(savedFilePath, buffer);
+        } catch (saveError) {
+          // Log error but don't fail the operation
+          console.error('Failed to save screenshot locally:', saveError);
+        }
+      }
+
+      const textContent = savedFilePath
+        ? `Screenshot captured for: ${options.url}\nSaved to: ${savedFilePath}`
+        : `Screenshot captured for: ${options.url}`;
+
       return {
         content: [
           {
@@ -64,7 +95,7 @@ export class ContentHandlers extends BaseHandler {
           },
           {
             type: 'text',
-            text: `Screenshot captured for: ${options.url}`,
+            text: textContent,
           },
         ],
       };

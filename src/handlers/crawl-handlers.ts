@@ -1,5 +1,7 @@
 import { BaseHandler } from './base-handler.js';
 import { BatchCrawlOptions, CrawlResultItem, AdvancedCrawlConfig, CrawlEndpointResponse } from '../types.js';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 
 export class CrawlHandlers extends BaseHandler {
   async batchCrawl(options: BatchCrawlOptions) {
@@ -445,11 +447,42 @@ export class CrawlHandlers extends BaseHandler {
 
       // Screenshot if available
       if (result.screenshot) {
+        // Save to local directory if requested
+        let savedFilePath: string | undefined;
+        if (options.screenshot_directory && typeof options.screenshot_directory === 'string') {
+          try {
+            // Ensure directory exists
+            await fs.mkdir(options.screenshot_directory, { recursive: true });
+
+            // Generate filename from URL and timestamp
+            const url = new URL(String(options.url));
+            const hostname = url.hostname.replace(/[^a-z0-9]/gi, '-');
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+            const filename = `${hostname}-${timestamp}.png`;
+
+            savedFilePath = path.join(options.screenshot_directory, filename);
+
+            // Convert base64 to buffer and save
+            const buffer = Buffer.from(result.screenshot, 'base64');
+            await fs.writeFile(savedFilePath, buffer);
+          } catch (saveError) {
+            // Log error but don't fail the operation
+            console.error('Failed to save screenshot locally:', saveError);
+          }
+        }
+
         content.push({
           type: 'image',
           data: result.screenshot,
           mimeType: 'image/png',
         });
+
+        if (savedFilePath) {
+          content.push({
+            type: 'text',
+            text: `\n---\nScreenshot saved to: ${savedFilePath}`,
+          });
+        }
       }
 
       // PDF if available
