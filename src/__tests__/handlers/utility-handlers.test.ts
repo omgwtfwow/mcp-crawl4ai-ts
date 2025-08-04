@@ -16,7 +16,7 @@ const mockAxiosClient = {
 } as unknown;
 
 // Import after setting up mocks
-const { UtilityHandlers } = await import('../../handlers/utility-handlers.js');
+const { UtilityHandlers: UtilityHandlersClass } = await import('../../handlers/utility-handlers.js');
 
 describe('UtilityHandlers', () => {
   let handler: UtilityHandlers;
@@ -25,7 +25,7 @@ describe('UtilityHandlers', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     sessions = new Map();
-    handler = new UtilityHandlers(mockService, mockAxiosClient, sessions);
+    handler = new UtilityHandlersClass(mockService, mockAxiosClient, sessions);
   });
 
   describe('extractLinks', () => {
@@ -33,14 +33,15 @@ describe('UtilityHandlers', () => {
       // Mock crawl response with empty links but markdown containing href attributes
       mockPost.mockResolvedValue({
         data: {
-          results: [{
-            success: true,
-            links: {
-              internal: [],
-              external: [],
-            },
-            markdown: {
-              raw_markdown: `
+          results: [
+            {
+              success: true,
+              links: {
+                internal: [],
+                external: [],
+              },
+              markdown: {
+                raw_markdown: `
             # Test Page
             
             Here are some links:
@@ -49,8 +50,9 @@ describe('UtilityHandlers', () => {
             <a href="/relative/path">Relative Link</a>
             <a href='https://example.com/page2'>Another Internal</a>
           `,
+              },
             },
-          }],
+          ],
         },
       });
 
@@ -74,17 +76,19 @@ describe('UtilityHandlers', () => {
       // Mock crawl response with empty links
       mockPost.mockResolvedValue({
         data: {
-          results: [{
-            success: true,
-            links: {
-              internal: [],
-              external: [],
-            },
-            markdown: {
-              raw_markdown: `<a href="https://example.com/page1">Link 1</a>
+          results: [
+            {
+              success: true,
+              links: {
+                internal: [],
+                external: [],
+              },
+              markdown: {
+                raw_markdown: `<a href="https://example.com/page1">Link 1</a>
                          <a href="https://external.com/page">Link 2</a>`,
+              },
             },
-          }],
+          ],
         },
       });
 
@@ -104,18 +108,20 @@ describe('UtilityHandlers', () => {
       // Mock crawl response with a malformed URL in href
       mockPost.mockResolvedValue({
         data: {
-          results: [{
-            success: true,
-            links: {
-              internal: [],
-              external: [],
-            },
-            markdown: {
-              raw_markdown: `<a href="javascript:void(0)">JS Link</a>
+          results: [
+            {
+              success: true,
+              links: {
+                internal: [],
+                external: [],
+              },
+              markdown: {
+                raw_markdown: `<a href="javascript:void(0)">JS Link</a>
                          <a href="https://example.com/valid">Valid Link</a>
                          <a href="not-a-url">Invalid URL</a>`,
+              },
             },
-          }],
+          ],
         },
       });
 
@@ -135,16 +141,18 @@ describe('UtilityHandlers', () => {
       // Mock crawl response with no links
       mockPost.mockResolvedValue({
         data: {
-          results: [{
-            success: true,
-            links: {
-              internal: [],
-              external: [],
+          results: [
+            {
+              success: true,
+              links: {
+                internal: [],
+                external: [],
+              },
+              markdown: {
+                raw_markdown: 'Just plain text without any links',
+              },
             },
-            markdown: {
-              raw_markdown: 'Just plain text without any links',
-            },
-          }],
+          ],
         },
       });
 
