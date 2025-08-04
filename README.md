@@ -3,7 +3,7 @@
 [![npm version](https://img.shields.io/npm/v/mcp-crawl4ai-ts.svg)](https://www.npmjs.com/package/mcp-crawl4ai-ts)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js CI](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
-[![coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/omgwtfwow/e2abffb0deb25afa2bf9185f440dae81/raw/coverage.json)](https://github.com/omgwtfwow/mcp-crawl4ai-ts/actions/workflows/ci.yml)
+[![coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fgist.githubusercontent.com%2Fomgwtfwow%2Fe2abffb0deb25afa2bf9185f440dae81%2Fraw%2Fcoverage.json)](https://github.com/omgwtfwow/mcp-crawl4ai-ts/actions/workflows/ci.yml)
 
 TypeScript implementation of an MCP server for Crawl4AI. Provides tools for web crawling, content extraction, and browser automation.
 
