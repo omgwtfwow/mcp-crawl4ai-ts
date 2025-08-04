@@ -51,6 +51,49 @@ describe('crawl Integration Tests', () => {
     );
 
     it(
+      'should handle invalid URL gracefully',
+      async () => {
+        const result = await client.callTool({
+          name: 'crawl',
+          arguments: {
+            url: 'not-a-valid-url',
+            cache_mode: 'BYPASS',
+          },
+        });
+
+        const content = (result as ToolResult).content;
+        expect(content).toHaveLength(1);
+        expect(content[0].type).toBe('text');
+        expect(content[0].text).toContain('Error');
+        // Our Zod validation catches this before it reaches the API
+        expect(content[0].text).toContain('Invalid parameters for crawl');
+        expect(content[0].text).toContain('Invalid url');
+      },
+      TEST_TIMEOUTS.short,
+    );
+
+    it(
+      'should handle non-existent domain gracefully',
+      async () => {
+        const result = await client.callTool({
+          name: 'crawl',
+          arguments: {
+            url: 'https://this-domain-definitely-does-not-exist-12345.com',
+            cache_mode: 'BYPASS',
+          },
+        });
+
+        const content = (result as ToolResult).content;
+        expect(content).toHaveLength(1);
+        expect(content[0].type).toBe('text');
+        expect(content[0].text).toContain('Error');
+        // Could be DNS error, connection error, or "Internal Server Error"
+        expect(content[0].text).toMatch(/Failed to crawl|Internal Server Error|DNS|connection/i);
+      },
+      TEST_TIMEOUTS.medium,
+    );
+
+    it(
       'should handle browser configuration',
       async () => {
         const result = await client.callTool({
