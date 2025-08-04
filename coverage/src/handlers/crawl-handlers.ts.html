@@ -23,16 +23,16 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">83.26% </span>
+                <span class="strong">83.4% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>199/239</span>
+                <span class='fraction'>201/241</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">76.51% </span>
+                <span class="strong">76.15% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>202/264</span>
+                <span class='fraction'>198/260</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">97.43% </span>
+                <span class="strong">97.46% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>190/195</span>
+                <span class='fraction'>192/197</span>
             </div>
         
             
@@ -561,7 +561,10 @@
 <a name='L496'></a><a href='#L496'>496</a>
 <a name='L497'></a><a href='#L497'>497</a>
 <a name='L498'></a><a href='#L498'>498</a>
-<a name='L499'></a><a href='#L499'>499</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L499'></a><a href='#L499'>499</a>
+<a name='L500'></a><a href='#L500'>500</a>
+<a name='L501'></a><a href='#L501'>501</a>
+<a name='L502'></a><a href='#L502'>502</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -721,6 +724,9 @@
 <span class="cline-any cline-yes">9x</span>
 <span class="cline-any cline-yes">9x</span>
 <span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">9x</span>
 <span class="cline-any cline-yes">9x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -1225,9 +1231,12 @@ export class CrawlHandlers extends BaseHandler {
       const includeRegex = options.include_pattern ? <span class="branch-0 cbranch-no" title="branch not covered" >new RegExp(options.include_pattern) </span>: null;
       const excludeRegex = options.exclude_pattern ? <span class="branch-0 cbranch-no" title="branch not covered" >new RegExp(options.exclude_pattern) </span>: null;
 &nbsp;
-      while (toVisit.length &gt; 0 &amp;&amp; results.length &lt; (options.max_pages || 50)) {
+      const maxDepth = options.max_depth !== undefined ? options.max_depth : 3;
+      const maxPages = options.max_pages || 50;
+&nbsp;
+      while (toVisit.length &gt; 0 &amp;&amp; results.length &lt; maxPages) {
         const current = toVisit.shift();
-        <span class="missing-if-branch" title="if path not taken" >I</span>if (!current || visited.has(current.url) || current.depth &gt; (options.max_depth || 3)) {
+        <span class="missing-if-branch" title="if path not taken" >I</span>if (!current || visited.has(current.url) || current.depth &gt; maxDepth) {
 <span class="cstat-no" title="statement not covered" >          continue;</span>
         }
 &nbsp;
@@ -1261,7 +1270,7 @@ export class CrawlHandlers extends BaseHandler {
             });
 &nbsp;
             // Add internal links to crawl queue
-            if (current.depth &lt; (options.max_depth || 3) &amp;&amp; result.links?.internal) {
+            if (current.depth &lt; maxDepth &amp;&amp; result.links?.internal) {
               for (const linkObj of result.links.internal) {
                 const linkUrl = linkObj.href || <span class="branch-1 cbranch-no" title="branch not covered" >linkObj;</span>
                 try {
@@ -1286,7 +1295,7 @@ export class CrawlHandlers extends BaseHandler {
       let outputText = `Recursive crawl completed:\n\nPages crawled: ${results.length}\nStarting URL: ${options.url}\n`;
 &nbsp;
       if (results.length &gt; 0) {
-        outputText += `Max depth reached: ${maxDepthReached} (limit: ${options.max_depth || 3})\n\nNote: Only internal links (same domain) are followed during recursive crawling.\n\nPages found:\n${results.map((r) =&gt; `- [Depth ${r.depth}] ${r.url}\n  Content: ${r.content.length} chars\n  Internal links found: ${r.internal_links_found}`).join('\n')}`;
+        outputText += `Max depth reached: ${maxDepthReached} (limit: ${maxDepth})\n\nNote: Only internal links (same domain) are followed during recursive crawling.\n\nPages found:\n${results.map((r) =&gt; `- [Depth ${r.depth}] ${r.url}\n  Content: ${r.content.length} chars\n  Internal links found: ${r.internal_links_found}`).join('\n')}`;
       } else {
         outputText += `\nNo pages could be crawled. This might be due to:\n- The starting URL returned an error\n- No internal links were found\n- All discovered links were filtered out by include/exclude patterns`;
       }
@@ -1564,7 +1573,7 @@ export class CrawlHandlers extends BaseHandler {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-08-04T21:26:43.181Z
+                at 2025-08-04T22:16:03.440Z
             </div>
         <script src="../../prettify.js"></script>
         <script>
