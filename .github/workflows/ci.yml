@@ -54,8 +54,9 @@ jobs:
       uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        files: ./coverage/lcov.info
+        files: ./coverage/lcov.info,./coverage/coverage-final.json
         flags: unittests
         name: node-${{ matrix.node-version }}
         fail_ci_if_error: true
         verbose: true
+        codecov_yml_path: ./.codecov.yml
