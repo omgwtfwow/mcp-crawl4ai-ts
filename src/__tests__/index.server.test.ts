@@ -350,10 +350,10 @@ describe('Crawl4AIServer Tool Handlers', () => {
           js_execution_result: {
             success: true,
             results: [
-              { 
-                success: false, 
+              {
+                success: false,
                 error: 'Error: Test error',
-                stack: 'Error: Test error\n    at eval (eval at evaluate (:291:30), <anonymous>:4:43)'
+                stack: 'Error: Test error\n    at eval (eval at evaluate (:291:30), <anonymous>:4:43)',
               },
             ],
           },
@@ -376,9 +376,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
           markdown: 'Page content',
           js_execution_result: {
             success: true,
-            results: [
-              { success: true },
-            ],
+            results: [{ success: true }],
           },
         };
 

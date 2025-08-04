@@ -341,7 +341,7 @@ describe('Session Management Integration Tests', () => {
         const typedResult = result as ToolResult;
         expect(typedResult.session_id).toBeDefined();
         expect(typedResult.browser_type).toBe('chromium');
-        
+
         const textContent = typedResult.content.find((c) => c.type === 'text');
         expect(textContent?.text).toContain('Session created successfully');
         expect(textContent?.text).toContain('Pre-warmed with: https://this-domain-definitely-does-not-exist-12345.com');
