@@ -1,5 +1,16 @@
 # Changelog
 
+## Version 2.6.1 (2025-08-04)
+
+### Testing
+- Improved crawl-handlers test coverage from 87% to 97%
+  - Added comprehensive unit tests for all crawl handler methods
+  - Test error handling for batchCrawl, smartCrawl, crawlRecursive, parseSitemap
+  - Cover edge cases including XML detection, URL validation, depth limits
+  - Added integration tests for real API behavior validation
+  - Test all crawl parameters including word_count_threshold, image thresholds, exclude_social_media_links
+  - Properly handle MCP error formatting vs direct handler throws
+
 ## Version 2.6.0 (2025-08-04)
 
 ### Testing
