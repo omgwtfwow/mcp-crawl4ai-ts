@@ -120,7 +120,7 @@ export class Crawl4AIServer {
         {
           name: 'get_markdown',
           description:
-            'Extract content as markdown with filtering options. Supports: raw (full content), fit (optimized, default), bm25 (keyword search), llm (AI-powered extraction). Use bm25/llm with query for specific content. STATELESS: Creates new browser each time. For persistence use create_session + crawl.',
+            '[STATELESS] Extract content as markdown with filtering options. Supports: raw (full content), fit (optimized, default), bm25 (keyword search), llm (AI-powered extraction). Use bm25/llm with query for specific content. Creates new browser each time. For persistence use create_session + crawl.',
           inputSchema: {
             type: 'object',
             properties: {
@@ -150,7 +150,7 @@ export class Crawl4AIServer {
         {
           name: 'capture_screenshot',
           description:
-            "Capture webpage screenshot. Returns base64-encoded PNG data. STATELESS: Creates new browser each time. IMPORTANT: Chained calls (execute_js then capture_screenshot) will NOT work - the screenshot won't see JS changes! For JS changes + screenshot use create_session + crawl(session_id, js_code, screenshot:true) in ONE call.",
+            "[STATELESS] Capture webpage screenshot. Returns base64-encoded PNG data. Creates new browser each time. IMPORTANT: Chained calls (execute_js then capture_screenshot) will NOT work - the screenshot won't see JS changes! For JS changes + screenshot use create_session + crawl(session_id, js_code, screenshot:true) in ONE call.",
           inputSchema: {
             type: 'object',
             properties: {
@@ -170,7 +170,7 @@ export class Crawl4AIServer {
         {
           name: 'generate_pdf',
           description:
-            'Convert webpage to PDF. Returns base64-encoded PDF data. STATELESS: Creates new browser each time. Cannot capture form fills or JS changes. For persistent PDFs use create_session + crawl(session_id, pdf:true).',
+            '[STATELESS] Convert webpage to PDF. Returns base64-encoded PDF data. Creates new browser each time. Cannot capture form fills or JS changes. For persistent PDFs use create_session + crawl(session_id, pdf:true).',
           inputSchema: {
             type: 'object',
             properties: {
@@ -185,7 +185,7 @@ export class Crawl4AIServer {
         {
           name: 'execute_js',
           description:
-            'Execute JavaScript and get return values + page content. STATELESS: Creates new browser each time. Use for: extracting data, triggering dynamic content, checking page state. Scripts with "return" statements return actual values (strings, numbers, objects, arrays). Note: null returns as {"success": true}. For persistent operations use create_session + crawl.',
+            '[STATELESS] Execute JavaScript and get return values + page content. Creates new browser each time. Use for: extracting data, triggering dynamic content, checking page state. Scripts with "return" statements return actual values (strings, numbers, objects, arrays). Note: null returns as {"success": true}. Returns values but page state is lost. For persistent JS execution, use crawl with session_id.',
           inputSchema: {
             type: 'object',
             properties: {
@@ -206,7 +206,7 @@ export class Crawl4AIServer {
         {
           name: 'batch_crawl',
           description:
-            'Crawl multiple URLs concurrently for efficiency. Use when: processing URL lists, comparing multiple pages, or bulk data extraction. Faster than sequential crawling. Max 5 concurrent by default. STATELESS: Each URL gets a fresh browser. Cannot maintain state between URLs. For persistent operations use create_session + crawl.',
+            '[STATELESS] Crawl multiple URLs concurrently for efficiency. Use when: processing URL lists, comparing multiple pages, or bulk data extraction. Faster than sequential crawling. Max 5 concurrent by default. Each URL gets a fresh browser. Cannot maintain state between URLs. For persistent operations use create_session + crawl.',
           inputSchema: {
             type: 'object',
             properties: {
@@ -238,7 +238,7 @@ export class Crawl4AIServer {
         {
           name: 'smart_crawl',
           description:
-            'Auto-detect and handle different content types (HTML, sitemap, RSS, text). Use when: URL type is unknown, crawling feeds/sitemaps, or want automatic format handling. Adapts strategy based on content. STATELESS: Creates new browser each time. For persistent operations use create_session + crawl.',
+            '[STATELESS] Auto-detect and handle different content types (HTML, sitemap, RSS, text). Use when: URL type is unknown, crawling feeds/sitemaps, or want automatic format handling. Adapts strategy based on content. Creates new browser each time. For persistent operations use create_session + crawl.',
           inputSchema: {
             type: 'object',
             properties: {
@@ -268,7 +268,7 @@ export class Crawl4AIServer {
         {
           name: 'get_html',
           description:
-            'Get sanitized/processed HTML optimized for schema extraction. Use when: building schemas, analyzing HTML structure, extracting patterns. Returns preprocessed HTML (not raw). For raw HTML or dynamic content use get_markdown or execute_js. STATELESS: Creates new browser each time.',
+            '[STATELESS] Get sanitized/processed HTML for inspection and automation planning. Use when: finding form fields/selectors, analyzing page structure before automation, building schemas. Returns cleaned HTML showing element names, IDs, and classes - perfect for identifying selectors for subsequent crawl operations. Commonly used before crawl to find selectors for automation. Creates new browser each time.',
           inputSchema: {
             type: 'object',
             properties: {
@@ -283,7 +283,7 @@ export class Crawl4AIServer {
         {
           name: 'extract_links',
           description:
-            'Extract and categorize all page links. Use when: building sitemaps, analyzing site structure, finding broken links, or discovering resources. Groups by internal/external/social/documents. STATELESS: Creates new browser each time. For persistent operations use create_session + crawl.',
+            '[STATELESS] Extract and categorize all page links. Use when: building sitemaps, analyzing site structure, finding broken links, or discovering resources. Groups by internal/external/social/documents. Creates new browser each time. For persistent operations use create_session + crawl.',
           inputSchema: {
             type: 'object',
             properties: {
@@ -304,7 +304,7 @@ export class Crawl4AIServer {
         {
           name: 'crawl_recursive',
           description:
-            'Deep crawl a website following internal links. Use when: mapping entire sites, finding all pages, building comprehensive indexes. Control with max_depth (default 3) and max_pages (default 50). Note: May need JS execution for dynamic sites. STATELESS: Each page gets a fresh browser. For persistent operations use create_session + crawl.',
+            '[STATELESS] Deep crawl a website following internal links. Use when: mapping entire sites, finding all pages, building comprehensive indexes. Control with max_depth (default 3) and max_pages (default 50). Note: May need JS execution for dynamic sites. Each page gets a fresh browser. For persistent operations use create_session + crawl.',
           inputSchema: {
             type: 'object',
             properties: {
@@ -339,7 +339,7 @@ export class Crawl4AIServer {
         {
           name: 'parse_sitemap',
           description:
-            'Extract URLs from XML sitemaps. Use when: discovering all site pages, planning crawl strategies, or checking sitemap validity. Supports regex filtering. Try sitemap.xml or robots.txt first. STATELESS: Creates new browser each time.',
+            '[STATELESS] Extract URLs from XML sitemaps. Use when: discovering all site pages, planning crawl strategies, or checking sitemap validity. Supports regex filtering. Try sitemap.xml or robots.txt first. Creates new browser each time.',
           inputSchema: {
             type: 'object',
             properties: {
@@ -358,20 +358,28 @@ export class Crawl4AIServer {
         {
           name: 'crawl',
           description:
-            'THE ONLY TOOL WITH BROWSER PERSISTENCE\n\n' +
+            '[SUPPORTS SESSIONS] THE ONLY TOOL WITH BROWSER PERSISTENCE\n\n' +
+            'RECOMMENDED PATTERNS:\n' +
+            '• Inspect first workflow:\n' +
+            '  1) get_html(url) → find selectors & verify elements exist\n' +
+            '  2) create_session() → "session-123"\n' +
+            '  3) crawl({url, session_id: "session-123", js_code: ["action 1"]})\n' +
+            '  4) crawl({url: "/page2", session_id: "session-123", js_code: ["action 2"]})\n\n' +
+            '• Multi-step with state:\n' +
+            '  1) create_session() → "session-123"\n' +
+            '  2) crawl({url, session_id: "session-123"}) → inspect current state\n' +
+            '  3) crawl({url, session_id: "session-123", js_code: ["verified actions"]})\n\n' +
             'WITH session_id: Maintains browser state (cookies, localStorage, page) across calls\n' +
             'WITHOUT session_id: Creates fresh browser each time (like other tools)\n\n' +
+            'WHEN TO USE SESSIONS vs STATELESS:\n' +
+            '• Need state between calls? → create_session + crawl\n' +
+            '• Just extracting data? → Use stateless tools\n' +
+            '• Filling forms? → Inspect first, then use sessions\n' +
+            '• Taking screenshot after JS? → Must use crawl with session\n' +
+            '• Unsure if elements exist? → Always use get_html first\n\n' +
             'CRITICAL FOR js_code:\n' +
             'RECOMMENDED: Always use screenshot: true when running js_code\n' +
-            'This avoids server serialization errors and gives visual confirmation\n\n' +
-            'ADVANCED (js_only): Only for continuing existing sessions:\n' +
-            '1st call: {url, session_id: "s1", js_code: [...], screenshot: true}\n' +
-            '2nd call: {url, session_id: "s1", js_code: [...], js_only: true}\n\n' +
-            'COMMON USE CASES:\n' +
-            '• Form + screenshot: crawl({url, js_code: ["fill & submit"], screenshot: true})\n' +
-            '• Multi-step: 1) crawl({url, session_id: "s1", js_code: ["fill form"]})\n' +
-            '              2) crawl({url, session_id: "s1", js_code: ["submit"], js_only: true})\n' +
-            '• Reuse session: crawl({url: "/page2", session_id: "s1"}) // same browser',
+            'This avoids server serialization errors and gives visual confirmation',
           inputSchema: {
             type: 'object',
             properties: {
@@ -466,6 +474,10 @@ export class Crawl4AIServer {
                 items: { type: 'string' },
                 description:
                   'JavaScript to execute. Each string runs separately. Use return to get values.\n\n' +
+                  'IMPORTANT: Always verify elements exist before acting on them!\n' +
+                  'Use get_html first to find correct selectors, then:\n' +
+                  'GOOD: ["if (document.querySelector(\'input[name=\\"email\\"]\')) { ... }"]\n' +
+                  'BAD: ["document.querySelector(\'input[name=\\"email\\"]\').value = \'...\'"]\n\n' +
                   'USAGE PATTERNS:\n' +
                   '1. WITH screenshot/pdf: {js_code: [...], screenshot: true} ✓\n' +
                   '2. MULTI-STEP: First {js_code: [...], session_id: "x"}, then {js_only: true, session_id: "x"}\n' +
@@ -474,9 +486,11 @@ export class Crawl4AIServer {
                   '  • name="..." (best for forms)\n' +
                   '  • id="..." (if unique)\n' +
                   '  • class="..." (careful, may repeat)\n\n' +
-                  'FORM EXAMPLE: [\n' +
-                  '  "document.querySelector(\'input[name=\\"email\\"]\').value = \'user@example.com\'",\n' +
-                  '  "document.querySelector(\'button[type=\\"submit\\"]\').click()"\n' +
+                  'FORM EXAMPLE WITH VERIFICATION: [\n' +
+                  '  "const emailInput = document.querySelector(\'input[name=\\"email\\"]\');",\n' +
+                  '  "if (emailInput) emailInput.value = \'user@example.com\';",\n' +
+                  '  "const submitBtn = document.querySelector(\'button[type=\\"submit\\"]\');",\n' +
+                  '  "if (submitBtn) submitBtn.click();"\n' +
                   ']',
               },
               js_only: {
@@ -726,7 +740,12 @@ export class Crawl4AIServer {
         {
           name: 'create_session',
           description:
-            'CREATES PERSISTENT BROWSER! Returns session_id for use with crawl. Browser stays alive across multiple calls, maintaining ALL state (cookies, localStorage, page). Other tools CANNOT use sessions - they create new browser each time. Essential for: forms, login flows, multi-step processes.',
+            '[SESSION MANAGEMENT] CREATES PERSISTENT BROWSER! Returns session_id for use with crawl.\n\n' +
+            'TYPICAL WORKFLOW:\n' +
+            '1. Inspect page structure (get_html/get_markdown)\n' +
+            '2. Create persistent session (create_session)\n' +
+            '3. Perform actions (crawl with session_id)\n\n' +
+            'Browser stays alive across multiple calls, maintaining ALL state (cookies, localStorage, page). Other tools CANNOT use sessions - they create new browser each time. Essential for: forms, login flows, multi-step processes, maintaining state across operations.',
           inputSchema: {
             type: 'object',
             properties: {
@@ -753,7 +772,7 @@ export class Crawl4AIServer {
         {
           name: 'clear_session',
           description:
-            'Stop tracking a browser session locally. Use when: done with multi-step crawling, cleaning up after login flows. Note: actual browser on server persists until timeout',
+            '[SESSION MANAGEMENT] Stop tracking a browser session locally. Use when: done with multi-step crawling, cleaning up after login flows. Note: actual browser on server persists until timeout',
           inputSchema: {
             type: 'object',
             properties: {
@@ -768,7 +787,7 @@ export class Crawl4AIServer {
         {
           name: 'list_sessions',
           description:
-            'Show all active browser sessions with age and usage info. Use when: checking available sessions, debugging session issues, or before creating new sessions. Shows local tracking only',
+            '[SESSION MANAGEMENT] Show all active browser sessions with age and usage info. Use when: checking available sessions, debugging session issues, or before creating new sessions. Shows local tracking only',
           inputSchema: {
             type: 'object',
             properties: {},
@@ -777,8 +796,8 @@ export class Crawl4AIServer {
         {
           name: 'extract_with_llm',
           description:
-            'Ask questions about webpage content using AI. Returns natural language answers. ' +
-            'STATELESS: Crawls fresh each time. For dynamic content or sessions, use crawl with session_id first.',
+            '[STATELESS] Ask questions about webpage content using AI. Returns natural language answers. ' +
+            'Crawls fresh each time. For dynamic content or sessions, use crawl with session_id first.',
           inputSchema: {
             type: 'object',
             properties: {

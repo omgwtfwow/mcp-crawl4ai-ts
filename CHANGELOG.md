@@ -1,5 +1,17 @@
 # Changelog
 
+## Version 2.6.3 (2025-08-04)
+
+### Enhancements
+- Improved tool descriptions for better LLM understanding and workflow clarity
+  - Added [STATELESS], [SUPPORTS SESSIONS], [SESSION MANAGEMENT] indicators
+  - Enhanced get_html description to emphasize selector discovery for automation
+  - Added inspect-first workflow patterns to crawl tool description
+  - Emphasized element verification in js_code parameter description
+  - Added typical workflow guidance to create_session
+  - Improved cross-references between related tools
+  - Removed problematic one-shot form pattern that assumed element existence
+
 ## Version 2.6.2 (2025-08-04)
 
 ### Refactoring
