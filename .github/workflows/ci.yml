@@ -56,5 +56,6 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: ./coverage/lcov.info
         flags: unittests
-        name: codecov-umbrella
+        name: node-${{ matrix.node-version }}
         fail_ci_if_error: true
+        verbose: true
