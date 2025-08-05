@@ -16,7 +16,7 @@ export interface IntegrationTestConfig {
 
 export function getTestConfig(): IntegrationTestConfig {
   const config: IntegrationTestConfig = {
-    baseUrl: process.env.CRAWL4AI_BASE_URL || 'http://localhost:11235',
+    baseUrl: process.env.CRAWL4AI_BASE_URL || '',
     apiKey: process.env.CRAWL4AI_API_KEY || '',
     llmProvider: process.env.LLM_PROVIDER,
     llmApiToken: process.env.LLM_API_TOKEN,
@@ -24,7 +24,9 @@ export function getTestConfig(): IntegrationTestConfig {
   };
 
   if (!config.baseUrl) {
-    throw new Error('CRAWL4AI_BASE_URL is required for integration tests');
+    throw new Error(
+      'CRAWL4AI_BASE_URL is required for integration tests. Please set it in .env file or environment variable.',
+    );
   }
 
   return config;
@@ -43,6 +45,7 @@ export async function createTestClient(): Promise<Client> {
       ...process.env,
       NODE_ENV: 'test',
     },
+    cwd: process.cwd(), // Ensure the child process runs in the correct directory
   });
 
   const client = new Client(
@@ -138,6 +141,19 @@ export async function expectExtractedData(result: unknown, expectedKeys: string[
 // Delay helper for tests
 export function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Rate limiter for integration tests
+let lastRequestTime = 0;
+export async function rateLimit(minDelayMs: number = 500): Promise<void> {
+  const now = Date.now();
+  const timeSinceLastRequest = now - lastRequestTime;
+
+  if (timeSinceLastRequest < minDelayMs) {
+    await delay(minDelayMs - timeSinceLastRequest);
+  }
+
+  lastRequestTime = Date.now();
 }
 
 // Skip test if condition is not met

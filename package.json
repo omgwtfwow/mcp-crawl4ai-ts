@@ -1,6 +1,6 @@
 {
   "name": "mcp-crawl4ai-ts",
-  "version": "2.6.6",
+  "version": "2.6.7",
   "description": "TypeScript MCP server for Crawl4AI - web crawling and content extraction",
   "main": "dist/index.js",
   "bin": {
@@ -18,7 +18,7 @@
     "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
     "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
     "test:unit": "NODE_OPTIONS=--experimental-vm-modules jest --testPathIgnorePatterns=integration --testPathIgnorePatterns=examples",
-    "test:integration": "NODE_OPTIONS=--experimental-vm-modules jest src/__tests__/integration --testTimeout=180000",
+    "test:integration": "JEST_TEST_TYPE=integration NODE_OPTIONS=--experimental-vm-modules jest src/__tests__/integration",
     "test:ci": "NODE_OPTIONS=--experimental-vm-modules jest --coverage --maxWorkers=2",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",

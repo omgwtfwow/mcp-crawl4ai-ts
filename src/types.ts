@@ -25,7 +25,7 @@ export interface JSExecuteEndpointResponse {
     success: boolean;
     results: unknown[];
   };
-  markdown?: string;
+  markdown?: string | CrawlMarkdownResult;
 }
 
 export interface ScreenshotEndpointOptions {

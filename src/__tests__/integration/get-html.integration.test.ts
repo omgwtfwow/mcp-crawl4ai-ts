@@ -130,7 +130,7 @@ describe('get_html Integration Tests', () => {
         const html = content[0].text || '';
         expect(html.length).toBeGreaterThan(0);
       },
-      TEST_TIMEOUTS.medium,
+      TEST_TIMEOUTS.long,
     );
   });
 });

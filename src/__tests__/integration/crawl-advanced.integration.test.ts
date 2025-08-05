@@ -31,7 +31,7 @@ describe('crawl Advanced Features Integration Tests', () => {
         const result = await client.callTool({
           name: 'crawl',
           arguments: {
-            url: 'https://httpbin.org/html',
+            url: 'https://example.com',
             image_score_threshold: 3,
             exclude_external_images: false,
             cache_mode: 'BYPASS',
@@ -42,7 +42,7 @@ describe('crawl Advanced Features Integration Tests', () => {
         const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
         expect(textContent?.text).toBeTruthy();
         // Should have extracted content
-        expect(textContent?.text).toContain('Herman Melville');
+        expect(textContent?.text).toContain('Example Domain');
       },
       TEST_TIMEOUTS.medium,
     );
@@ -65,7 +65,7 @@ describe('crawl Advanced Features Integration Tests', () => {
         // MHTML should be captured but not in the text output
         expect(textContent?.text).toContain('Example Domain');
       },
-      TEST_TIMEOUTS.medium,
+      TEST_TIMEOUTS.long,
     );
 
     it(

@@ -2,22 +2,15 @@
 const dotenv = require('dotenv');
 const path = require('path');
 
-// Check if this is an integration test by looking at the test path
-const isIntegrationTest = process.argv.some(arg => 
-  arg.includes('integration') || arg.includes('test:integration')
-);
+// The npm script sets an env var to identify integration tests
+const isIntegrationTest = process.env.JEST_TEST_TYPE === 'integration';
 
 if (isIntegrationTest) {
-  // Load from .env file for integration tests
+  // For integration tests, load from .env file
   dotenv.config({ path: path.resolve(__dirname, '.env') });
   
-  // Only set defaults if not already in environment
-  if (!process.env.CRAWL4AI_BASE_URL) {
-    process.env.CRAWL4AI_BASE_URL = 'http://localhost:11235';
-  }
-  if (!process.env.CRAWL4AI_API_KEY) {
-    process.env.CRAWL4AI_API_KEY = 'test-api-key';
-  }
+  // For integration tests, we MUST have proper environment variables
+  // No fallback to localhost - tests should fail if not configured
 } else {
   // For unit tests, always use localhost
   process.env.CRAWL4AI_BASE_URL = 'http://localhost:11235';

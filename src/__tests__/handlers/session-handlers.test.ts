@@ -56,17 +56,23 @@ describe('SessionHandlers', () => {
       expect(result.browser_type).toBe('chromium');
 
       // Verify crawl was attempted
-      expect(mockPost).toHaveBeenCalledWith('/crawl', {
-        urls: ['https://this-domain-definitely-does-not-exist-12345.com'],
-        browser_config: {
-          headless: true,
-          browser_type: 'chromium',
+      expect(mockPost).toHaveBeenCalledWith(
+        '/crawl',
+        {
+          urls: ['https://this-domain-definitely-does-not-exist-12345.com'],
+          browser_config: {
+            headless: true,
+            browser_type: 'chromium',
+          },
+          crawler_config: {
+            session_id: expect.stringMatching(/^session-/),
+            cache_mode: 'BYPASS',
+          },
         },
-        crawler_config: {
-          session_id: expect.stringMatching(/^session-/),
-          cache_mode: 'BYPASS',
+        {
+          timeout: 30000,
         },
-      });
+      );
 
       // Verify session was stored locally
       expect(sessions.size).toBe(1);

@@ -43,11 +43,22 @@ export class UtilityHandlers extends BaseHandler {
         formattedResults = 'No results returned';
       }
 
+      // Handle markdown content - can be string or object
+      let markdownContent = '';
+      if (result.markdown) {
+        if (typeof result.markdown === 'string') {
+          markdownContent = result.markdown;
+        } else if (typeof result.markdown === 'object' && result.markdown.raw_markdown) {
+          // Use raw_markdown from the object structure
+          markdownContent = result.markdown.raw_markdown;
+        }
+      }
+
       return {
         content: [
           {
             type: 'text',
-            text: `JavaScript executed on: ${options.url}\n\nResults:\n${formattedResults}${result.markdown ? `\n\nPage Content After Execution:\n${typeof result.markdown === 'string' ? result.markdown : JSON.stringify(result.markdown, null, 2)}` : ''}`,
+            text: `JavaScript executed on: ${options.url}\n\nResults:\n${formattedResults}${markdownContent ? `\n\nPage Content After Execution:\n${markdownContent}` : ''}`,
           },
         ],
       };

@@ -1,4 +1,4 @@
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosInstance, AxiosError } from 'axios';
 import {
   BatchCrawlOptions,
   AdvancedCrawlConfig,
@@ -44,6 +44,65 @@ const validateJavaScriptCode = (code: string): boolean => {
   return true;
 };
 
+// Helper to validate URL format
+const validateURL = (url: string): boolean => {
+  try {
+    new URL(url);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+// Helper to handle axios errors consistently
+const handleAxiosError = (error: unknown): never => {
+  if (axios.isAxiosError(error)) {
+    const axiosError = error as AxiosError;
+
+    // Handle timeout errors
+    if (axiosError.code === 'ECONNABORTED') {
+      throw new Error('Request timed out');
+    }
+
+    if (axiosError.code === 'ETIMEDOUT') {
+      throw new Error('Request timeout');
+    }
+
+    // Handle network errors
+    if (axiosError.code === 'ENOTFOUND') {
+      throw new Error(`DNS resolution failed: ${axiosError.message}`);
+    }
+
+    if (axiosError.code === 'ECONNREFUSED') {
+      throw new Error(`Connection refused: ${axiosError.message}`);
+    }
+
+    if (axiosError.code === 'ECONNRESET') {
+      throw new Error(`Connection reset: ${axiosError.message}`);
+    }
+
+    if (axiosError.code === 'ENETUNREACH') {
+      throw new Error(`Network unreachable: ${axiosError.message}`);
+    }
+
+    // Handle HTTP errors
+    if (axiosError.response) {
+      const status = axiosError.response.status;
+      const data = axiosError.response.data as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+      const message = data?.error || data?.detail || data?.message || axiosError.message;
+      throw new Error(`Request failed with status ${status}: ${message}`);
+    }
+
+    // Handle request errors (e.g., invalid URL)
+    if (axiosError.request) {
+      throw new Error(`Request failed: ${axiosError.message}`);
+    }
+  }
+
+  // Re-throw unknown errors
+  throw error;
+};
+
 export class Crawl4AIService {
   private axiosClient: AxiosInstance;
 
@@ -59,36 +118,68 @@ export class Crawl4AIService {
   }
 
   async getMarkdown(options: MarkdownEndpointOptions): Promise<MarkdownEndpointResponse> {
-    const response = await this.axiosClient.post('/md', {
-      url: options.url,
-      f: options.f,
-      q: options.q,
-      c: options.c,
-    });
+    // Validate URL
+    if (!validateURL(options.url)) {
+      throw new Error('Invalid URL format');
+    }
 
-    return response.data;
+    try {
+      const response = await this.axiosClient.post('/md', {
+        url: options.url,
+        f: options.f,
+        q: options.q,
+        c: options.c,
+      });
+
+      return response.data;
+    } catch (error) {
+      return handleAxiosError(error);
+    }
   }
 
   async captureScreenshot(options: ScreenshotEndpointOptions): Promise<ScreenshotEndpointResponse> {
-    const response = await this.axiosClient.post('/screenshot', {
-      url: options.url,
-      screenshot_wait_for: options.screenshot_wait_for,
-      // output_path is omitted to get base64 response
-    });
+    // Validate URL
+    if (!validateURL(options.url)) {
+      throw new Error('Invalid URL format');
+    }
 
-    return response.data;
+    try {
+      const response = await this.axiosClient.post('/screenshot', {
+        url: options.url,
+        screenshot_wait_for: options.screenshot_wait_for,
+        // output_path is omitted to get base64 response
+      });
+
+      return response.data;
+    } catch (error) {
+      return handleAxiosError(error);
+    }
   }
 
   async generatePDF(options: PDFEndpointOptions): Promise<PDFEndpointResponse> {
-    const response = await this.axiosClient.post('/pdf', {
-      url: options.url,
-      // output_path is omitted to get base64 response
-    });
+    // Validate URL
+    if (!validateURL(options.url)) {
+      throw new Error('Invalid URL format');
+    }
 
-    return response.data;
+    try {
+      const response = await this.axiosClient.post('/pdf', {
+        url: options.url,
+        // output_path is omitted to get base64 response
+      });
+
+      return response.data;
+    } catch (error) {
+      return handleAxiosError(error);
+    }
   }
 
   async executeJS(options: JSExecuteEndpointOptions): Promise<JSExecuteEndpointResponse> {
+    // Validate URL
+    if (!validateURL(options.url)) {
+      throw new Error('Invalid URL format');
+    }
+
     // Ensure scripts is always an array
     const scripts = Array.isArray(options.scripts) ? options.scripts : [options.scripts];
 
@@ -101,16 +192,25 @@ export class Crawl4AIService {
       }
     }
 
-    const response = await this.axiosClient.post('/execute_js', {
-      url: options.url,
-      scripts: scripts, // Always send as array
-      // Only url and scripts are supported by the endpoint
-    });
+    try {
+      const response = await this.axiosClient.post('/execute_js', {
+        url: options.url,
+        scripts: scripts, // Always send as array
+        // Only url and scripts are supported by the endpoint
+      });
 
-    return response.data;
+      return response.data;
+    } catch (error) {
+      return handleAxiosError(error);
+    }
   }
 
   async batchCrawl(options: BatchCrawlOptions) {
+    // Validate URLs
+    if (!options.urls || options.urls.length === 0) {
+      throw new Error('URLs array cannot be empty');
+    }
+
     // Build crawler config if needed
     const crawler_config: Record<string, unknown> = {};
 
@@ -123,28 +223,45 @@ export class Crawl4AIService {
       crawler_config.cache_mode = 'BYPASS';
     }
 
-    const response = await this.axiosClient.post('/crawl', {
-      urls: options.urls,
-      max_concurrent: options.max_concurrent,
-      crawler_config: Object.keys(crawler_config).length > 0 ? crawler_config : undefined,
-    });
+    try {
+      const response = await this.axiosClient.post('/crawl', {
+        urls: options.urls,
+        max_concurrent: options.max_concurrent,
+        crawler_config: Object.keys(crawler_config).length > 0 ? crawler_config : undefined,
+      });
 
-    return response.data;
+      return response.data;
+    } catch (error) {
+      return handleAxiosError(error);
+    }
   }
 
   async getHTML(options: HTMLEndpointOptions): Promise<HTMLEndpointResponse> {
-    const response = await this.axiosClient.post('/html', {
-      url: options.url,
-      // Only url is supported by the endpoint
-    });
+    // Validate URL
+    if (!validateURL(options.url)) {
+      throw new Error('Invalid URL format');
+    }
 
-    return response.data;
+    try {
+      const response = await this.axiosClient.post('/html', {
+        url: options.url,
+        // Only url is supported by the endpoint
+      });
+
+      return response.data;
+    } catch (error) {
+      return handleAxiosError(error);
+    }
   }
 
   async parseSitemap(url: string) {
-    // Use axios directly without baseURL for fetching external URLs
-    const response = await axios.get(url);
-    return response.data;
+    try {
+      // Use axios directly without baseURL for fetching external URLs
+      const response = await axios.get(url);
+      return response.data;
+    } catch (error) {
+      return handleAxiosError(error);
+    }
   }
 
   async detectContentType(url: string): Promise<string> {
@@ -182,29 +299,39 @@ export class Crawl4AIService {
       crawler_config: options.crawler_config || {}, // Always include crawler_config, even if empty
     };
 
-    const response = await this.axiosClient.post('/crawl', requestBody);
-    return response.data;
+    try {
+      const response = await this.axiosClient.post('/crawl', requestBody);
+      return response.data;
+    } catch (error) {
+      return handleAxiosError(error);
+    }
   }
 
   async extractWithLLM(options: LLMEndpointOptions): Promise<LLMEndpointResponse> {
+    // Validate URL
+    if (!validateURL(options.url)) {
+      throw new Error('Invalid URL format');
+    }
+
     try {
       const encodedUrl = encodeURIComponent(options.url);
       const encodedQuery = encodeURIComponent(options.query);
       const response = await this.axiosClient.get(`/llm/${encodedUrl}?q=${encodedQuery}`);
       return response.data;
     } catch (error) {
-      const axiosError = error as { code?: string; response?: { status?: number; data?: { detail?: string } } };
-      if (axiosError.code === 'ECONNABORTED' || axiosError.response?.status === 504) {
-        throw new Error('LLM extraction timed out. Try a simpler query or different URL.');
+      // Special handling for LLM-specific errors
+      if (axios.isAxiosError(error)) {
+        const axiosError = error as AxiosError;
+        if (axiosError.code === 'ECONNABORTED' || axiosError.response?.status === 504) {
+          throw new Error('LLM extraction timed out. Try a simpler query or different URL.');
+        }
+        if (axiosError.response?.status === 401) {
+          throw new Error(
+            'LLM extraction failed: No LLM provider configured on server. Please ensure the server has an API key set.',
+          );
+        }
       }
-      if (axiosError.response?.status === 401) {
-        throw new Error(
-          'LLM extraction failed: No LLM provider configured on server. Please ensure the server has an API key set.',
-        );
-      }
-      throw new Error(
-        `LLM extraction failed: ${axiosError.response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
-      );
+      return handleAxiosError(error);
     }
   }
 }

@@ -20,17 +20,23 @@ export class SessionHandlers extends BaseHandler {
       // If initial_url provided, make first crawl to establish session
       if (options.initial_url) {
         try {
-          await this.axiosClient.post('/crawl', {
-            urls: [options.initial_url],
-            browser_config: {
-              headless: true,
-              browser_type: options.browser_type || 'chromium',
+          await this.axiosClient.post(
+            '/crawl',
+            {
+              urls: [options.initial_url],
+              browser_config: {
+                headless: true,
+                browser_type: options.browser_type || 'chromium',
+              },
+              crawler_config: {
+                session_id: sessionId,
+                cache_mode: 'BYPASS',
+              },
             },
-            crawler_config: {
-              session_id: sessionId,
-              cache_mode: 'BYPASS',
+            {
+              timeout: 30000, // 30 second timeout for initial crawl
             },
-          });
+          );
 
           // Update last_used
           const session = this.sessions.get(sessionId);

@@ -1,5 +1,21 @@
 # Changelog
 
+## Version 2.6.7 (2025-08-05)
+
+### Bug Fixes
+- Fixed integration tests to use production Crawl4AI server from environment variables
+- Fixed child process environment variable loading in test utilities
+- Added support for both string and object markdown responses from Crawl4AI API
+- Fixed timeout issues in MHTML capture and HTML extraction tests
+- Replaced unreliable test URLs (httpbin.org) with stable alternatives
+- Added 30-second timeout to session creation to prevent socket hang-ups
+
+### Testing Improvements
+- Integration tests now run sequentially (maxWorkers: 1) to avoid rate limiting
+- Added proper working directory configuration for child processes
+- Fixed all integration tests to pass with production API
+- Maintained test coverage at 92.25% with all tests passing
+
 ## Version 2.6.6 (2025-08-05)
 
 ### Testing

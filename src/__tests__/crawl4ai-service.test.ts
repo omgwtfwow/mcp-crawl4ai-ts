@@ -97,7 +97,7 @@ describe('Crawl4AIService', () => {
       nock(baseURL).post('/md').matchHeader('x-api-key', apiKey).reply(500, { detail: 'Internal server error' });
 
       await expect(service.getMarkdown({ url: 'https://example.com' })).rejects.toThrow(
-        'Request failed with status code 500',
+        'Request failed with status 500: Internal server error',
       );
     });
   });
