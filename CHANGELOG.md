@@ -1,5 +1,17 @@
 # Changelog
 
+## Version 2.6.10 (2025-08-05)
+
+### Bug Fixes
+- Fixed unit tests to use correct localhost URL from jest.setup.cjs
+- Fixed network error handling tests to not specify request body in nock mocks
+- Unit tests always use http://localhost:11235 as configured
+- Integration tests get URL from .env file
+
+### Code Quality
+- Replaced all 'any' type warnings with proper type assertions in tests
+- All tests passing with zero lint warnings
+
 ## Version 2.6.9 (2025-08-05)
 
 ### Testing Improvements
