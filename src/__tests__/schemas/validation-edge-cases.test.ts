@@ -1,4 +1,4 @@
-import { jest } from '@jest/globals';
+// import { jest } from '@jest/globals';
 import { validateJavaScriptCode } from '../../schemas/helpers.js';
 import { JsCodeSchema, CrawlSchema } from '../../schemas/validation-schemas.js';
 
@@ -14,7 +14,7 @@ describe('JavaScript Validation Edge Cases', () => {
           `const className = 'container';`,
         ];
 
-        validCases.forEach(code => {
+        validCases.forEach((code) => {
           expect(validateJavaScriptCode(code)).toBe(true);
         });
       });
@@ -30,7 +30,7 @@ line
 string\`;`, // Real newlines in template literals
         ];
 
-        validCases.forEach(code => {
+        validCases.forEach((code) => {
           expect(validateJavaScriptCode(code)).toBe(true);
         });
       });
@@ -52,7 +52,7 @@ string\`;`, // Real newlines in template literals
           `const result = '<div' + ' class="' + className + '">' + content + '</div>';`,
         ];
 
-        validCases.forEach(code => {
+        validCases.forEach((code) => {
           expect(validateJavaScriptCode(code)).toBe(true);
         });
       });
@@ -66,7 +66,7 @@ string\`;`, // Real newlines in template literals
           `const math = "∑(n=1 to ∞) = π²/6";`,
         ];
 
-        validCases.forEach(code => {
+        validCases.forEach((code) => {
           expect(validateJavaScriptCode(code)).toBe(true);
         });
       });
@@ -82,7 +82,7 @@ string\`;`, // Real newlines in template literals
           `return &apos;hello&apos;;`,
         ];
 
-        invalidCases.forEach(code => {
+        invalidCases.forEach((code) => {
           expect(validateJavaScriptCode(code)).toBe(false);
         });
       });
@@ -94,7 +94,7 @@ string\`;`, // Real newlines in template literals
           `return value;\\nreturn other;`,
         ];
 
-        invalidCases.forEach(code => {
+        invalidCases.forEach((code) => {
           expect(validateJavaScriptCode(code)).toBe(false);
         });
       });
@@ -107,7 +107,7 @@ string\`;`, // Real newlines in template literals
           `<style>body { color: red; }</style>`,
         ];
 
-        invalidCases.forEach(code => {
+        invalidCases.forEach((code) => {
           expect(validateJavaScriptCode(code)).toBe(false);
         });
       });
@@ -133,7 +133,7 @@ string\`;`, // Real newlines in template literals
           `const z = \`Template with "quotes" and 'apostrophes'\`;`,
         ];
 
-        validCases.forEach(code => {
+        validCases.forEach((code) => {
           expect(validateJavaScriptCode(code)).toBe(true);
         });
       });
@@ -191,7 +191,7 @@ const longText = \`
 
       it('should accept all valid cache modes', () => {
         const validModes = ['ENABLED', 'BYPASS', 'DISABLED'];
-        validModes.forEach(mode => {
+        validModes.forEach((mode) => {
           const config = { url: 'https://example.com', cache_mode: mode };
           expect(() => CrawlSchema.parse(config)).not.toThrow();
         });
@@ -249,12 +249,12 @@ const longText = \`
 
     // Test boundary conditions with special characters
     const specialChars = ['<', '>', '&', '"', "'", '\\', '\n', '\r', '\t'];
-    
+
     it('should handle special characters in string contexts correctly', () => {
-      specialChars.forEach(char => {
+      specialChars.forEach((char) => {
         const inString = `const x = "${char}";`;
         const inTemplate = `const y = \`${char}\`;`;
-        
+
         // These should be valid (special chars inside strings)
         expect(validateJavaScriptCode(inString)).toBe(true);
         expect(validateJavaScriptCode(inTemplate)).toBe(true);

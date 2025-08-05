@@ -2,15 +2,27 @@ import { jest } from '@jest/globals';
 import { CrawlHandlers } from '../../handlers/crawl-handlers.js';
 import { ContentHandlers } from '../../handlers/content-handlers.js';
 
+type MockService = {
+  crawl: jest.Mock;
+  getMarkdown: jest.Mock;
+  captureScreenshot: jest.Mock;
+};
+
+type MockAxiosClient = {
+  post: jest.Mock;
+  get: jest.Mock;
+  head: jest.Mock;
+};
+
 describe('Optional Parameter Combinations', () => {
   let crawlHandlers: CrawlHandlers;
-  let contentHandlers: ContentHandlers;
-  let mockService: any;
-  let mockAxiosClient: any;
+  let _contentHandlers: ContentHandlers;
+  let mockService: MockService;
+  let mockAxiosClient: MockAxiosClient;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     mockService = {
       crawl: jest.fn(),
       getMarkdown: jest.fn(),
@@ -24,7 +36,7 @@ describe('Optional Parameter Combinations', () => {
     };
 
     crawlHandlers = new CrawlHandlers(mockService, mockAxiosClient, new Map());
-    contentHandlers = new ContentHandlers(mockService, mockAxiosClient, new Map());
+    _contentHandlers = new ContentHandlers(mockService, mockAxiosClient, new Map());
   });
 
   describe('Batch Crawl Parameter Combinations', () => {
@@ -147,7 +159,7 @@ describe('Optional Parameter Combinations', () => {
         params: {
           url: 'https://example.com',
           cookies: [{ name: 'session', value: '123', domain: '.example.com' }],
-          headers: { 'X-Custom': 'value', 'Authorization': 'Bearer token' },
+          headers: { 'X-Custom': 'value', Authorization: 'Bearer token' },
         },
       },
       // Content filtering combinations
@@ -274,18 +286,20 @@ describe('Optional Parameter Combinations', () => {
     parameterSets.forEach(({ name, params }) => {
       it(`should correctly process ${name}`, async () => {
         mockService.crawl.mockResolvedValue({
-          results: [{
-            url: params.url,
-            success: true,
-            markdown: { raw_markdown: 'Test content' },
-          }],
+          results: [
+            {
+              url: params.url,
+              success: true,
+              markdown: { raw_markdown: 'Test content' },
+            },
+          ],
         });
 
         const result = await crawlHandlers.crawl(params);
 
         // Verify the service was called
         expect(mockService.crawl).toHaveBeenCalled();
-        
+
         // Verify response structure
         expect(result.content).toBeDefined();
         expect(result.content[0].type).toBe('text');
@@ -306,21 +320,23 @@ describe('Optional Parameter Combinations', () => {
     // Test default values
     it('should apply correct defaults when parameters are omitted', async () => {
       mockService.crawl.mockResolvedValue({
-        results: [{
-          url: 'https://example.com',
-          success: true,
-          markdown: { raw_markdown: 'Content' },
-        }],
+        results: [
+          {
+            url: 'https://example.com',
+            success: true,
+            markdown: { raw_markdown: 'Content' },
+          },
+        ],
       });
 
       await crawlHandlers.crawl({ url: 'https://example.com' });
 
       const call = mockService.crawl.mock.calls[0][0];
-      
+
       // Check browser_config defaults
       expect(call.browser_config).toBeDefined();
       expect(call.browser_config.headless).toBe(true);
-      
+
       // Check that optional configs are not included when not specified
       expect(call.crawler_config.word_count_threshold).toBeUndefined();
       expect(call.crawler_config.excluded_tags).toBeUndefined();
@@ -388,10 +404,12 @@ describe('Optional Parameter Combinations', () => {
       });
 
       // null js_code should throw error
-      await expect(crawlHandlers.crawl({
-        url: 'https://example.com',
-        js_code: null as any,
-      })).rejects.toThrow('js_code parameter is null');
+      await expect(
+        crawlHandlers.crawl({
+          url: 'https://example.com',
+          js_code: null as unknown as string[],
+        }),
+      ).rejects.toThrow('js_code parameter is null');
 
       // undefined js_code should be fine
       await crawlHandlers.crawl({
@@ -428,7 +446,7 @@ describe('Optional Parameter Combinations', () => {
       await crawlHandlers.crawl(allTrue);
 
       const call = mockService.crawl.mock.calls[0][0];
-      booleanFlags.forEach(flag => {
+      booleanFlags.forEach((flag) => {
         const config = call.crawler_config[flag] || call.browser_config[flag];
         expect(config).toBe(true);
       });

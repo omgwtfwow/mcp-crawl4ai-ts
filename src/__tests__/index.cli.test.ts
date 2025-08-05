@@ -1,4 +1,4 @@
-import { jest } from '@jest/globals';
+// import { jest } from '@jest/globals';
 import { spawn } from 'child_process';
 import * as path from 'path';
 import * as url from 'url';
@@ -7,9 +7,11 @@ const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
 
 describe('CLI Entry Point', () => {
   const cliPath = path.join(__dirname, '..', '..', 'src', 'index.ts');
-  
+
   // Helper to run CLI with given env vars
-  const runCLI = (env: Record<string, string> = {}): Promise<{ code: number | null; stdout: string; stderr: string }> => {
+  const runCLI = (
+    env: Record<string, string> = {},
+  ): Promise<{ code: number | null; stdout: string; stderr: string }> => {
     return new Promise((resolve) => {
       const child = spawn('tsx', [cliPath], {
         env: { ...process.env, ...env },
@@ -94,7 +96,7 @@ describe('CLI Entry Point', () => {
       });
 
       // Wait for startup
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Send SIGTERM
       child.kill('SIGTERM');
@@ -117,7 +119,7 @@ describe('CLI Entry Point', () => {
       });
 
       // Wait for startup
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Send SIGINT (Ctrl+C)
       child.kill('SIGINT');
@@ -152,7 +154,7 @@ describe('CLI Entry Point', () => {
       // Create a temporary .env file
       const fs = await import('fs/promises');
       const envPath = path.join(__dirname, '..', '..', '.env.test');
-      
+
       await fs.writeFile(envPath, 'TEST_ENV_VAR=loaded_from_file\n');
 
       try {
