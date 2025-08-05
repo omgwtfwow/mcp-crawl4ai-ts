@@ -1,5 +1,20 @@
 # Changelog
 
+## Version 2.6.5 (2025-08-05)
+
+### Features
+- Enhanced screenshot handling for better compatibility
+  - Added home directory (`~`) path resolution support
+  - Large screenshots (>800KB) are now saved locally without being returned inline to avoid MCP's 1MB response limit
+  - Clear indication when screenshots are too large to display inline
+
+### Bug Fixes
+- Improved screenshot directory handling
+  - Better parameter descriptions clarifying that only directory paths should be provided
+  - Added automatic handling when file paths are mistakenly provided instead of directories
+  - Warning messages when incorrect path format is detected
+  - Ensures compatibility with various LLM usage patterns
+
 ## Version 2.6.4 (2025-08-04)
 
 ### Features

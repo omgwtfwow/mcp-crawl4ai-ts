@@ -165,7 +165,8 @@ export class Crawl4AIServer {
               },
               save_to_directory: {
                 type: 'string',
-                description: 'Optional local directory path to save the screenshot file',
+                description:
+                  "Directory path to save screenshot (e.g., ~/Desktop, /tmp). Do NOT include filename - it will be auto-generated. Large screenshots (>800KB) won't be returned inline when saved.",
               },
             },
             required: ['url'],
@@ -553,7 +554,8 @@ export class Crawl4AIServer {
               },
               screenshot_directory: {
                 type: 'string',
-                description: 'Optional local directory path to save the screenshot file when screenshot=true',
+                description:
+                  "Directory path to save screenshot (e.g., ~/Desktop, /tmp). Do NOT include filename - it will be auto-generated. Large screenshots (>800KB) won't be returned inline when saved.",
               },
               pdf: {
                 type: 'boolean',

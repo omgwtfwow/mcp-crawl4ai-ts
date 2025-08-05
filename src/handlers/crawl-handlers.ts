@@ -2,6 +2,7 @@ import { BaseHandler } from './base-handler.js';
 import { BatchCrawlOptions, CrawlResultItem, AdvancedCrawlConfig, CrawlEndpointResponse } from '../types.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import * as os from 'os';
 
 export class CrawlHandlers extends BaseHandler {
   async batchCrawl(options: BatchCrawlOptions) {
@@ -451,8 +452,23 @@ export class CrawlHandlers extends BaseHandler {
         let savedFilePath: string | undefined;
         if (options.screenshot_directory && typeof options.screenshot_directory === 'string') {
           try {
+            // Resolve home directory path
+            let screenshotDir = options.screenshot_directory;
+            if (screenshotDir.startsWith('~')) {
+              const homedir = os.homedir();
+              screenshotDir = path.join(homedir, screenshotDir.slice(1));
+            }
+
+            // Check if user provided a file path instead of directory
+            if (screenshotDir.endsWith('.png') || screenshotDir.endsWith('.jpg')) {
+              console.warn(
+                `Warning: screenshot_directory should be a directory path, not a file path. Using parent directory.`,
+              );
+              screenshotDir = path.dirname(screenshotDir);
+            }
+
             // Ensure directory exists
-            await fs.mkdir(options.screenshot_directory, { recursive: true });
+            await fs.mkdir(screenshotDir, { recursive: true });
 
             // Generate filename from URL and timestamp
             const url = new URL(String(options.url));
@@ -460,7 +476,7 @@ export class CrawlHandlers extends BaseHandler {
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
             const filename = `${hostname}-${timestamp}.png`;
 
-            savedFilePath = path.join(options.screenshot_directory, filename);
+            savedFilePath = path.join(screenshotDir, filename);
 
             // Convert base64 to buffer and save
             const buffer = Buffer.from(result.screenshot, 'base64');
@@ -471,16 +487,25 @@ export class CrawlHandlers extends BaseHandler {
           }
         }
 
-        content.push({
-          type: 'image',
-          data: result.screenshot,
-          mimeType: 'image/png',
-        });
+        // If saved locally and screenshot is large (>800KB), don't return the base64 data
+        const screenshotSize = Buffer.from(result.screenshot, 'base64').length;
+        const shouldReturnImage = !savedFilePath || screenshotSize < 800 * 1024; // 800KB threshold
+
+        if (shouldReturnImage) {
+          content.push({
+            type: 'image',
+            data: result.screenshot,
+            mimeType: 'image/png',
+          });
+        }
 
         if (savedFilePath) {
+          const sizeInfo = !shouldReturnImage
+            ? ` (${Math.round(screenshotSize / 1024)}KB - too large to display inline)`
+            : '';
           content.push({
             type: 'text',
-            text: `\n---\nScreenshot saved to: ${savedFilePath}`,
+            text: `\n---\nScreenshot saved to: ${savedFilePath}${sizeInfo}`,
           });
         }
       }

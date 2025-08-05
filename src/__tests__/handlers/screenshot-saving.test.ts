@@ -9,6 +9,12 @@ jest.unstable_mockModule('fs/promises', () => ({
   writeFile: mockWriteFile,
 }));
 
+// Mock os
+const mockHomedir = jest.fn();
+jest.unstable_mockModule('os', () => ({
+  homedir: mockHomedir,
+}));
+
 // Import after mocking
 const { ContentHandlers } = await import('../../handlers/content-handlers.js');
 const { CrawlHandlers } = await import('../../handlers/crawl-handlers.js');
@@ -92,6 +98,83 @@ describe('Screenshot Local Saving', () => {
       expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to save screenshot locally:', expect.any(Error));
 
       consoleErrorSpy.mockRestore();
+    });
+
+    it('should handle file path instead of directory path', async () => {
+      const mockDate = new Date('2024-01-15T10:30:00Z');
+      jest.spyOn(globalThis, 'Date').mockImplementation(() => mockDate as never);
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      mockService.captureScreenshot.mockResolvedValue({
+        success: true,
+        screenshot: testScreenshotBase64,
+      });
+
+      await contentHandlers.captureScreenshot({
+        url: 'https://example.com',
+        save_to_directory: '/tmp/screenshots/screenshot.png',
+      });
+
+      // Should warn about file path
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Warning: save_to_directory should be a directory path, not a file path. Using parent directory.',
+      );
+
+      // Should use parent directory
+      expect(mockMkdir).toHaveBeenCalledWith('/tmp/screenshots', { recursive: true });
+
+      // Should still generate filename
+      const expectedFilename = 'example-com-2024-01-15T10-30-00.png';
+      const expectedPath = '/tmp/screenshots/' + expectedFilename;
+      expect(mockWriteFile).toHaveBeenCalledWith(expectedPath, Buffer.from(testScreenshotBase64, 'base64'));
+
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should resolve home directory paths', async () => {
+      const mockDate = new Date('2024-01-15T10:30:00Z');
+      jest.spyOn(globalThis, 'Date').mockImplementation(() => mockDate as never);
+      mockHomedir.mockReturnValue('/Users/testuser');
+
+      mockService.captureScreenshot.mockResolvedValue({
+        success: true,
+        screenshot: testScreenshotBase64,
+      });
+
+      await contentHandlers.captureScreenshot({
+        url: 'https://example.com',
+        save_to_directory: '~/Desktop/screenshots',
+      });
+
+      // Should resolve ~ to home directory
+      expect(mockMkdir).toHaveBeenCalledWith('/Users/testuser/Desktop/screenshots', { recursive: true });
+
+      const expectedPath = '/Users/testuser/Desktop/screenshots/example-com-2024-01-15T10-30-00.png';
+      expect(mockWriteFile).toHaveBeenCalledWith(expectedPath, Buffer.from(testScreenshotBase64, 'base64'));
+    });
+
+    it('should not return large screenshots when saved locally', async () => {
+      // Create a large fake screenshot (>800KB when decoded)
+      const largeBase64 = 'A'.repeat(1200000); // ~900KB when decoded
+
+      mockService.captureScreenshot.mockResolvedValue({
+        success: true,
+        screenshot: largeBase64,
+      });
+
+      const result = await contentHandlers.captureScreenshot({
+        url: 'https://example.com',
+        save_to_directory: '/tmp',
+      });
+
+      // Should not include image in response
+      const imageContent = result.content.find((c) => c.type === 'image');
+      expect(imageContent).toBeUndefined();
+
+      // Should mention size in text
+      const textContent = result.content.find((c) => c.type === 'text');
+      expect(textContent?.text).toContain('not returned due to size');
+      expect(textContent?.text).toContain('KB');
     });
 
     it('should sanitize filename for URLs with special characters', async () => {

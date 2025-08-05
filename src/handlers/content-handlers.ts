@@ -12,6 +12,7 @@ import {
 } from '../types.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import * as os from 'os';
 
 export class ContentHandlers extends BaseHandler {
   async getMarkdown(
@@ -62,8 +63,23 @@ export class ContentHandlers extends BaseHandler {
       // Save to local directory if requested
       if (options.save_to_directory) {
         try {
+          // Resolve home directory path
+          let resolvedPath = options.save_to_directory;
+          if (resolvedPath.startsWith('~')) {
+            const homedir = os.homedir();
+            resolvedPath = path.join(homedir, resolvedPath.slice(1));
+          }
+
+          // Check if user provided a file path instead of directory
+          if (resolvedPath.endsWith('.png') || resolvedPath.endsWith('.jpg')) {
+            console.warn(
+              `Warning: save_to_directory should be a directory path, not a file path. Using parent directory.`,
+            );
+            resolvedPath = path.dirname(resolvedPath);
+          }
+
           // Ensure directory exists
-          await fs.mkdir(options.save_to_directory, { recursive: true });
+          await fs.mkdir(resolvedPath, { recursive: true });
 
           // Generate filename from URL and timestamp
           const url = new URL(options.url);
@@ -71,7 +87,7 @@ export class ContentHandlers extends BaseHandler {
           const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
           const filename = `${hostname}-${timestamp}.png`;
 
-          savedFilePath = path.join(options.save_to_directory, filename);
+          savedFilePath = path.join(resolvedPath, filename);
 
           // Convert base64 to buffer and save
           const buffer = Buffer.from(result.screenshot, 'base64');
@@ -86,19 +102,28 @@ export class ContentHandlers extends BaseHandler {
         ? `Screenshot captured for: ${options.url}\nSaved to: ${savedFilePath}`
         : `Screenshot captured for: ${options.url}`;
 
-      return {
-        content: [
-          {
-            type: 'image',
-            data: result.screenshot,
-            mimeType: 'image/png',
-          },
-          {
-            type: 'text',
-            text: textContent,
-          },
-        ],
-      };
+      // If saved locally and screenshot is large (>800KB), don't return the base64 data
+      const screenshotSize = Buffer.from(result.screenshot, 'base64').length;
+      const shouldReturnImage = !savedFilePath || screenshotSize < 800 * 1024; // 800KB threshold
+
+      const content = [];
+
+      if (shouldReturnImage) {
+        content.push({
+          type: 'image',
+          data: result.screenshot,
+          mimeType: 'image/png',
+        });
+      }
+
+      content.push({
+        type: 'text',
+        text: shouldReturnImage
+          ? textContent
+          : `${textContent}\n\nNote: Screenshot data not returned due to size (${Math.round(screenshotSize / 1024)}KB). View the saved file instead.`,
+      });
+
+      return { content };
     } catch (error) {
       throw this.formatError(error, 'capture screenshot');
     }
