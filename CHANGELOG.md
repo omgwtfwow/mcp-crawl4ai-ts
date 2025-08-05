@@ -1,5 +1,16 @@
 # Changelog
 
+## Version 2.6.8 (2025-08-05)
+
+### Code Cleanup
+- Removed unused mock generation system
+- Cleaned up package.json scripts
+- Simplified development workflow
+
+### Chores
+- Verified alignment between unit tests, integration tests, and implementation
+- Confirmed all tests properly mock API interactions
+
 ## Version 2.6.7 (2025-08-05)
 
 ### Bug Fixes
