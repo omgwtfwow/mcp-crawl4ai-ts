@@ -19,7 +19,8 @@ import type {
 
 describe('Crawl4AIService', () => {
   let service: Crawl4AIService;
-  const baseURL = 'https://api.crawl4ai.com';
+  // Unit tests always use localhost as configured in jest.setup.cjs
+  const baseURL = 'http://localhost:11235';
   const apiKey = 'test-api-key';
 
   beforeEach(() => {
@@ -1108,12 +1109,7 @@ describe('Crawl4AIService', () => {
       (error as any).code = 'ECONNABORTED';
 
       nock(baseURL)
-        .post('/md', {
-          url: 'https://example.com',
-          f: 'fit',
-          q: undefined,
-          c: undefined,
-        })
+        .post('/md')
         .matchHeader('x-api-key', apiKey)
         .replyWithError(error);
 
@@ -1125,12 +1121,7 @@ describe('Crawl4AIService', () => {
       (error as any).code = 'ETIMEDOUT';
 
       nock(baseURL)
-        .post('/md', {
-          url: 'https://example.com',
-          f: 'fit',
-          q: undefined,
-          c: undefined,
-        })
+        .post('/md')
         .matchHeader('x-api-key', apiKey)
         .replyWithError(error);
 
@@ -1142,12 +1133,7 @@ describe('Crawl4AIService', () => {
       (error as any).code = 'ENOTFOUND';
 
       nock(baseURL)
-        .post('/md', {
-          url: 'https://example.com',
-          f: 'fit',
-          q: undefined,
-          c: undefined,
-        })
+        .post('/md')
         .matchHeader('x-api-key', apiKey)
         .replyWithError(error);
 
@@ -1159,12 +1145,7 @@ describe('Crawl4AIService', () => {
       (error as any).code = 'ECONNREFUSED';
 
       nock(baseURL)
-        .post('/md', {
-          url: 'https://example.com',
-          f: 'fit',
-          q: undefined,
-          c: undefined,
-        })
+        .post('/md')
         .matchHeader('x-api-key', apiKey)
         .replyWithError(error);
 
@@ -1176,12 +1157,7 @@ describe('Crawl4AIService', () => {
       (error as any).code = 'ECONNRESET';
 
       nock(baseURL)
-        .post('/md', {
-          url: 'https://example.com',
-          f: 'fit',
-          q: undefined,
-          c: undefined,
-        })
+        .post('/md')
         .matchHeader('x-api-key', apiKey)
         .replyWithError(error);
 
@@ -1193,12 +1169,7 @@ describe('Crawl4AIService', () => {
       (error as any).code = 'ENETUNREACH';
 
       nock(baseURL)
-        .post('/md', {
-          url: 'https://example.com',
-          f: 'fit',
-          q: undefined,
-          c: undefined,
-        })
+        .post('/md')
         .matchHeader('x-api-key', apiKey)
         .replyWithError(error);
 
@@ -1210,12 +1181,7 @@ describe('Crawl4AIService', () => {
       error.isAxiosError = true;
 
       nock(baseURL)
-        .post('/md', {
-          url: 'https://example.com',
-          f: 'fit',
-          q: undefined,
-          c: undefined,
-        })
+        .post('/md')
         .matchHeader('x-api-key', apiKey)
         .replyWithError(error);
 
