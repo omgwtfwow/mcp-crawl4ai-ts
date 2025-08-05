@@ -100,6 +100,16 @@ describe('Crawl4AIService', () => {
         'Request failed with status 500: Internal server error',
       );
     });
+
+    it('should validate URL format', async () => {
+      await expect(service.getMarkdown({ url: 'invalid-url' })).rejects.toThrow('Invalid URL format');
+    });
+
+    it('should handle network errors', async () => {
+      nock(baseURL).post('/md').matchHeader('x-api-key', apiKey).replyWithError('Network error');
+
+      await expect(service.getMarkdown({ url: 'https://example.com' })).rejects.toThrow('Network error');
+    });
   });
 
   describe('captureScreenshot', () => {
@@ -124,6 +134,10 @@ describe('Crawl4AIService', () => {
 
       expect(result).toEqual(mockResponse);
     });
+
+    it('should validate URL format', async () => {
+      await expect(service.captureScreenshot({ url: 'not-a-url' })).rejects.toThrow('Invalid URL format');
+    });
   });
 
   describe('generatePDF', () => {
@@ -145,6 +159,10 @@ describe('Crawl4AIService', () => {
       });
 
       expect(result).toEqual(mockResponse);
+    });
+
+    it('should validate URL format', async () => {
+      await expect(service.generatePDF({ url: 'not a url' })).rejects.toThrow('Invalid URL format');
     });
   });
 
@@ -168,6 +186,10 @@ describe('Crawl4AIService', () => {
       });
 
       expect(result).toEqual(mockResponse);
+    });
+
+    it('should validate URL format', async () => {
+      await expect(service.getHTML({ url: 'just text' })).rejects.toThrow('Invalid URL format');
     });
   });
 
@@ -281,6 +303,10 @@ describe('Crawl4AIService', () => {
       expect(result.success).toBe(true);
       expect(result.results).toHaveLength(2);
     });
+
+    it('should validate empty URLs array', async () => {
+      await expect(service.batchCrawl({ urls: [] })).rejects.toThrow('URLs array cannot be empty');
+    });
   });
 
   describe('executeJS', () => {
@@ -370,6 +396,44 @@ describe('Crawl4AIService', () => {
           scripts: ['valid script', 'console.log(&amp;&amp; true)'],
         }),
       ).rejects.toThrow('Invalid JavaScript: Contains HTML entities');
+    });
+
+    it('should validate URL format', async () => {
+      await expect(service.executeJS({ url: '//no-protocol', scripts: 'return 1' })).rejects.toThrow(
+        'Invalid URL format',
+      );
+    });
+
+    it('should reject scripts with escaped backslash-n pattern', async () => {
+      // Test the specific pattern that line 40-41 checks for: })\\nword
+      const scriptWithPattern = 'function test() {}\\nconsole.log("test")';
+      await expect(
+        service.executeJS({
+          url: 'https://example.com',
+          scripts: scriptWithPattern,
+        }),
+      ).rejects.toThrow('Invalid JavaScript: Contains HTML entities');
+    });
+
+    it('should allow valid JavaScript with actual newlines', async () => {
+      const validScript = `function test() {
+        console.log("This has real newlines");
+        return true;
+      }`;
+
+      const mockResponse = {
+        success: true,
+        js_execution_result: { results: [true] },
+      };
+
+      nock(baseURL).post('/execute_js').matchHeader('x-api-key', apiKey).reply(200, mockResponse);
+
+      const result = await service.executeJS({
+        url: 'https://example.com',
+        scripts: validScript,
+      });
+
+      expect(result.success).toBe(true);
     });
   });
 
