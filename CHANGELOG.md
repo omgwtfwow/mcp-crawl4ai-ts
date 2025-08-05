@@ -1,5 +1,16 @@
 # Changelog
 
+## Version 2.6.6 (2025-08-05)
+
+### Testing
+- Improved test coverage from 88.8% to 93.19%
+  - Added comprehensive CLI entry point tests for signal handling, environment variables, and dotenv loading
+  - Added network failure tests for axios timeout and HTTP error scenarios
+  - Added input validation edge case tests for JavaScript code validation
+  - Added parameter combination tests for optional parameters and edge cases
+  - Improved branch coverage from 80.76% to 86.12%
+  - Improved function coverage from 96.41% to 98.92%
+
 ## Version 2.6.5 (2025-08-05)
 
 ### Features
