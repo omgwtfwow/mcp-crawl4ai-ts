@@ -1105,85 +1105,64 @@ describe('Crawl4AIService', () => {
 
   describe('Network Error Handling', () => {
     it('should handle ECONNABORTED error', async () => {
-      const error = new Error('Connection aborted');
-      (error as any).code = 'ECONNABORTED';
+      const error = new Error('Connection aborted') as Error & { code?: string };
+      error.code = 'ECONNABORTED';
 
-      nock(baseURL)
-        .post('/md')
-        .matchHeader('x-api-key', apiKey)
-        .replyWithError(error);
+      nock(baseURL).post('/md').matchHeader('x-api-key', apiKey).replyWithError(error);
 
       await expect(service.getMarkdown({ url: 'https://example.com' })).rejects.toThrow('Request timed out');
     });
 
     it('should handle ETIMEDOUT error', async () => {
-      const error = new Error('Socket timed out');
-      (error as any).code = 'ETIMEDOUT';
+      const error = new Error('Socket timed out') as Error & { code?: string };
+      error.code = 'ETIMEDOUT';
 
-      nock(baseURL)
-        .post('/md')
-        .matchHeader('x-api-key', apiKey)
-        .replyWithError(error);
+      nock(baseURL).post('/md').matchHeader('x-api-key', apiKey).replyWithError(error);
 
       await expect(service.getMarkdown({ url: 'https://example.com' })).rejects.toThrow('Request timeout');
     });
 
     it('should handle ENOTFOUND error', async () => {
-      const error = new Error('getaddrinfo ENOTFOUND');
-      (error as any).code = 'ENOTFOUND';
+      const error = new Error('getaddrinfo ENOTFOUND') as Error & { code?: string };
+      error.code = 'ENOTFOUND';
 
-      nock(baseURL)
-        .post('/md')
-        .matchHeader('x-api-key', apiKey)
-        .replyWithError(error);
+      nock(baseURL).post('/md').matchHeader('x-api-key', apiKey).replyWithError(error);
 
       await expect(service.getMarkdown({ url: 'https://example.com' })).rejects.toThrow('DNS resolution failed');
     });
 
     it('should handle ECONNREFUSED error', async () => {
-      const error = new Error('connect ECONNREFUSED');
-      (error as any).code = 'ECONNREFUSED';
+      const error = new Error('connect ECONNREFUSED') as Error & { code?: string };
+      error.code = 'ECONNREFUSED';
 
-      nock(baseURL)
-        .post('/md')
-        .matchHeader('x-api-key', apiKey)
-        .replyWithError(error);
+      nock(baseURL).post('/md').matchHeader('x-api-key', apiKey).replyWithError(error);
 
       await expect(service.getMarkdown({ url: 'https://example.com' })).rejects.toThrow('Connection refused');
     });
 
     it('should handle ECONNRESET error', async () => {
-      const error = new Error('socket hang up');
-      (error as any).code = 'ECONNRESET';
+      const error = new Error('socket hang up') as Error & { code?: string };
+      error.code = 'ECONNRESET';
 
-      nock(baseURL)
-        .post('/md')
-        .matchHeader('x-api-key', apiKey)
-        .replyWithError(error);
+      nock(baseURL).post('/md').matchHeader('x-api-key', apiKey).replyWithError(error);
 
       await expect(service.getMarkdown({ url: 'https://example.com' })).rejects.toThrow('Connection reset');
     });
 
     it('should handle ENETUNREACH error', async () => {
-      const error = new Error('Network is unreachable');
-      (error as any).code = 'ENETUNREACH';
+      const error = new Error('Network is unreachable') as Error & { code?: string };
+      error.code = 'ENETUNREACH';
 
-      nock(baseURL)
-        .post('/md')
-        .matchHeader('x-api-key', apiKey)
-        .replyWithError(error);
+      nock(baseURL).post('/md').matchHeader('x-api-key', apiKey).replyWithError(error);
 
       await expect(service.getMarkdown({ url: 'https://example.com' })).rejects.toThrow('Network unreachable');
     });
 
     it('should handle generic axios errors', async () => {
-      const error = new Error('Generic error') as any;
+      const error = new Error('Generic error') as Error & { isAxiosError?: boolean };
       error.isAxiosError = true;
 
-      nock(baseURL)
-        .post('/md')
-        .matchHeader('x-api-key', apiKey)
-        .replyWithError(error);
+      nock(baseURL).post('/md').matchHeader('x-api-key', apiKey).replyWithError(error);
 
       await expect(service.getMarkdown({ url: 'https://example.com' })).rejects.toThrow('Generic error');
     });
