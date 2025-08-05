@@ -1,5 +1,18 @@
 # Changelog
 
+## Version 2.6.9 (2025-08-05)
+
+### Testing Improvements
+- Improved crawl4ai-service.ts test coverage from 76% to 84%
+- Added comprehensive network error handling tests
+- Added URL validation tests for all service methods
+- Added tests for optional parameter handling
+- Added JavaScript validation edge case tests
+
+### Code Quality
+- All tests pass with zero lint errors
+- Maintained 100% function coverage for service layer
+
 ## Version 2.6.8 (2025-08-05)
 
 ### Code Cleanup

@@ -1101,4 +1101,164 @@ describe('Crawl4AIService', () => {
       expect(contentType).toBe('');
     });
   });
+
+  describe('Network Error Handling', () => {
+    it('should handle ECONNABORTED error', async () => {
+      const error = new Error('Connection aborted');
+      (error as any).code = 'ECONNABORTED';
+
+      nock(baseURL)
+        .post('/md', {
+          url: 'https://example.com',
+          f: 'fit',
+          q: undefined,
+          c: undefined,
+        })
+        .matchHeader('x-api-key', apiKey)
+        .replyWithError(error);
+
+      await expect(service.getMarkdown({ url: 'https://example.com' })).rejects.toThrow('Request timed out');
+    });
+
+    it('should handle ETIMEDOUT error', async () => {
+      const error = new Error('Socket timed out');
+      (error as any).code = 'ETIMEDOUT';
+
+      nock(baseURL)
+        .post('/md', {
+          url: 'https://example.com',
+          f: 'fit',
+          q: undefined,
+          c: undefined,
+        })
+        .matchHeader('x-api-key', apiKey)
+        .replyWithError(error);
+
+      await expect(service.getMarkdown({ url: 'https://example.com' })).rejects.toThrow('Request timeout');
+    });
+
+    it('should handle ENOTFOUND error', async () => {
+      const error = new Error('getaddrinfo ENOTFOUND');
+      (error as any).code = 'ENOTFOUND';
+
+      nock(baseURL)
+        .post('/md', {
+          url: 'https://example.com',
+          f: 'fit',
+          q: undefined,
+          c: undefined,
+        })
+        .matchHeader('x-api-key', apiKey)
+        .replyWithError(error);
+
+      await expect(service.getMarkdown({ url: 'https://example.com' })).rejects.toThrow('DNS resolution failed');
+    });
+
+    it('should handle ECONNREFUSED error', async () => {
+      const error = new Error('connect ECONNREFUSED');
+      (error as any).code = 'ECONNREFUSED';
+
+      nock(baseURL)
+        .post('/md', {
+          url: 'https://example.com',
+          f: 'fit',
+          q: undefined,
+          c: undefined,
+        })
+        .matchHeader('x-api-key', apiKey)
+        .replyWithError(error);
+
+      await expect(service.getMarkdown({ url: 'https://example.com' })).rejects.toThrow('Connection refused');
+    });
+
+    it('should handle ECONNRESET error', async () => {
+      const error = new Error('socket hang up');
+      (error as any).code = 'ECONNRESET';
+
+      nock(baseURL)
+        .post('/md', {
+          url: 'https://example.com',
+          f: 'fit',
+          q: undefined,
+          c: undefined,
+        })
+        .matchHeader('x-api-key', apiKey)
+        .replyWithError(error);
+
+      await expect(service.getMarkdown({ url: 'https://example.com' })).rejects.toThrow('Connection reset');
+    });
+
+    it('should handle ENETUNREACH error', async () => {
+      const error = new Error('Network is unreachable');
+      (error as any).code = 'ENETUNREACH';
+
+      nock(baseURL)
+        .post('/md', {
+          url: 'https://example.com',
+          f: 'fit',
+          q: undefined,
+          c: undefined,
+        })
+        .matchHeader('x-api-key', apiKey)
+        .replyWithError(error);
+
+      await expect(service.getMarkdown({ url: 'https://example.com' })).rejects.toThrow('Network unreachable');
+    });
+
+    it('should handle generic axios errors', async () => {
+      const error = new Error('Generic error') as any;
+      error.isAxiosError = true;
+
+      nock(baseURL)
+        .post('/md', {
+          url: 'https://example.com',
+          f: 'fit',
+          q: undefined,
+          c: undefined,
+        })
+        .matchHeader('x-api-key', apiKey)
+        .replyWithError(error);
+
+      await expect(service.getMarkdown({ url: 'https://example.com' })).rejects.toThrow('Generic error');
+    });
+  });
+
+  describe('Optional Parameter Handling', () => {
+    it('should handle batchCrawl with remove_images option', async () => {
+      const urls = ['https://example.com'];
+
+      nock(baseURL)
+        .post('/crawl', (body) => {
+          return body.crawler_config?.exclude_tags?.includes('img');
+        })
+        .matchHeader('x-api-key', apiKey)
+        .reply(200, { success: true, results: [] });
+
+      await service.batchCrawl({ urls, remove_images: true });
+    });
+
+    it('should handle batchCrawl with bypass_cache option', async () => {
+      const urls = ['https://example.com'];
+
+      nock(baseURL)
+        .post('/crawl', (body) => {
+          return body.crawler_config?.cache_mode === 'BYPASS';
+        })
+        .matchHeader('x-api-key', apiKey)
+        .reply(200, { success: true, results: [] });
+
+      await service.batchCrawl({ urls, bypass_cache: true });
+    });
+
+    it('should test edge case JavaScript validation pattern', async () => {
+      // Test the specific pattern on line 40-41: })\\nword
+      const scriptWithEdgeCase = 'if (true) {}\\nwindow.alert("test")';
+      await expect(
+        service.executeJS({
+          url: 'https://example.com',
+          scripts: scriptWithEdgeCase,
+        }),
+      ).rejects.toThrow('Invalid JavaScript: Contains HTML entities');
+    });
+  });
 });
