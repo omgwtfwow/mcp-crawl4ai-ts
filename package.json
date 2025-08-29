@@ -1,6 +1,6 @@
 {
   "name": "mcp-crawl4ai-ts",
-  "version": "2.6.10",
+  "version": "2.6.12",
   "description": "TypeScript MCP server for Crawl4AI - web crawling and content extraction",
   "main": "dist/index.js",
   "bin": {

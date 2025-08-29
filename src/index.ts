@@ -1,10 +1,18 @@
 #!/usr/bin/env node
 
-import dotenv from 'dotenv';
 import { Crawl4AIServer } from './server.js';
 
-// Load environment variables
-dotenv.config();
+// Try to load dotenv only in development
+// In production (via npx), env vars come from the MCP client
+try {
+  // Only try to load dotenv if CRAWL4AI_BASE_URL is not set
+  if (!process.env.CRAWL4AI_BASE_URL) {
+    const dotenv = await import('dotenv');
+    dotenv.config();
+  }
+} catch {
+  // dotenv is not available in production, which is expected
+}
 
 const CRAWL4AI_BASE_URL = process.env.CRAWL4AI_BASE_URL;
 const CRAWL4AI_API_KEY = process.env.CRAWL4AI_API_KEY || '';
@@ -17,9 +25,10 @@ if (!CRAWL4AI_BASE_URL) {
   process.exit(1);
 }
 
-/* istanbul ignore next */
-// Start the server if run directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  const server = new Crawl4AIServer(CRAWL4AI_BASE_URL, CRAWL4AI_API_KEY, SERVER_NAME, SERVER_VERSION);
-  server.start().catch(console.error);
-}
+// Always start the server when this script is executed
+// This script is meant to be run as an MCP server
+const server = new Crawl4AIServer(CRAWL4AI_BASE_URL, CRAWL4AI_API_KEY, SERVER_NAME, SERVER_VERSION);
+server.start().catch((err) => {
+  console.error('Server failed to start:', err);
+  process.exit(1);
+});

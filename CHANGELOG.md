@@ -1,5 +1,21 @@
 # Changelog
 
+## Version 2.6.12 (2025-08-05)
+
+### Bug Fixes
+- Fixed server startup issue when running via npx
+  - Removed complex module detection logic that was preventing server startup
+  - Server now always starts when the script is executed (as intended for MCP servers)
+  - Simplified dotenv loading to only attempt in development when env vars aren't set
+
+## Version 2.6.11 (2025-08-05)
+
+### Bug Fixes
+- Fixed environment variable handling when running via npx
+  - Only loads .env file if CRAWL4AI_BASE_URL is not already set
+  - Prevents issues when env vars are passed via CLI/MCP configuration
+  - Ensures package works correctly with Claude Desktop and other MCP clients
+
 ## Version 2.6.10 (2025-08-05)
 
 ### Bug Fixes
