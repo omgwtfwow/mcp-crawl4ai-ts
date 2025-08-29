@@ -237,7 +237,7 @@ describe('NPX Execution Tests', () => {
       // Should exit with error code
       expect(exitCode).toBe(1);
       expect(stderr).toContain('CRAWL4AI_BASE_URL environment variable is required');
-      
+
       // Ensure cleanup
       child.kill();
     }, 15000); // 15 second test timeout

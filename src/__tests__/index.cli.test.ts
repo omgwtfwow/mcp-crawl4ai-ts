@@ -115,7 +115,7 @@ describe('CLI Entry Point', () => {
 
       // Should exit with signal code
       expect(code).toBe(143); // 128 + 15 (SIGTERM)
-      
+
       // Ensure cleanup
       child.kill();
     }, 10000);
@@ -149,7 +149,7 @@ describe('CLI Entry Point', () => {
 
       // Should exit with signal code
       expect(code).toBe(130); // 128 + 2 (SIGINT)
-      
+
       // Ensure cleanup
       child.kill();
     }, 10000);

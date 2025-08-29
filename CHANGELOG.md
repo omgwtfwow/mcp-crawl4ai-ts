@@ -1,5 +1,11 @@
 # Changelog
 
+## Version 2.7.1 (2025-08-30)
+
+### Bug Fixes
+- Fixed lint/formatting issues in test files
+- Cleaned up trailing whitespace
+
 ## Version 2.7.0 (2025-08-30)
 
 ### Compatibility Updates
