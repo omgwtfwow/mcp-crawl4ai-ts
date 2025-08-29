@@ -1,5 +1,7 @@
 # MCP Server for Crawl4AI
 
+> **Note:** Tested with Crawl4AI version 0.7.4
+
 [![npm version](https://img.shields.io/npm/v/mcp-crawl4ai-ts.svg)](https://www.npmjs.com/package/mcp-crawl4ai-ts)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js CI](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
@@ -43,10 +45,8 @@ TypeScript implementation of an MCP server for Crawl4AI. Provides tools for web 
 ### 1. Start the Crawl4AI server (for example, local docker)
 
 ```bash
-docker run -d -p 11235:11235 --name crawl4ai --shm-size=1g unclecode/crawl4ai:0.7.2
+docker run -d -p 11235:11235 --name crawl4ai --shm-size=1g unclecode/crawl4ai:0.7.4
 ```
-
-> **Note:** Tested with Crawl4AI version 0.7.2
 
 ### 2. Add to your MCP client
 

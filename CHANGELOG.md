@@ -1,5 +1,29 @@
 # Changelog
 
+## Version 2.7.0 (2025-08-30)
+
+### Compatibility Updates
+- Verified full compatibility with Crawl4AI version 0.7.4
+  - All 15 MCP tools tested and working
+  - 100% integration test pass rate (148 tests)
+  - Supports new v0.7.3/0.7.4 features including:
+    - Undetected browser support with stealth mode
+    - Multi-URL configuration system
+    - Enhanced table extraction
+    - Memory optimization improvements
+
+### Bug Fixes
+- Fixed unit test timeout issues in NPX and CLI tests
+  - Added proper process cleanup and timeouts
+  - Fixed edge case where dotenv was loading during tests
+  - Ensured all spawned child processes are properly terminated
+
+### Testing
+- Comprehensive testing against Crawl4AI v0.7.4 Docker image
+- All integration tests pass with LLM features enabled
+- Unit test suite: 308 tests passing
+- Integration test suite: 148 tests passing
+
 ## Version 2.6.12 (2025-08-05)
 
 ### Bug Fixes
