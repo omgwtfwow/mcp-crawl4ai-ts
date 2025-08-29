@@ -32,8 +32,7 @@ import {
   CrawlRecursiveSchema,
   ParseSitemapSchema,
   CrawlSchema,
-  CreateSessionSchema,
-  ClearSessionSchema,
+  ManageSessionSchema,
   ExtractWithLlmSchema,
 } from './schemas/validation-schemas.js';
 
@@ -748,59 +747,60 @@ export class Crawl4AIServer {
           },
         },
         {
-          name: 'create_session',
+          name: 'manage_session',
           description:
-            '[SESSION MANAGEMENT] CREATES PERSISTENT BROWSER! Returns session_id for use with crawl.\n\n' +
-            'TYPICAL WORKFLOW:\n' +
-            '1. Inspect page structure (get_html/get_markdown)\n' +
-            '2. Create persistent session (create_session)\n' +
-            '3. Perform actions (crawl with session_id)\n\n' +
-            'Browser stays alive across multiple calls, maintaining ALL state (cookies, localStorage, page). Other tools CANNOT use sessions - they create new browser each time. Essential for: forms, login flows, multi-step processes, maintaining state across operations.',
+            '[SESSION MANAGEMENT] Unified tool for managing browser sessions. Supports three actions:\n\n' +
+            '• CREATE: Start a persistent browser session that maintains state across calls\n' +
+            '• CLEAR: Remove a session from local tracking\n' +
+            '• LIST: Show all active sessions with age and usage info\n\n' +
+            'USAGE EXAMPLES:\n' +
+            '1. Create session: {action: "create", session_id: "my-session", initial_url: "https://example.com"}\n' +
+            '2. Clear session: {action: "clear", session_id: "my-session"}\n' +
+            '3. List sessions: {action: "list"}\n\n' +
+            'Browser sessions maintain ALL state (cookies, localStorage, page) across multiple crawl calls. Essential for: forms, login flows, multi-step processes, maintaining state across operations.',
           inputSchema: {
             type: 'object',
-            properties: {
-              session_id: {
-                type: 'string',
-                description:
-                  'Custom session identifier. Auto-generated if not provided. Use this EXACT ID in all subsequent crawl calls to reuse the browser.',
+            oneOf: [
+              {
+                type: 'object',
+                properties: {
+                  action: { type: 'string', const: 'create' },
+                  session_id: {
+                    type: 'string',
+                    description: 'Custom session identifier. Auto-generated if not provided.',
+                  },
+                  initial_url: {
+                    type: 'string',
+                    description: 'URL to load when creating session.',
+                  },
+                  browser_type: {
+                    type: 'string',
+                    enum: ['chromium', 'firefox', 'webkit'],
+                    description: 'Browser engine for the session',
+                    default: 'chromium',
+                  },
+                },
+                required: ['action'],
               },
-              initial_url: {
-                type: 'string',
-                description:
-                  'URL to load when creating session. Useful for: setting cookies, logging in, or reaching a starting point before actual crawling',
+              {
+                type: 'object',
+                properties: {
+                  action: { type: 'string', const: 'clear' },
+                  session_id: {
+                    type: 'string',
+                    description: 'Session ID to remove from tracking',
+                  },
+                },
+                required: ['action', 'session_id'],
               },
-              browser_type: {
-                type: 'string',
-                enum: ['chromium', 'firefox', 'webkit'],
-                description: 'Browser engine for the session',
-                default: 'chromium',
+              {
+                type: 'object',
+                properties: {
+                  action: { type: 'string', const: 'list' },
+                },
+                required: ['action'],
               },
-            },
-            required: [],
-          },
-        },
-        {
-          name: 'clear_session',
-          description:
-            '[SESSION MANAGEMENT] Stop tracking a browser session locally. Use when: done with multi-step crawling, cleaning up after login flows. Note: actual browser on server persists until timeout',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              session_id: {
-                type: 'string',
-                description: 'Session ID to remove from tracking',
-              },
-            },
-            required: ['session_id'],
-          },
-        },
-        {
-          name: 'list_sessions',
-          description:
-            '[SESSION MANAGEMENT] Show all active browser sessions with age and usage info. Use when: checking available sessions, debugging session issues, or before creating new sessions. Shows local tracking only',
-          inputSchema: {
-            type: 'object',
-            properties: {},
+            ],
           },
         },
         {
@@ -898,18 +898,10 @@ export class Crawl4AIServer {
               this.crawlHandlers.crawl(validatedArgs),
             );
 
-          case 'create_session':
-            return await this.validateAndExecute('create_session', args, CreateSessionSchema, async (validatedArgs) =>
-              this.sessionHandlers.createSession(validatedArgs),
+          case 'manage_session':
+            return await this.validateAndExecute('manage_session', args, ManageSessionSchema, async (validatedArgs) =>
+              this.sessionHandlers.manageSession(validatedArgs),
             );
-
-          case 'clear_session':
-            return await this.validateAndExecute('clear_session', args, ClearSessionSchema, async (validatedArgs) =>
-              this.sessionHandlers.clearSession(validatedArgs),
-            );
-
-          case 'list_sessions':
-            return await this.sessionHandlers.listSessions();
 
           case 'extract_with_llm':
             return await this.validateAndExecute(
@@ -984,17 +976,6 @@ export class Crawl4AIServer {
     return this.crawlHandlers.crawl(options);
   }
 
-  protected async createSession(options: Parameters<SessionHandlers['createSession']>[0]) {
-    return this.sessionHandlers.createSession(options);
-  }
-
-  protected async clearSession(options: Parameters<SessionHandlers['clearSession']>[0]) {
-    return this.sessionHandlers.clearSession(options);
-  }
-
-  protected async listSessions() {
-    return this.sessionHandlers.listSessions();
-  }
 
   // Setter for axiosClient to update all handlers (for testing)
   set axiosClientForTesting(client: AxiosInstance) {

@@ -27,10 +27,8 @@ TypeScript implementation of an MCP server for Crawl4AI. Provides tools for web 
   - [9. crawl_recursive](#9-crawl_recursive---deep-crawl-website-following-links)
   - [10. parse_sitemap](#10-parse_sitemap---extract-urls-from-xml-sitemaps)
   - [11. crawl](#11-crawl---advanced-web-crawling-with-full-configuration)
-  - [12. create_session](#12-create_session---create-persistent-browser-session)
-  - [13. clear_session](#13-clear_session---remove-session-from-tracking)
-  - [14. list_sessions](#14-list_sessions---list-tracked-browser-sessions)
-  - [15. extract_with_llm](#15-extract_with_llm---extract-structured-data-using-ai)
+  - [12. manage_session](#12-manage_session---unified-session-management)
+  - [13. extract_with_llm](#13-extract_with_llm---extract-structured-data-using-ai)
 - [Advanced Configuration](#advanced-configuration)
 - [Development](#development)
 - [License](#license)
@@ -295,37 +293,35 @@ Extracts all URLs from XML sitemaps. Supports regex filtering for specific URL p
 }
 ```
 
-### 12. `create_session` - Create persistent browser session
+### 12. `manage_session` - Unified session management
 
 ```typescript
 { 
-  session_id?: string,                            // Optional: Custom ID (auto-generated if not provided)
-  initial_url?: string,                           // Optional: URL to load when creating session
-  browser_type?: 'chromium'|'firefox'|'webkit'   // Optional: Browser engine (default: 'chromium')
+  action: 'create' | 'clear' | 'list',    // Required: Action to perform
+  session_id?: string,                    // For 'create' and 'clear' actions
+  initial_url?: string,                   // For 'create' action: URL to load
+  browser_type?: 'chromium' | 'firefox' | 'webkit'  // For 'create' action
 }
 ```
 
-Creates a persistent browser session for maintaining state across multiple requests. Returns the session_id for use with the `crawl` tool.
+Unified tool for managing browser sessions. Supports three actions:
+- **create**: Start a persistent browser session
+- **clear**: Remove a session from local tracking
+- **list**: Show all active sessions
 
-**Important**: Only the `crawl` tool supports session_id. Other tools are stateless and create new browsers each time.
-
-### 13. `clear_session` - Remove session from tracking
-
+Examples:
 ```typescript
-{ session_id: string }
+// Create a new session
+{ action: 'create', session_id: 'my-session', initial_url: 'https://example.com' }
+
+// Clear a session
+{ action: 'clear', session_id: 'my-session' }
+
+// List all sessions
+{ action: 'list' }
 ```
 
-Removes session from local tracking. Note: The actual browser session on the server persists until timeout.
-
-### 14. `list_sessions` - List tracked browser sessions
-
-```typescript
-{}  // No parameters required
-```
-
-Returns all locally tracked sessions with creation time, last used time, and initial URL. Note: These are session references - actual server state may differ.
-
-### 15. `extract_with_llm` - Extract structured data using AI
+### 13. `extract_with_llm` - Extract structured data using AI
 
 ```typescript
 { 

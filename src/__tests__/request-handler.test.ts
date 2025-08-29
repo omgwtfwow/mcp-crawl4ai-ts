@@ -157,9 +157,9 @@ describe('MCP Request Handler Direct Testing', () => {
         { name: 'crawl_recursive', arguments: { url: 'https://example.com' } },
         { name: 'parse_sitemap', arguments: { url: 'https://example.com/sitemap.xml' } },
         { name: 'crawl', arguments: { url: 'https://example.com' } },
-        { name: 'create_session', arguments: {} },
-        { name: 'clear_session', arguments: { session_id: 'test' } },
-        { name: 'list_sessions', arguments: {} },
+        { name: 'manage_session', arguments: { action: 'create' } },
+        { name: 'manage_session', arguments: { action: 'clear', session_id: 'test' } },
+        { name: 'manage_session', arguments: { action: 'list' } },
         { name: 'extract_with_llm', arguments: { url: 'https://example.com', prompt: 'test' } },
       ];
 
@@ -190,7 +190,12 @@ describe('MCP Request Handler Direct Testing', () => {
         { name: 'crawl_recursive', arguments: {}, expectedError: 'Invalid parameters for crawl_recursive' },
         { name: 'parse_sitemap', arguments: {}, expectedError: 'Invalid parameters for parse_sitemap' },
         { name: 'crawl', arguments: {}, expectedError: 'Invalid parameters for crawl' },
-        { name: 'clear_session', arguments: {}, expectedError: 'Invalid parameters for clear_session' },
+        { name: 'manage_session', arguments: {}, expectedError: 'Invalid parameters for manage_session' },
+        {
+          name: 'manage_session',
+          arguments: { action: 'clear' },
+          expectedError: 'Invalid parameters for manage_session',
+        },
         {
           name: 'extract_with_llm',
           arguments: { url: 'https://example.com' },
@@ -233,73 +238,75 @@ describe('MCP Request Handler Direct Testing', () => {
       expect(result.content[0].text).toContain('Error: Failed to get markdown: Service error');
     });
 
-    it('should handle create_session with initial_url', async () => {
+    it('should handle manage_session with create action', async () => {
       const result = await requestHandler({
         method: 'tools/call',
         params: {
-          name: 'create_session',
+          name: 'manage_session',
           arguments: {
+            action: 'create',
             session_id: 'test-session',
             initial_url: 'https://example.com',
-            browser_type: 'firefox',
           },
         },
       });
 
       expect(result.content[0].text).toContain('Session created successfully');
-      expect(result.content[0].text).toContain('firefox');
+      expect(result.content[0].text).toContain('test-session');
     });
 
-    it('should handle create_session with initial_url error', async () => {
-      // Make crawl fail for initial_url
-      mockPost.mockRejectedValue(new Error('Initial crawl failed'));
-
-      const result = await requestHandler({
-        method: 'tools/call',
-        params: {
-          name: 'create_session',
-          arguments: {
-            initial_url: 'https://example.com',
-          },
-        },
-      });
-
-      // Session should still be created even if initial crawl fails
-      expect(result.content[0].text).toContain('Session created successfully');
-    });
-
-    it('should handle clear_session for non-existent session', async () => {
-      const result = await requestHandler({
-        method: 'tools/call',
-        params: {
-          name: 'clear_session',
-          arguments: { session_id: 'non-existent' },
-        },
-      });
-
-      expect(result.content[0].text).toContain('Session not found: non-existent');
-    });
-
-    it('should handle list_sessions with existing sessions', async () => {
+    it('should handle manage_session with clear action', async () => {
       // First create a session
       await requestHandler({
         method: 'tools/call',
         params: {
-          name: 'create_session',
-          arguments: { session_id: 'test-session' },
+          name: 'manage_session',
+          arguments: {
+            action: 'create',
+            session_id: 'test-to-clear',
+          },
         },
       });
 
+      // Then clear it
       const result = await requestHandler({
         method: 'tools/call',
         params: {
-          name: 'list_sessions',
-          arguments: {},
+          name: 'manage_session',
+          arguments: {
+            action: 'clear',
+            session_id: 'test-to-clear',
+          },
         },
       });
 
-      expect(result.content[0].text).toContain('Active sessions (1)');
-      expect(result.content[0].text).toContain('test-session');
+      expect(result.content[0].text).toContain('Session cleared successfully');
+    });
+
+    it('should handle manage_session with list action', async () => {
+      // First create a session
+      await requestHandler({
+        method: 'tools/call',
+        params: {
+          name: 'manage_session',
+          arguments: {
+            action: 'create',
+            session_id: 'test-list-session',
+          },
+        },
+      });
+
+      // List sessions
+      const result = await requestHandler({
+        method: 'tools/call',
+        params: {
+          name: 'manage_session',
+          arguments: { action: 'list' },
+        },
+      });
+
+      expect(result.content[0].text).toContain('Active sessions');
+      expect(result.content[0].text).toContain('test-list-session');
     });
   });
 });

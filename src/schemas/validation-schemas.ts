@@ -132,16 +132,22 @@ export const ParseSitemapSchema = createStatelessSchema(
   'parse_sitemap',
 );
 
-// Session management tools don't need stateless schema
-export const CreateSessionSchema = z.object({
-  session_id: z.string().optional(),
-  initial_url: z.string().url().optional(),
-  browser_type: z.enum(['chromium', 'firefox', 'webkit']).optional(),
-});
-
-export const ClearSessionSchema = z.object({
-  session_id: z.string(),
-});
+// Unified session management schema
+export const ManageSessionSchema = z.discriminatedUnion('action', [
+  z.object({
+    action: z.literal('create'),
+    session_id: z.string().optional(),
+    initial_url: z.string().url().optional(),
+    browser_type: z.enum(['chromium', 'firefox', 'webkit']).optional(),
+  }),
+  z.object({
+    action: z.literal('clear'),
+    session_id: z.string(),
+  }),
+  z.object({
+    action: z.literal('list'),
+  }),
+]);
 
 export const CrawlSchema = z
   .object({

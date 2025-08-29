@@ -196,13 +196,14 @@ describe('Crawl Handlers Integration Tests', () => {
     );
 
     it(
-      'should work with session_id parameter',
+      'should work with session_id parameter using manage_session',
       async () => {
-        // First create a session
+        // First create a session using manage_session
         const sessionResult = await client.callTool({
-          name: 'create_session',
+          name: 'manage_session',
           arguments: {
-            session_id: 'test-crawl-session',
+            action: 'create',
+            session_id: 'test-crawl-session-new',
           },
         });
 
@@ -213,7 +214,7 @@ describe('Crawl Handlers Integration Tests', () => {
           name: 'crawl',
           arguments: {
             url: 'https://example.com',
-            session_id: 'test-crawl-session',
+            session_id: 'test-crawl-session-new',
           },
         });
 
@@ -222,11 +223,12 @@ describe('Crawl Handlers Integration Tests', () => {
         expect(content[0].type).toBe('text');
         expect(content[0].text).not.toContain('Error');
 
-        // Clean up
+        // Clean up using manage_session
         await client.callTool({
-          name: 'clear_session',
+          name: 'manage_session',
           arguments: {
-            session_id: 'test-crawl-session',
+            action: 'clear',
+            session_id: 'test-crawl-session-new',
           },
         });
       },

@@ -1,7 +1,33 @@
 import { BaseHandler } from './base-handler.js';
 
 export class SessionHandlers extends BaseHandler {
-  async createSession(options: { session_id?: string; initial_url?: string; browser_type?: string }) {
+  async manageSession(options: {
+    action: 'create' | 'clear' | 'list';
+    session_id?: string;
+    initial_url?: string;
+    browser_type?: string;
+  }) {
+    switch (options.action) {
+      case 'create':
+        return this.createSession({
+          session_id: options.session_id,
+          initial_url: options.initial_url,
+          browser_type: options.browser_type,
+        });
+      case 'clear':
+        if (!options.session_id) {
+          throw new Error('session_id is required for clear action');
+        }
+        return this.clearSession({ session_id: options.session_id });
+      case 'list':
+        return this.listSessions();
+      default:
+        // This should never happen due to TypeScript types, but handle it for runtime safety
+        throw new Error(`Invalid action: ${(options as { action: string }).action}`);
+    }
+  }
+
+  private async createSession(options: { session_id?: string; initial_url?: string; browser_type?: string }) {
     try {
       // Generate session ID if not provided
       const sessionId = options.session_id || `session-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
@@ -67,7 +93,7 @@ export class SessionHandlers extends BaseHandler {
     }
   }
 
-  async clearSession(options: { session_id: string }) {
+  private async clearSession(options: { session_id: string }) {
     try {
       // Remove from local store
       const deleted = this.sessions.delete(options.session_id);
@@ -90,7 +116,7 @@ export class SessionHandlers extends BaseHandler {
     }
   }
 
-  async listSessions() {
+  private async listSessions() {
     try {
       // Return locally stored sessions
       const sessions = Array.from(this.sessions.entries()).map(([id, info]) => {

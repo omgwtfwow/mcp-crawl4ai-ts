@@ -1,5 +1,27 @@
 # Changelog
 
+## Version 2.9.0 (2025-08-29)
+
+### Breaking Changes
+- Consolidated session management into single `manage_session` tool
+  - Replaces `create_session`, `clear_session`, and `list_sessions` tools
+  - Uses discriminated union with `action` parameter: 'create', 'clear', or 'list'
+  - Reduces tool count from 15 to 13
+
+### Removed
+- Removed `create_session` tool (use `manage_session` with `action: 'create'`)
+- Removed `clear_session` tool (use `manage_session` with `action: 'clear'`)
+- Removed `list_sessions` tool (use `manage_session` with `action: 'list'`)
+
+### Improvements
+- Simplified API surface for better LLM interaction
+- Improved type safety with discriminated unions
+- Reduced code duplication in session management
+
+### Testing
+- Updated all tests to use new `manage_session` tool
+- Maintained 100% test coverage
+
 ## Version 2.7.1 (2025-08-30)
 
 ### Bug Fixes

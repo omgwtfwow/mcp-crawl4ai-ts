@@ -76,7 +76,6 @@ const {
   GetMarkdownSchema,
   CrawlSchema,
   BatchCrawlSchema,
-  CreateSessionSchema,
   CaptureScreenshotSchema: _CaptureScreenshotSchema,
   GeneratePdfSchema: _GeneratePdfSchema,
   ExecuteJsSchema: _ExecuteJsSchema,
@@ -122,9 +121,6 @@ interface TestServerMethods {
   getHTML: (params: unknown) => Promise<ToolResult>;
   batchCrawl: (params: unknown) => Promise<ToolResult>;
   crawl: (params: unknown) => Promise<ToolResult>;
-  createSession: (params: unknown) => Promise<ToolResult>;
-  clearSession: (params: unknown) => Promise<ToolResult>;
-  listSessions: () => Promise<ToolResult>;
   extractWithLLM: (params: unknown) => Promise<ToolResult>;
   extractLinks: (params: unknown) => Promise<ToolResult>;
   crawlRecursive: (params: unknown) => Promise<ToolResult>;
@@ -627,42 +623,6 @@ describe('Crawl4AIServer Tool Handlers', () => {
       });
     });
 
-    describe('Session management', () => {
-      it('should create a session successfully', async () => {
-        const result: ToolResult = await server.createSession({
-          initial_url: 'https://example.com',
-        });
-
-        expect(result.content).toHaveLength(1);
-        expect(result.content[0].type).toBe('text');
-        expect(result.content[0].text).toMatch(/Session created successfully/);
-        expect(result.content[0].text).toMatch(/Session ID: session-/);
-      });
-
-      it('should clear a session successfully', async () => {
-        // First create a session
-        const createResult = await server.createSession({});
-        const sessionIdMatch = createResult.content[0].text.match(/Session ID: (session-[^\n]+)/);
-        const sessionId = sessionIdMatch?.[1] || 'test-session';
-
-        const result: ToolResult = await server.clearSession({
-          session_id: sessionId,
-        });
-
-        expect(result.content[0].text).toBe(`Session cleared successfully: ${sessionId}`);
-      });
-
-      it('should list sessions', async () => {
-        // Create a couple of sessions
-        await server.createSession({ initial_url: 'https://example1.com' });
-        await server.createSession({ initial_url: 'https://example2.com' });
-
-        const result: ToolResult = await server.listSessions();
-
-        expect(result.content[0].text).toContain('Active sessions (2)');
-        expect(result.content[0].text).toMatch(/session-\w+-\w+/);
-      });
-    });
 
     describe('extract_with_llm', () => {
       it('should handle successful LLM extraction', async () => {
@@ -976,13 +936,6 @@ describe('Crawl4AIServer Tool Handlers', () => {
         expect(result.content[0].text).toMatch(/\n\s*$/);
       });
 
-      it('should handle session not found for clear_session', async () => {
-        const result: ToolResult = await server.clearSession({
-          session_id: 'non-existent-session',
-        });
-
-        expect(result.content[0].text).toContain('Session not found');
-      });
 
       it('should handle smart crawl with HEAD request failure', async () => {
         mockHead.mockRejectedValue(new Error('HEAD failed'));
@@ -1050,18 +1003,6 @@ describe('Crawl4AIServer Tool Handlers', () => {
         // Invalid - not an array
         expect(() => {
           BatchCrawlSchema.parse({ urls: 'not-an-array' });
-        }).toThrow();
-      });
-
-      it('should validate create_session parameters', () => {
-        // Valid case
-        expect(() => {
-          CreateSessionSchema.parse({});
-        }).not.toThrow();
-
-        // Invalid browser type
-        expect(() => {
-          CreateSessionSchema.parse({ browser_type: 'invalid' });
         }).toThrow();
       });
     });
@@ -1566,50 +1507,9 @@ describe('Crawl4AIServer Tool Handlers', () => {
         expect(result.content[0].text).toContain('Filtered URLs: 2');
       });
 
-      it('should handle list_sessions', async () => {
-        const result: ToolResult = await server.listSessions();
 
-        expect(result.content[0].text).toContain('No active sessions');
-      });
 
-      it('should handle create_session', async () => {
-        const result: ToolResult = await server.createSession({
-          session_id: 'test-session',
-        });
 
-        expect(result.content[0].text).toContain('Session created successfully');
-        expect(result.content[0].text).toContain('test-session');
-      });
-
-      it('should handle create_session with initial_url', async () => {
-        mockCrawl.mockResolvedValue({
-          success: true,
-          results: [{ success: true }],
-        });
-
-        const result: ToolResult = await server.createSession({
-          session_id: 'test-session-2',
-          initial_url: 'https://example.com',
-          browser_type: 'firefox',
-        });
-
-        expect(result.content[0].text).toContain('Session created successfully');
-        expect(result.content[0].text).toContain('firefox');
-        expect(result.content[0].text).toContain('Pre-warmed with: https://example.com');
-      });
-
-      it('should handle clear_session', async () => {
-        // First create a session
-        await server.createSession({
-          session_id: 'test-to-clear',
-        });
-
-        const result: ToolResult = await server.clearSession({
-          session_id: 'test-to-clear',
-        });
-
-        expect(result.content[0].text).toContain('Session cleared successfully: test-to-clear');
-      });
 
       it('should handle crawl_recursive', async () => {
         mockCrawl.mockResolvedValue({
@@ -1632,13 +1532,6 @@ describe('Crawl4AIServer Tool Handlers', () => {
         expect(result.content[0].text).toContain('Recursive crawl completed');
       });
 
-      it('should handle clearSession for non-existent session', async () => {
-        const result: ToolResult = await server.clearSession({
-          session_id: 'non-existent',
-        });
-
-        expect(result.content[0].text).toContain('Session not found: non-existent');
-      });
 
       it('should handle parse_sitemap error', async () => {
         mockParseSitemap.mockRejectedValue(new Error('Network error'));
@@ -1845,9 +1738,9 @@ describe('Crawl4AIServer Tool Handlers', () => {
           { name: 'crawl_recursive', args: { url: 'https://example.com' } },
           { name: 'parse_sitemap', args: { url: 'https://example.com/sitemap.xml' } },
           { name: 'crawl', args: { url: 'https://example.com' } },
-          { name: 'create_session', args: {} },
-          { name: 'clear_session', args: { session_id: 'test' } },
-          { name: 'list_sessions', args: {} },
+          { name: 'manage_session', args: { action: 'create' } },
+          { name: 'manage_session', args: { action: 'clear', session_id: 'test' } },
+          { name: 'manage_session', args: { action: 'list' } },
           { name: 'extract_with_llm', args: { url: 'https://example.com', prompt: 'test' } },
         ];
 
@@ -1925,7 +1818,9 @@ describe('Crawl4AIServer Tool Handlers', () => {
           { name: 'crawl_recursive', args: {} }, // missing url
           { name: 'parse_sitemap', args: {} }, // missing url
           { name: 'crawl', args: {} }, // missing url
-          { name: 'clear_session', args: {} }, // missing session_id
+          { name: 'manage_session', args: {} }, // missing action
+          { name: 'manage_session', args: { action: 'clear' } }, // missing session_id for clear
+          { name: 'manage_session', args: { action: 'invalid' } }, // invalid action
           { name: 'extract_with_llm', args: { url: 'https://example.com' } }, // missing prompt
         ];
 
@@ -1980,7 +1875,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
         const result = await toolsListHandler({ method: 'tools/list', params: {} });
         expect(result).toBeDefined();
         expect(result.tools).toBeDefined();
-        expect(result.tools.length).toBe(15); // Should have 15 tools
+        expect(result.tools.length).toBe(13); // Should have 13 tools
       });
 
       it('should handle get_markdown query functionality', async () => {
