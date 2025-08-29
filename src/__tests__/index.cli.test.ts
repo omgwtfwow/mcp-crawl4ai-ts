@@ -101,13 +101,24 @@ describe('CLI Entry Point', () => {
       // Send SIGTERM
       child.kill('SIGTERM');
 
-      const code = await new Promise<number | null>((resolve) => {
-        child.on('close', resolve);
+      const code = await new Promise<number | null>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          child.kill('SIGKILL');
+          reject(new Error('Process did not exit in time'));
+        }, 5000);
+
+        child.on('close', (exitCode) => {
+          clearTimeout(timeout);
+          resolve(exitCode);
+        });
       });
 
       // Should exit with signal code
       expect(code).toBe(143); // 128 + 15 (SIGTERM)
-    });
+      
+      // Ensure cleanup
+      child.kill();
+    }, 10000);
 
     it('should handle SIGINT gracefully', async () => {
       const child = spawn('tsx', [cliPath], {
@@ -124,13 +135,24 @@ describe('CLI Entry Point', () => {
       // Send SIGINT (Ctrl+C)
       child.kill('SIGINT');
 
-      const code = await new Promise<number | null>((resolve) => {
-        child.on('close', resolve);
+      const code = await new Promise<number | null>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          child.kill('SIGKILL');
+          reject(new Error('Process did not exit in time'));
+        }, 5000);
+
+        child.on('close', (exitCode) => {
+          clearTimeout(timeout);
+          resolve(exitCode);
+        });
       });
 
       // Should exit with signal code
       expect(code).toBe(130); // 128 + 2 (SIGINT)
-    });
+      
+      // Ensure cleanup
+      child.kill();
+    }, 10000);
   });
 
   describe('Error Handling', () => {

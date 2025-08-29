@@ -204,7 +204,8 @@ describe('NPX Execution Tests', () => {
 
       const child = spawn('node', [distIndexPath], {
         env: {
-          // Intentionally omit CRAWL4AI_BASE_URL
+          // Explicitly set to empty string to prevent dotenv from loading
+          CRAWL4AI_BASE_URL: '',
           PATH: process.env.PATH,
         },
         stdio: 'pipe',
@@ -215,14 +216,31 @@ describe('NPX Execution Tests', () => {
         stderr += data.toString();
       });
 
-      const exitCode = await new Promise<number | null>((resolve) => {
-        child.on('exit', resolve);
+      const exitCode = await new Promise<number | null>((resolve, reject) => {
+        // Add timeout to prevent hanging
+        const timeout = setTimeout(() => {
+          child.kill('SIGTERM');
+          reject(new Error('Process timeout'));
+        }, 10000); // 10 second timeout
+
+        child.on('exit', (code) => {
+          clearTimeout(timeout);
+          resolve(code);
+        });
+
+        child.on('error', (err) => {
+          clearTimeout(timeout);
+          reject(err);
+        });
       });
 
       // Should exit with error code
       expect(exitCode).toBe(1);
       expect(stderr).toContain('CRAWL4AI_BASE_URL environment variable is required');
-    });
+      
+      // Ensure cleanup
+      child.kill();
+    }, 15000); // 15 second test timeout
   });
 
   describe('NPX-specific edge cases', () => {
