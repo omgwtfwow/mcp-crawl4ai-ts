@@ -25,28 +25,28 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/9</span>
+                <span class='fraction'>0/16</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/8</span>
+                <span class='fraction'>0/10</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/0</span>
+                <span class='fraction'>0/1</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/9</span>
+                <span class='fraction'>0/16</span>
             </div>
         
             
@@ -88,7 +88,16 @@
 <a name='L23'></a><a href='#L23'>23</a>
 <a name='L24'></a><a href='#L24'>24</a>
 <a name='L25'></a><a href='#L25'>25</a>
-<a name='L26'></a><a href='#L26'>26</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -99,6 +108,14 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -109,17 +126,26 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">#!/usr/bin/env node
 &nbsp;
-import dotenv from 'dotenv';
 import { Crawl4AIServer } from './server.js';
 &nbsp;
-// Load environment variables
-<span class="cstat-no" title="statement not covered" >dotenv.config();</span>
+// Try to load dotenv only in development
+// In production (via npx), env vars come from the MCP client
+<span class="cstat-no" title="statement not covered" >try {</span>
+  // Only try to load dotenv if CRAWL4AI_BASE_URL is not set
+<span class="cstat-no" title="statement not covered" >  if (!process.env.CRAWL4AI_BASE_URL) {</span>
+    const dotenv = <span class="cstat-no" title="statement not covered" >await import('dotenv');</span>
+<span class="cstat-no" title="statement not covered" >    dotenv.config();</span>
+  }
+} catch {
+  // dotenv is not available in production, which is expected
+}
 &nbsp;
 const CRAWL4AI_BASE_URL = <span class="cstat-no" title="statement not covered" >process.env.CRAWL4AI_BASE_URL;</span>
 const CRAWL4AI_API_KEY = <span class="cstat-no" title="statement not covered" >process.env.CRAWL4AI_API_KEY || '';</span>
@@ -132,12 +158,13 @@ const SERVER_VERSION = <span class="cstat-no" title="statement not covered" >pro
 <span class="cstat-no" title="statement not covered" >  process.exit(1);</span>
 }
 &nbsp;
-/* istanbul ignore next */
-// Start the server if run directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  const server = new Crawl4AIServer(CRAWL4AI_BASE_URL, CRAWL4AI_API_KEY, SERVER_NAME, SERVER_VERSION);
-  server.start().catch(console.error);
-}
+// Always start the server when this script is executed
+// This script is meant to be run as an MCP server
+const server = <span class="cstat-no" title="statement not covered" >new Crawl4AIServer(CRAWL4AI_BASE_URL, CRAWL4AI_API_KEY, SERVER_NAME, SERVER_VERSION);</span>
+<span class="cstat-no" title="statement not covered" >server.start().catch(<span class="fstat-no" title="function not covered" >(e</span>rr) =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >  console.error('Server failed to start:', err);</span>
+<span class="cstat-no" title="statement not covered" >  process.exit(1);</span>
+});
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
@@ -145,7 +172,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-08-05T14:06:24.982Z
+                at 2025-08-29T12:40:00.188Z
             </div>
         <script src="../prettify.js"></script>
         <script>
