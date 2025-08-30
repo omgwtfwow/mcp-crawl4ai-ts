@@ -1,5 +1,13 @@
 import { BaseHandler } from './base-handler.js';
-import { BatchCrawlOptions, CrawlResultItem, AdvancedCrawlConfig, CrawlEndpointResponse } from '../types.js';
+import {
+  BatchCrawlOptions,
+  CrawlResultItem,
+  AdvancedCrawlConfig,
+  CrawlEndpointResponse,
+  ExtractionStrategy,
+  TableExtractionStrategy,
+  MarkdownGeneratorOptions,
+} from '../types.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
@@ -7,25 +15,60 @@ import * as os from 'os';
 export class CrawlHandlers extends BaseHandler {
   async batchCrawl(options: BatchCrawlOptions) {
     try {
-      // Build crawler config if needed
-      const crawler_config: Record<string, unknown> = {};
+      let response;
 
-      // Handle remove_images by using exclude_tags
-      if (options.remove_images) {
-        crawler_config.exclude_tags = ['img', 'picture', 'svg'];
+      // Check if we have per-URL configs (new in 0.7.3/0.7.4)
+      if (options.configs && options.configs.length > 0) {
+        // Use the new configs array format
+        // Extract URLs from configs for the urls field
+        const urls = options.configs.map((config) => config.url);
+        const requestBody = {
+          urls: urls,
+          configs: options.configs,
+          max_concurrent: options.max_concurrent,
+        };
+        response = await this.axiosClient.post('/crawl', requestBody);
+      } else {
+        // Use the legacy format with single crawler_config
+        // Build crawler config if needed
+        const crawler_config: Record<string, unknown> = {};
+
+        // Handle remove_images by using exclude_tags
+        if (options.remove_images) {
+          crawler_config.exclude_tags = ['img', 'picture', 'svg'];
+        }
+
+        if (options.bypass_cache) {
+          crawler_config.cache_mode = 'BYPASS';
+        }
+
+        response = await this.axiosClient.post('/crawl', {
+          urls: options.urls,
+          max_concurrent: options.max_concurrent,
+          crawler_config: Object.keys(crawler_config).length > 0 ? crawler_config : undefined,
+        });
       }
-
-      if (options.bypass_cache) {
-        crawler_config.cache_mode = 'BYPASS';
-      }
-
-      const response = await this.axiosClient.post('/crawl', {
-        urls: options.urls,
-        max_concurrent: options.max_concurrent,
-        crawler_config: Object.keys(crawler_config).length > 0 ? crawler_config : undefined,
-      });
 
       const results = response.data.results || [];
+
+      // Add memory metrics if available
+      let metricsText = '';
+      const responseData = response.data as CrawlEndpointResponse;
+      if (responseData.server_memory_delta_mb !== undefined || responseData.server_peak_memory_mb !== undefined) {
+        const memoryInfo = [];
+        if (responseData.server_processing_time_s !== undefined) {
+          memoryInfo.push(`Processing time: ${responseData.server_processing_time_s.toFixed(2)}s`);
+        }
+        if (responseData.server_memory_delta_mb !== undefined) {
+          memoryInfo.push(`Memory delta: ${responseData.server_memory_delta_mb.toFixed(1)}MB`);
+        }
+        if (responseData.server_peak_memory_mb !== undefined) {
+          memoryInfo.push(`Peak memory: ${responseData.server_peak_memory_mb.toFixed(1)}MB`);
+        }
+        if (memoryInfo.length > 0) {
+          metricsText = `\n\nServer metrics: ${memoryInfo.join(', ')}`;
+        }
+      }
 
       return {
         content: [
@@ -35,7 +78,7 @@ export class CrawlHandlers extends BaseHandler {
               .map(
                 (r: CrawlResultItem, i: number) => `${i + 1}. ${options.urls[i]}: ${r.success ? 'Success' : 'Failed'}`,
               )
-              .join('\n')}`,
+              .join('\n')}${metricsText}`,
           },
         ],
       };
@@ -304,8 +347,12 @@ export class CrawlHandlers extends BaseHandler {
       if (options.headers) browser_config.headers = options.headers;
       if (options.cookies) browser_config.cookies = options.cookies;
 
-      // Handle proxy configuration
-      if (options.proxy_server) {
+      // Handle proxy configuration - support both unified and legacy formats
+      if (options.proxy) {
+        // New unified format (0.7.3/0.7.4)
+        browser_config.proxy = options.proxy;
+      } else if (options.proxy_server) {
+        // Legacy format for backward compatibility
         browser_config.proxy_config = {
           server: options.proxy_server,
           username: options.proxy_username,
@@ -400,11 +447,26 @@ export class CrawlHandlers extends BaseHandler {
       if (options.log_console) crawler_config.log_console = options.log_console;
       if (options.capture_mhtml) crawler_config.capture_mhtml = options.capture_mhtml;
 
+      // New parameters from 0.7.3/0.7.4
+      if (options.delay_before_return_html) crawler_config.delay_before_return_html = options.delay_before_return_html;
+      if (options.css_selector) crawler_config.css_selector = options.css_selector;
+      if (options.include_links !== undefined) crawler_config.include_links = options.include_links;
+      if (options.resolve_absolute_urls !== undefined)
+        crawler_config.resolve_absolute_urls = options.resolve_absolute_urls;
+
       // Call service with proper configuration
       const crawlConfig: AdvancedCrawlConfig = {
         url: options.url ? String(options.url) : undefined,
         crawler_config,
       };
+
+      // Add extraction strategy passthrough objects if provided
+      if (options.extraction_strategy)
+        crawlConfig.extraction_strategy = options.extraction_strategy as ExtractionStrategy;
+      if (options.table_extraction_strategy)
+        crawlConfig.table_extraction_strategy = options.table_extraction_strategy as TableExtractionStrategy;
+      if (options.markdown_generator_options)
+        crawlConfig.markdown_generator_options = options.markdown_generator_options as MarkdownGeneratorOptions;
 
       // Only include browser_config if we're not using a session
       if (!options.session_id) {
@@ -549,6 +611,26 @@ export class CrawlHandlers extends BaseHandler {
           type: 'text',
           text: `\n---\nJavaScript Execution Results:\n${jsResults}`,
         });
+      }
+
+      // Add memory metrics if available
+      if (response.server_memory_delta_mb !== undefined || response.server_peak_memory_mb !== undefined) {
+        const memoryInfo = [];
+        if (response.server_processing_time_s !== undefined) {
+          memoryInfo.push(`Processing time: ${response.server_processing_time_s.toFixed(2)}s`);
+        }
+        if (response.server_memory_delta_mb !== undefined) {
+          memoryInfo.push(`Memory delta: ${response.server_memory_delta_mb.toFixed(1)}MB`);
+        }
+        if (response.server_peak_memory_mb !== undefined) {
+          memoryInfo.push(`Peak memory: ${response.server_peak_memory_mb.toFixed(1)}MB`);
+        }
+        if (memoryInfo.length > 0) {
+          content.push({
+            type: 'text',
+            text: `\n---\nServer metrics: ${memoryInfo.join(', ')}`,
+          });
+        }
       }
 
       return { content };

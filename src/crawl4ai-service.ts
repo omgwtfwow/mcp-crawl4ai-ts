@@ -293,11 +293,26 @@ export class Crawl4AIService {
     // Server only accepts urls array, not url string
     const urls = options.url ? [options.url] : options.urls || [];
 
-    const requestBody: CrawlEndpointOptions = {
+    const requestBody: CrawlEndpointOptions & {
+      extraction_strategy?: unknown;
+      table_extraction_strategy?: unknown;
+      markdown_generator_options?: unknown;
+    } = {
       urls,
       browser_config: options.browser_config,
       crawler_config: options.crawler_config || {}, // Always include crawler_config, even if empty
     };
+
+    // Add extraction strategy passthrough fields if present
+    if (options.extraction_strategy) {
+      requestBody.extraction_strategy = options.extraction_strategy;
+    }
+    if (options.table_extraction_strategy) {
+      requestBody.table_extraction_strategy = options.table_extraction_strategy;
+    }
+    if (options.markdown_generator_options) {
+      requestBody.markdown_generator_options = options.markdown_generator_options;
+    }
 
     try {
       const response = await this.axiosClient.post('/crawl', requestBody);

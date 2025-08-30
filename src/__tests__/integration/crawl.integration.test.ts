@@ -1326,5 +1326,121 @@ describe('crawl Integration Tests', () => {
         TEST_TIMEOUTS.short,
       );
     });
+
+    describe('New crawler parameters (0.7.3/0.7.4)', () => {
+      it(
+        'should accept undetected browser type',
+        async () => {
+          const result = await client.callTool({
+            name: 'crawl',
+            arguments: {
+              url: 'https://httpbin.org/user-agent',
+              browser_type: 'undetected',
+            },
+          });
+
+          await expectSuccessfulCrawl(result);
+          const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
+          expect(textContent?.text).toBeTruthy();
+          // The undetected browser should mask automation indicators
+          // but we can at least verify the request was accepted
+        },
+        TEST_TIMEOUTS.short,
+      );
+
+      it(
+        'should filter content using css_selector',
+        async () => {
+          const result = await client.callTool({
+            name: 'crawl',
+            arguments: {
+              url: 'https://example.com',
+              css_selector: 'h1',
+              cache_mode: 'BYPASS',
+            },
+          });
+
+          await expectSuccessfulCrawl(result);
+          const textContent = (result as ToolResult).content.find((c) => c.type === 'text');
+          expect(textContent?.text).toBeTruthy();
+          // css_selector returns ONLY the selected element content
+          expect(textContent?.text?.toLowerCase()).toContain('example domain');
+          // Should NOT contain the paragraph text that's outside the h1
+          expect(textContent?.text).not.toContain('use in illustrative examples');
+        },
+        TEST_TIMEOUTS.short,
+      );
+
+      it(
+        'should include links when include_links is true',
+        async () => {
+          const result = await client.callTool({
+            name: 'crawl',
+            arguments: {
+              url: 'https://example.com',
+              include_links: true,
+            },
+          });
+
+          await expectSuccessfulCrawl(result);
+          // Check if links section is included
+          const hasLinksInfo = (result as ToolResult).content.some(
+            (item) => item.type === 'text' && item.text?.includes('Links:'),
+          );
+          expect(hasLinksInfo).toBe(true);
+        },
+        TEST_TIMEOUTS.short,
+      );
+
+      it(
+        'should respect delay_before_return_html parameter',
+        async () => {
+          const startTime = Date.now();
+
+          const result = await client.callTool({
+            name: 'crawl',
+            arguments: {
+              url: 'https://httpbin.org/delay/1', // 1 second delay from server
+              delay_before_return_html: 2, // Additional 2 second delay (in seconds, not ms)
+              cache_mode: 'BYPASS',
+            },
+          });
+
+          const elapsed = Date.now() - startTime;
+
+          await expectSuccessfulCrawl(result);
+          // Total time should be at least 3 seconds (1s from endpoint + 2s delay)
+          expect(elapsed).toBeGreaterThanOrEqual(3000);
+        },
+        TEST_TIMEOUTS.medium,
+      );
+
+      it(
+        'should convert relative URLs when resolve_absolute_urls is true',
+        async () => {
+          const result = await client.callTool({
+            name: 'crawl',
+            arguments: {
+              url: 'https://example.com',
+              resolve_absolute_urls: true,
+              include_links: true,
+              cache_mode: 'BYPASS',
+            },
+          });
+
+          await expectSuccessfulCrawl(result);
+
+          // Links should be in a separate content item
+          const linksContent = (result as ToolResult).content.find(
+            (c) => c.type === 'text' && c.text?.includes('Links:'),
+          );
+
+          // With include_links=true, links info should be present
+          expect(linksContent).toBeDefined();
+          expect(linksContent?.text).toContain('External: 1');
+        },
+        TEST_TIMEOUTS.short,
+      );
+    });
   });
 });

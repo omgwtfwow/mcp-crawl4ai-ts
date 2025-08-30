@@ -112,28 +112,10 @@ interface ToolResult {
 
 type RequestHandler = (request: { method: string; params: unknown }) => Promise<ToolResult>;
 
-// Create a test interface for server methods
-interface TestServerMethods {
-  getMarkdown: (params: unknown) => Promise<ToolResult>;
-  captureScreenshot: (params: unknown) => Promise<ToolResult>;
-  generatePDF: (params: unknown) => Promise<ToolResult>;
-  executeJS: (params: unknown) => Promise<ToolResult>;
-  getHTML: (params: unknown) => Promise<ToolResult>;
-  batchCrawl: (params: unknown) => Promise<ToolResult>;
-  crawl: (params: unknown) => Promise<ToolResult>;
-  extractWithLLM: (params: unknown) => Promise<ToolResult>;
-  extractLinks: (params: unknown) => Promise<ToolResult>;
-  crawlRecursive: (params: unknown) => Promise<ToolResult>;
-  parseSitemap: (params: unknown) => Promise<ToolResult>;
-  smartCrawl: (params: unknown) => Promise<ToolResult>;
-  // Private properties for testing
-  service: any; // eslint-disable-line @typescript-eslint/no-explicit-any
-  sessions: Map<string, unknown>;
-  axiosClient: any; // eslint-disable-line @typescript-eslint/no-explicit-any
-}
+// Removed TestServerMethods interface - no longer needed since we use 'any' type
 
 describe('Crawl4AIServer Tool Handlers', () => {
-  let server: InstanceType<typeof Crawl4AIServer> & TestServerMethods;
+  let server: any; // eslint-disable-line @typescript-eslint/no-explicit-any
   let requestHandler: RequestHandler;
 
   beforeEach(async () => {
@@ -159,7 +141,7 @@ describe('Crawl4AIServer Tool Handlers', () => {
       process.env.CRAWL4AI_API_KEY || 'test-api-key',
       'test-server',
       '1.0.0',
-    ) as InstanceType<typeof Crawl4AIServer> & TestServerMethods;
+    );
 
     // Start the server to register handlers
     await server.start();
@@ -1861,11 +1843,13 @@ describe('Crawl4AIServer Tool Handlers', () => {
     describe('MCP Protocol Handler Tests', () => {
       it('should handle tools/list request', async () => {
         // Find the tools/list handler
-        const toolsListHandler = mockSetRequestHandler.mock.calls.find((call) => call[0].method === 'tools/list')?.[1];
+        const toolsListHandler = mockSetRequestHandler.mock.calls.find(
+          (call) => (call[0] as any).method === 'tools/list',
+        )?.[1];
 
         expect(toolsListHandler).toBeDefined();
 
-        const result = await toolsListHandler({ method: 'tools/list', params: {} });
+        const result = await (toolsListHandler as any)({ method: 'tools/list', params: {} }); // eslint-disable-line @typescript-eslint/no-explicit-any
         expect(result).toBeDefined();
         expect(result.tools).toBeDefined();
         expect(result.tools.length).toBe(13); // Should have 13 tools

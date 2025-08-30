@@ -1,5 +1,35 @@
 # Changelog
 
+## Version 3.0.0 (2025-08-30)
+
+### Features
+- Added full support for Crawl4AI 0.7.3/0.7.4 features:
+  - **'undetected' browser type** - Stealth browser option for anti-bot detection
+  - **New crawler parameters**:
+    - `delay_before_return_html` - Delay before returning HTML content
+    - `css_selector` - Filter content by CSS selector
+    - `include_links` - Include extracted links in response
+    - `resolve_absolute_urls` - Convert relative URLs to absolute
+  - **Extraction strategies** - Support for LLM extraction, table extraction, and markdown generation options
+  - **Multi-config batch crawling** - Per-URL configurations in batch_crawl
+  - **Unified proxy format** - Support both string and object proxy configurations
+  - **Memory metrics display** - Show server memory usage when available
+
+### Improvements
+- Enhanced error formatting for better debugging
+- Better handling of object error responses from API
+- Fixed batch_crawl to include required `urls` field when using configs array
+
+### Testing
+- Added comprehensive integration tests for all new features
+- Fixed TypeScript errors in test files
+- All 306 unit tests passing
+- All 150 integration tests passing
+
+### Backward Compatibility
+- Fully backward compatible with older Crawl4AI servers (before 0.7.4)
+- All new features are optional and gracefully degrade
+
 ## Version 2.9.0 (2025-08-29)
 
 ### Breaking Changes

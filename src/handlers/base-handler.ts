@@ -4,9 +4,12 @@ import { AxiosInstance } from 'axios';
 // Error handling types
 export interface ErrorWithResponse {
   response?: {
-    data?: {
-      detail?: string;
-    };
+    data?:
+      | {
+          detail?: string;
+        }
+      | string
+      | unknown;
   };
   message?: string;
 }
@@ -32,8 +35,20 @@ export abstract class BaseHandler {
 
   protected formatError(error: unknown, operation: string): Error {
     const errorWithResponse = error as ErrorWithResponse;
-    return new Error(
-      `Failed to ${operation}: ${errorWithResponse.response?.data?.detail || (error instanceof Error ? error.message : String(error))}`,
-    );
+    let errorMessage = '';
+
+    const data = errorWithResponse.response?.data;
+    if (typeof data === 'object' && data && 'detail' in data) {
+      errorMessage = (data as { detail: string }).detail;
+    } else if (data) {
+      // If data is an object, stringify it
+      errorMessage = typeof data === 'object' ? JSON.stringify(data) : String(data);
+    } else if (error instanceof Error) {
+      errorMessage = error.message;
+    } else {
+      errorMessage = String(error);
+    }
+
+    return new Error(`Failed to ${operation}: ${errorMessage}`);
   }
 }

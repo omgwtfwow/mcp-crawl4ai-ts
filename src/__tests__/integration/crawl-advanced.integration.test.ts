@@ -193,6 +193,74 @@ describe('crawl Advanced Features Integration Tests', () => {
     );
   });
 
+  describe('Extraction Strategies (0.7.3/0.7.4)', () => {
+    it(
+      'should accept extraction_strategy parameter',
+      async () => {
+        const result = await client.callTool({
+          name: 'crawl',
+          arguments: {
+            url: 'https://httpbin.org/html',
+            extraction_strategy: {
+              type: 'custom',
+              provider: 'openai',
+              api_key: 'test-key',
+              model: 'gpt-4',
+            },
+            cache_mode: 'BYPASS',
+          },
+        });
+
+        // The parameter should be accepted even if not fully processed
+        await expectSuccessfulCrawl(result);
+      },
+      TEST_TIMEOUTS.short,
+    );
+
+    it(
+      'should accept table_extraction_strategy parameter',
+      async () => {
+        const result = await client.callTool({
+          name: 'crawl',
+          arguments: {
+            url: 'https://httpbin.org/html',
+            table_extraction_strategy: {
+              enable_chunking: true,
+              thresholds: {
+                min_rows: 5,
+                max_columns: 20,
+              },
+            },
+            cache_mode: 'BYPASS',
+          },
+        });
+
+        await expectSuccessfulCrawl(result);
+      },
+      TEST_TIMEOUTS.short,
+    );
+
+    it(
+      'should accept markdown_generator_options parameter',
+      async () => {
+        const result = await client.callTool({
+          name: 'crawl',
+          arguments: {
+            url: 'https://httpbin.org/html',
+            markdown_generator_options: {
+              include_links: true,
+              preserve_formatting: true,
+            },
+            cache_mode: 'BYPASS',
+          },
+        });
+
+        await expectSuccessfulCrawl(result);
+      },
+      TEST_TIMEOUTS.short,
+    );
+  });
+
   describe('Virtual Scroll', () => {
     it(
       'should handle virtual scroll configuration',

@@ -1205,5 +1205,55 @@ describe('Crawl4AIService', () => {
         }),
       ).rejects.toThrow('Invalid JavaScript: Contains HTML entities');
     });
+
+    it('should include memory metrics in crawl response', async () => {
+      const mockResponse: CrawlEndpointResponse = {
+        success: true,
+        results: [
+          {
+            url: 'https://example.com',
+            html: '<html>Test</html>',
+            cleaned_html: '<html>Test</html>',
+            fit_html: '<html>Test</html>',
+            success: true,
+            status_code: 200,
+            response_headers: {},
+            session_id: null,
+            metadata: {},
+            links: { internal: [], external: [] },
+            media: { images: [], videos: [], audios: [] },
+            markdown: {
+              raw_markdown: 'Test content',
+              markdown_with_citations: '',
+              references_markdown: '',
+              fit_markdown: 'Test content',
+              fit_html: '',
+            },
+            tables: [],
+            extracted_content: null,
+            screenshot: null,
+            pdf: null,
+            mhtml: null,
+            js_execution_result: null,
+            downloaded_files: null,
+            network_requests: null,
+            console_messages: null,
+            ssl_certificate: null,
+            dispatch_result: null,
+          },
+        ],
+        server_processing_time_s: 2.5,
+        server_memory_delta_mb: 15.3,
+        server_peak_memory_mb: 512.7,
+      };
+
+      nock(baseURL).post('/crawl').matchHeader('x-api-key', apiKey).reply(200, mockResponse);
+
+      const result = await service.crawl({ url: 'https://example.com' });
+
+      expect(result.server_processing_time_s).toBe(2.5);
+      expect(result.server_memory_delta_mb).toBe(15.3);
+      expect(result.server_peak_memory_mb).toBe(512.7);
+    });
   });
 });

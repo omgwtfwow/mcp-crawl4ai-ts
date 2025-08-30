@@ -18,7 +18,7 @@ describe('Session Management Integration Tests', () => {
 
   beforeAll(async () => {
     client = await createTestClient();
-  }, TEST_TIMEOUTS.setup);
+  }, TEST_TIMEOUTS.medium);
 
   afterEach(async () => {
     // Clean up any sessions created during tests

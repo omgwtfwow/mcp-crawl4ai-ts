@@ -9,6 +9,7 @@ import { ContentHandlers } from './handlers/content-handlers.js';
 import { SessionHandlers } from './handlers/session-handlers.js';
 import { UtilityHandlers } from './handlers/utility-handlers.js';
 import { CrawlHandlers } from './handlers/crawl-handlers.js';
+import { BatchCrawlOptions } from './types.js';
 // Define the tool call result type
 type ToolCallResult = {
   content: Array<{
@@ -862,7 +863,7 @@ export class Crawl4AIServer {
 
           case 'batch_crawl':
             return await this.validateAndExecute('batch_crawl', args, BatchCrawlSchema, async (validatedArgs) =>
-              this.crawlHandlers.batchCrawl(validatedArgs),
+              this.crawlHandlers.batchCrawl(validatedArgs as BatchCrawlOptions),
             );
 
           case 'smart_crawl':

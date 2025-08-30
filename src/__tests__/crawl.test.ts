@@ -93,6 +93,76 @@ describe('crawl parameter mapping', () => {
         crawler_config: {},
       });
     });
+
+    it('should support undetected browser type', async () => {
+      const mockResponse = createMockAxiosResponse({ results: [{ markdown: 'test' }] });
+      mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
+
+      await service.crawl({
+        url: 'https://example.com',
+        browser_config: {
+          browser_type: 'undetected',
+          headless: true,
+        },
+      });
+
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/crawl', {
+        urls: ['https://example.com'],
+        browser_config: {
+          browser_type: 'undetected',
+          headless: true,
+        },
+        crawler_config: {},
+      });
+    });
+
+    it('should support unified proxy format (string)', async () => {
+      const mockResponse = createMockAxiosResponse({ results: [{ markdown: 'test' }] });
+      mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
+
+      await service.crawl({
+        url: 'https://example.com',
+        browser_config: {
+          proxy: 'http://user:pass@proxy.example.com:8080',
+        },
+      });
+
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/crawl', {
+        urls: ['https://example.com'],
+        browser_config: {
+          proxy: 'http://user:pass@proxy.example.com:8080',
+        },
+        crawler_config: {},
+      });
+    });
+
+    it('should support unified proxy format (object)', async () => {
+      const mockResponse = createMockAxiosResponse({ results: [{ markdown: 'test' }] });
+      mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
+
+      await service.crawl({
+        url: 'https://example.com',
+        browser_config: {
+          proxy: {
+            server: 'http://proxy.example.com:8080',
+            username: 'user',
+            password: 'pass',
+          },
+        },
+      });
+
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/crawl', {
+        urls: ['https://example.com'],
+        browser_config: {
+          proxy: {
+            server: 'http://proxy.example.com:8080',
+            username: 'user',
+            password: 'pass',
+          },
+        },
+        crawler_config: {},
+      });
+    });
   });
 
   describe('Crawler configuration mapping', () => {
@@ -323,6 +393,32 @@ describe('crawl parameter mapping', () => {
       });
     });
 
+    it('should map new crawler parameters', async () => {
+      const mockResponse = createMockAxiosResponse({ results: [{ markdown: 'test' }] });
+      mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
+
+      await service.crawl({
+        url: 'https://example.com',
+        crawler_config: {
+          delay_before_return_html: 2000,
+          css_selector: '.main-content',
+          include_links: true,
+          resolve_absolute_urls: true,
+        },
+      });
+
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/crawl', {
+        urls: ['https://example.com'],
+        browser_config: undefined,
+        crawler_config: {
+          delay_before_return_html: 2000,
+          css_selector: '.main-content',
+          include_links: true,
+          resolve_absolute_urls: true,
+        },
+      });
+    });
+
     it('should map performance and debug parameters', async () => {
       const mockResponse = createMockAxiosResponse({ results: [{ markdown: 'test' }] });
       mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
@@ -343,6 +439,87 @@ describe('crawl parameter mapping', () => {
           timeout: 90000,
           verbose: true,
           log_console: true,
+        },
+      });
+    });
+  });
+
+  describe('Extraction strategies', () => {
+    it('should support extraction_strategy passthrough', async () => {
+      const mockResponse = createMockAxiosResponse({ results: [{ markdown: 'test' }] });
+      mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
+
+      await service.crawl({
+        url: 'https://example.com',
+        extraction_strategy: {
+          provider: 'openai',
+          api_key: 'sk-test',
+          model: 'gpt-4',
+          temperature: 0.7,
+        },
+      });
+
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/crawl', {
+        urls: ['https://example.com'],
+        browser_config: undefined,
+        crawler_config: {},
+        extraction_strategy: {
+          provider: 'openai',
+          api_key: 'sk-test',
+          model: 'gpt-4',
+          temperature: 0.7,
+        },
+      });
+    });
+
+    it('should support table_extraction_strategy passthrough', async () => {
+      const mockResponse = createMockAxiosResponse({ results: [{ markdown: 'test' }] });
+      mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
+
+      await service.crawl({
+        url: 'https://example.com',
+        table_extraction_strategy: {
+          enable_chunking: true,
+          thresholds: {
+            min_rows: 5,
+            max_columns: 20,
+          },
+        },
+      });
+
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/crawl', {
+        urls: ['https://example.com'],
+        browser_config: undefined,
+        crawler_config: {},
+        table_extraction_strategy: {
+          enable_chunking: true,
+          thresholds: {
+            min_rows: 5,
+            max_columns: 20,
+          },
+        },
+      });
+    });
+
+    it('should support markdown_generator_options passthrough', async () => {
+      const mockResponse = createMockAxiosResponse({ results: [{ markdown: 'test' }] });
+      mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
+
+      await service.crawl({
+        url: 'https://example.com',
+        markdown_generator_options: {
+          include_links: true,
+          preserve_formatting: true,
+        },
+      });
+
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/crawl', {
+        urls: ['https://example.com'],
+        browser_config: undefined,
+        crawler_config: {},
+        markdown_generator_options: {
+          include_links: true,
+          preserve_formatting: true,
         },
       });
     });

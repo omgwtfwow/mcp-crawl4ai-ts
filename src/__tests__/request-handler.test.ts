@@ -66,25 +66,11 @@ jest.unstable_mockModule('@modelcontextprotocol/sdk/server/stdio.js', () => ({
 // Now import the server after mocks are set up
 const { Crawl4AIServer } = await import('../server.js');
 
-type InstanceType<T> = T extends new (...args: unknown[]) => infer R ? R : never;
-
-interface RequestHandlerParams {
-  method: string;
-  params: {
-    name: string;
-    arguments: Record<string, unknown>;
-  };
-}
-
-interface RequestHandlerResult {
-  content: Array<{
-    text: string;
-  }>;
-}
+// Removed unused type definitions - using 'any' for test mocks
 
 describe('MCP Request Handler Direct Testing', () => {
-  let server: InstanceType<typeof Crawl4AIServer>;
-  let requestHandler: (params: RequestHandlerParams) => Promise<RequestHandlerResult>;
+  let server: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  let requestHandler: any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -134,7 +120,7 @@ describe('MCP Request Handler Direct Testing', () => {
     // Find the handler for CallToolRequestSchema (tools/call)
     for (const call of handlerCalls) {
       const [schema, handler] = call;
-      if (schema && schema.method === 'tools/call') {
+      if (schema && (schema as any).method === 'tools/call') {
         requestHandler = handler;
         break;
       }

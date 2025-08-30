@@ -91,15 +91,34 @@ export interface LLMEndpointResponse {
 export interface BatchCrawlOptions extends CrawlOptions {
   urls: string[];
   max_concurrent?: number;
+  // New: Support per-URL configs array (0.7.3/0.7.4)
+  configs?: Array<{
+    url: string;
+    browser_config?: BrowserConfig;
+    crawler_config?: CrawlerConfig;
+    extraction_strategy?: ExtractionStrategy;
+    table_extraction_strategy?: TableExtractionStrategy;
+    markdown_generator_options?: MarkdownGeneratorOptions;
+    matcher?: string | ((url: string) => boolean);
+  }>;
 }
 
 // Browser configuration options
 export interface BrowserConfig {
-  browser_type?: 'chromium' | 'firefox' | 'webkit';
+  browser_type?: 'chromium' | 'firefox' | 'webkit' | 'undetected';
   headless?: boolean;
   viewport_width?: number;
   viewport_height?: number;
   user_agent?: string;
+  // Unified proxy config - accepts string or object format (new in 0.7.3/0.7.4)
+  proxy?:
+    | string
+    | {
+        server: string;
+        username?: string;
+        password?: string;
+      };
+  // Legacy field kept for backward compatibility
   proxy_config?: {
     server: string;
     username?: string;
@@ -186,6 +205,28 @@ export interface CrawlerConfig {
 
   // Debug
   log_console?: boolean;
+
+  // New parameters from 0.7.3/0.7.4
+  delay_before_return_html?: number; // Delay in ms before capturing final HTML
+  css_selector?: string; // CSS selector to extract specific elements
+  include_links?: boolean; // Whether to include links in the response
+  resolve_absolute_urls?: boolean; // Convert relative URLs to absolute ones
+}
+
+// Extraction strategy passthrough objects (new in 0.7.3/0.7.4)
+export interface ExtractionStrategy {
+  [key: string]: unknown;
+}
+
+export interface TableExtractionStrategy {
+  enable_chunking?: boolean;
+  thresholds?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+export interface MarkdownGeneratorOptions {
+  include_links?: boolean;
+  [key: string]: unknown;
 }
 
 // Advanced crawl configuration combining browser and crawler configs
@@ -195,6 +236,9 @@ export interface AdvancedCrawlConfig {
   browser_config?: BrowserConfig;
   crawler_config?: CrawlerConfig;
   priority?: number;
+  extraction_strategy?: ExtractionStrategy;
+  table_extraction_strategy?: TableExtractionStrategy;
+  markdown_generator_options?: MarkdownGeneratorOptions;
 }
 
 // Session management types (used internally by MCP server)

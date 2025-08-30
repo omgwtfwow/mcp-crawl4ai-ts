@@ -11,12 +11,12 @@ const mockService = {
 } as unknown as Crawl4AIService;
 
 // Mock axios client
-const mockPost = jest.fn();
-const mockHead = jest.fn();
+const mockPost = jest.fn() as jest.Mock;
+const mockHead = jest.fn() as jest.Mock;
 const mockAxiosClient = {
   post: mockPost,
   head: mockHead,
-} as unknown;
+} as any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 // Mock axios for parseSitemap
 const mockAxiosGet = jest.fn();
@@ -32,7 +32,7 @@ const { CrawlHandlers: CrawlHandlersClass } = await import('../../handlers/crawl
 
 describe('CrawlHandlers', () => {
   let handler: CrawlHandlersType;
-  let sessions: Map<string, unknown>;
+  let sessions: Map<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -43,14 +43,14 @@ describe('CrawlHandlers', () => {
   describe('batchCrawl', () => {
     it('should handle API errors gracefully', async () => {
       // Mock API error response
-      mockPost.mockRejectedValue(
+      (mockPost as jest.Mock).mockRejectedValue(
         new AxiosError('Request failed with status code 500', 'ERR_BAD_RESPONSE', undefined, undefined, {
           status: 500,
           statusText: 'Internal Server Error',
           data: 'Internal Server Error',
           headers: {},
-          config: {} as unknown,
-        } as unknown),
+          config: {} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+        } as any), // eslint-disable-line @typescript-eslint/no-explicit-any
       );
 
       await expect(
@@ -58,21 +58,73 @@ describe('CrawlHandlers', () => {
           urls: ['not-a-valid-url', 'https://invalid-domain.com'],
           max_concurrent: 2,
         }),
-      ).rejects.toThrow('Failed to batch crawl: Request failed with status code 500');
+      ).rejects.toThrow('Failed to batch crawl: Internal Server Error');
+    });
+
+    it('should support per-URL configs array', async () => {
+      (mockPost as jest.Mock).mockResolvedValue({
+        data: {
+          results: [
+            { url: 'https://example1.com', success: true, markdown: { raw_markdown: 'Test 1' } },
+            { url: 'https://example2.com', success: true, markdown: { raw_markdown: 'Test 2' } },
+          ],
+        },
+      });
+
+      const result = await handler.batchCrawl({
+        urls: ['https://example1.com', 'https://example2.com'],
+        configs: [
+          {
+            url: 'https://example1.com',
+            browser_config: { browser_type: 'chromium' },
+            crawler_config: { screenshot: true },
+          },
+          {
+            url: 'https://example2.com',
+            browser_config: { browser_type: 'undetected' },
+            crawler_config: { pdf: true },
+            extraction_strategy: { provider: 'openai' },
+          },
+        ],
+        max_concurrent: 2,
+      });
+
+      // Verify the configs array was passed through
+      expect(mockPost).toHaveBeenCalledWith(
+        '/crawl',
+        expect.objectContaining({
+          configs: expect.arrayContaining([
+            expect.objectContaining({
+              url: 'https://example1.com',
+              browser_config: { browser_type: 'chromium' },
+              crawler_config: { screenshot: true },
+            }),
+            expect.objectContaining({
+              url: 'https://example2.com',
+              browser_config: { browser_type: 'undetected' },
+              crawler_config: { pdf: true },
+              extraction_strategy: { provider: 'openai' },
+            }),
+          ]),
+          max_concurrent: 2,
+        }),
+      );
+
+      expect(result.content[0].text).toContain('Batch crawl completed');
     });
   });
 
   describe('smartCrawl', () => {
     it('should detect XML content type from HEAD request', async () => {
       // Mock HEAD response with XML content type
-      mockHead.mockResolvedValue({
+      (mockHead as jest.Mock).mockResolvedValue({
         headers: {
           'content-type': 'application/xml',
         },
       });
 
       // Mock crawl response
-      mockPost.mockResolvedValue({
+      (mockPost as jest.Mock).mockResolvedValue({
         data: {
           results: [
             {
@@ -95,10 +147,10 @@ describe('CrawlHandlers', () => {
 
     it('should handle HEAD request failure gracefully', async () => {
       // Mock HEAD request failure
-      mockHead.mockRejectedValue(new Error('HEAD request failed'));
+      (mockHead as jest.Mock).mockRejectedValue(new Error('HEAD request failed'));
 
       // Mock successful crawl
-      mockPost.mockResolvedValue({
+      (mockPost as jest.Mock).mockResolvedValue({
         data: {
           results: [
             {
@@ -120,14 +172,14 @@ describe('CrawlHandlers', () => {
 
     it('should follow links from sitemap when follow_links is true', async () => {
       // Mock successful HEAD request
-      mockHead.mockResolvedValue({
+      (mockHead as jest.Mock).mockResolvedValue({
         headers: {
           'content-type': 'application/xml',
         },
       });
 
       // Mock initial crawl with sitemap content
-      mockPost.mockResolvedValueOnce({
+      (mockPost as jest.Mock).mockResolvedValueOnce({
         data: {
           results: [
             {
@@ -147,7 +199,7 @@ describe('CrawlHandlers', () => {
       });
 
       // Mock follow-up crawl
-      mockPost.mockResolvedValueOnce({
+      (mockPost as jest.Mock).mockResolvedValueOnce({
         data: {
           results: [{ success: true }, { success: true }],
         },
@@ -166,9 +218,9 @@ describe('CrawlHandlers', () => {
     });
 
     it('should handle smartCrawl API errors', async () => {
-      mockHead.mockResolvedValue({ headers: {} });
+      (mockHead as jest.Mock).mockResolvedValue({ headers: {} });
       // Mock crawl to get empty results first, then error on follow-up
-      mockPost.mockResolvedValueOnce({
+      (mockPost as jest.Mock).mockResolvedValueOnce({
         data: {
           results: [],
         },
@@ -187,7 +239,7 @@ describe('CrawlHandlers', () => {
   describe('crawlRecursive', () => {
     it('should handle max_depth limit correctly', async () => {
       // Mock successful crawl with links
-      mockPost.mockResolvedValueOnce({
+      (mockPost as jest.Mock).mockResolvedValueOnce({
         data: {
           results: [
             {
@@ -205,7 +257,7 @@ describe('CrawlHandlers', () => {
       });
 
       // Mock second crawl for page1
-      mockPost.mockResolvedValueOnce({
+      (mockPost as jest.Mock).mockResolvedValueOnce({
         data: {
           results: [
             {
@@ -223,7 +275,7 @@ describe('CrawlHandlers', () => {
       });
 
       // Mock third crawl for page2
-      mockPost.mockResolvedValueOnce({
+      (mockPost as jest.Mock).mockResolvedValueOnce({
         data: {
           results: [
             {
@@ -252,7 +304,7 @@ describe('CrawlHandlers', () => {
 
     it('should handle invalid URLs in discovered links', async () => {
       // Mock crawl with invalid link
-      mockPost.mockResolvedValue({
+      (mockPost as jest.Mock).mockResolvedValue({
         data: {
           results: [
             {
@@ -283,7 +335,7 @@ describe('CrawlHandlers', () => {
 
     it('should handle crawl failures during recursion', async () => {
       // First crawl succeeds
-      mockPost.mockResolvedValueOnce({
+      (mockPost as jest.Mock).mockResolvedValueOnce({
         data: {
           results: [
             {
@@ -301,7 +353,7 @@ describe('CrawlHandlers', () => {
       });
 
       // Second crawl fails
-      mockPost.mockRejectedValueOnce(new Error('Crawl failed'));
+      (mockPost as jest.Mock).mockRejectedValueOnce(new Error('Crawl failed'));
 
       const result = await handler.crawlRecursive({
         url: 'https://example.com',
@@ -313,7 +365,7 @@ describe('CrawlHandlers', () => {
     });
 
     it('should handle crawlRecursive API errors', async () => {
-      mockPost.mockRejectedValue(new Error('API Error'));
+      (mockPost as jest.Mock).mockRejectedValue(new Error('API Error'));
 
       const result = await handler.crawlRecursive({
         url: 'https://example.com',
@@ -342,7 +394,7 @@ describe('CrawlHandlers', () => {
 
   describe('crawl', () => {
     it('should handle word_count_threshold parameter', async () => {
-      mockCrawl.mockResolvedValue({
+      (mockCrawl as jest.Mock).mockResolvedValue({
         results: [
           {
             success: true,
@@ -377,7 +429,7 @@ describe('CrawlHandlers', () => {
       };
       sessions.set(sessionId, session);
 
-      mockCrawl.mockResolvedValue({
+      (mockCrawl as jest.Mock).mockResolvedValue({
         results: [
           {
             success: true,
@@ -398,7 +450,7 @@ describe('CrawlHandlers', () => {
     });
 
     it('should handle image description parameters', async () => {
-      mockCrawl.mockResolvedValue({
+      (mockCrawl as jest.Mock).mockResolvedValue({
         results: [
           {
             success: true,
@@ -426,7 +478,7 @@ describe('CrawlHandlers', () => {
     });
 
     it('should handle exclude_social_media_links parameter', async () => {
-      mockCrawl.mockResolvedValue({
+      (mockCrawl as jest.Mock).mockResolvedValue({
         results: [
           {
             success: true,
@@ -452,7 +504,7 @@ describe('CrawlHandlers', () => {
     });
 
     it('should use extracted_content when available as string', async () => {
-      mockCrawl.mockResolvedValue({
+      (mockCrawl as jest.Mock).mockResolvedValue({
         results: [
           {
             success: true,
@@ -470,7 +522,7 @@ describe('CrawlHandlers', () => {
 
     it('should handle extracted_content as object', async () => {
       const extractedObj = { title: 'Test', body: 'Content' };
-      mockCrawl.mockResolvedValue({
+      (mockCrawl as jest.Mock).mockResolvedValue({
         results: [
           {
             success: true,
@@ -487,7 +539,7 @@ describe('CrawlHandlers', () => {
     });
 
     it('should fallback to html when markdown is not available', async () => {
-      mockCrawl.mockResolvedValue({
+      (mockCrawl as jest.Mock).mockResolvedValue({
         results: [
           {
             success: true,
@@ -504,7 +556,7 @@ describe('CrawlHandlers', () => {
     });
 
     it('should fallback to fit_html when neither markdown nor html is available', async () => {
-      mockCrawl.mockResolvedValue({
+      (mockCrawl as jest.Mock).mockResolvedValue({
         results: [
           {
             success: true,

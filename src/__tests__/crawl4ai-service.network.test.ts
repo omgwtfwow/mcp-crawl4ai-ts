@@ -2,22 +2,22 @@ import { jest } from '@jest/globals';
 
 // Mock axios before importing the service
 const mockAxiosInstance = {
-  get: jest.fn(),
-  post: jest.fn(),
+  get: jest.fn() as jest.Mock,
+  post: jest.fn() as jest.Mock,
   interceptors: {
-    request: { use: jest.fn() },
-    response: { use: jest.fn() },
+    request: { use: jest.fn() as jest.Mock },
+    response: { use: jest.fn() as jest.Mock },
   },
 };
 
 jest.unstable_mockModule('axios', () => ({
   default: {
     create: jest.fn(() => mockAxiosInstance),
-    isAxiosError: jest.fn((error) => error.isAxiosError === true),
+    isAxiosError: jest.fn((error: any) => error.isAxiosError === true), // eslint-disable-line @typescript-eslint/no-explicit-any
     get: jest.fn(),
     head: jest.fn(),
   },
-  isAxiosError: jest.fn((error) => error.isAxiosError === true),
+  isAxiosError: jest.fn((error: any) => error.isAxiosError === true), // eslint-disable-line @typescript-eslint/no-explicit-any
 }));
 
 // Import after mocking
@@ -45,7 +45,7 @@ describe('Crawl4AI Service - Network Failures', () => {
       const timeoutError = new Error('timeout of 30000ms exceeded') as ErrorWithCode;
       timeoutError.code = 'ECONNABORTED';
       timeoutError.isAxiosError = true;
-      mockAxiosInstance.post.mockRejectedValue(timeoutError);
+      (mockAxiosInstance.post as jest.Mock).mockRejectedValue(timeoutError);
 
       await expect(service.getMarkdown({ url: 'https://example.com' })).rejects.toThrow('Request timed out');
     });
@@ -54,7 +54,7 @@ describe('Crawl4AI Service - Network Failures', () => {
       const timeoutError = new Error('timeout of 30000ms exceeded') as ErrorWithCode;
       timeoutError.code = 'ETIMEDOUT';
       timeoutError.isAxiosError = true;
-      mockAxiosInstance.post.mockRejectedValue(timeoutError);
+      (mockAxiosInstance.post as jest.Mock).mockRejectedValue(timeoutError);
 
       await expect(service.getHTML({ url: 'https://example.com' })).rejects.toThrow('Request timeout');
     });
@@ -69,7 +69,7 @@ describe('Crawl4AI Service - Network Failures', () => {
         },
         isAxiosError: true,
       };
-      mockAxiosInstance.post.mockRejectedValue(error);
+      (mockAxiosInstance.post as jest.Mock).mockRejectedValue(error);
 
       await expect(service.crawl({ urls: ['https://example.com'] })).rejects.toThrow(
         'Request failed with status 401: Invalid API key',
@@ -84,7 +84,7 @@ describe('Crawl4AI Service - Network Failures', () => {
         },
         isAxiosError: true,
       };
-      mockAxiosInstance.post.mockRejectedValue(error);
+      (mockAxiosInstance.post as jest.Mock).mockRejectedValue(error);
 
       await expect(service.captureScreenshot({ url: 'https://example.com' })).rejects.toThrow(
         'Request failed with status 403: Access denied',
@@ -99,7 +99,7 @@ describe('Crawl4AI Service - Network Failures', () => {
         },
         isAxiosError: true,
       };
-      mockAxiosInstance.post.mockRejectedValue(error);
+      (mockAxiosInstance.post as jest.Mock).mockRejectedValue(error);
 
       await expect(service.generatePDF({ url: 'https://example.com' })).rejects.toThrow(
         'Request failed with status 404: Endpoint not found',
@@ -117,7 +117,7 @@ describe('Crawl4AI Service - Network Failures', () => {
         },
         isAxiosError: true,
       };
-      mockAxiosInstance.post.mockRejectedValue(error);
+      (mockAxiosInstance.post as jest.Mock).mockRejectedValue(error);
 
       await expect(service.executeJS({ url: 'https://example.com', scripts: ['return 1;'] })).rejects.toThrow(
         'Request failed with status 429: Rate limit exceeded',
@@ -132,7 +132,7 @@ describe('Crawl4AI Service - Network Failures', () => {
         },
         isAxiosError: true,
       };
-      mockAxiosInstance.post.mockRejectedValue(error);
+      (mockAxiosInstance.post as jest.Mock).mockRejectedValue(error);
 
       await expect(service.crawl({ urls: ['https://example.com'] })).rejects.toThrow(
         'Request failed with status 500: Internal server error',
@@ -148,7 +148,7 @@ describe('Crawl4AI Service - Network Failures', () => {
         isAxiosError: true,
         message: 'Request failed with status code 502',
       };
-      mockAxiosInstance.post.mockRejectedValue(error);
+      (mockAxiosInstance.post as jest.Mock).mockRejectedValue(error);
 
       await expect(service.getMarkdown({ url: 'https://example.com' })).rejects.toThrow(
         'Request failed with status 502: Request failed with status code 502',
@@ -163,7 +163,7 @@ describe('Crawl4AI Service - Network Failures', () => {
         },
         isAxiosError: true,
       };
-      mockAxiosInstance.get.mockRejectedValue(error);
+      (mockAxiosInstance.get as jest.Mock).mockRejectedValue(error);
 
       await expect(service.extractWithLLM({ url: 'https://example.com', query: 'test' })).rejects.toThrow(
         'Request failed with status 503: Service temporarily unavailable',
@@ -178,7 +178,7 @@ describe('Crawl4AI Service - Network Failures', () => {
         },
         isAxiosError: true,
       };
-      mockAxiosInstance.post.mockRejectedValue(error);
+      (mockAxiosInstance.post as jest.Mock).mockRejectedValue(error);
 
       await expect(service.getHTML({ url: 'https://example.com' })).rejects.toThrow(
         'Request failed with status 504: Gateway timeout',
@@ -191,7 +191,7 @@ describe('Crawl4AI Service - Network Failures', () => {
       const error = new Error('getaddrinfo ENOTFOUND invalid.domain') as ErrorWithCode;
       error.code = 'ENOTFOUND';
       error.isAxiosError = true;
-      mockAxiosInstance.post.mockRejectedValue(error);
+      (mockAxiosInstance.post as jest.Mock).mockRejectedValue(error);
 
       await expect(service.getMarkdown({ url: 'https://invalid.domain' })).rejects.toThrow(
         'DNS resolution failed: getaddrinfo ENOTFOUND invalid.domain',
@@ -202,7 +202,7 @@ describe('Crawl4AI Service - Network Failures', () => {
       const error = new Error('connect ECONNREFUSED 127.0.0.1:11235') as ErrorWithCode;
       error.code = 'ECONNREFUSED';
       error.isAxiosError = true;
-      mockAxiosInstance.post.mockRejectedValue(error);
+      (mockAxiosInstance.post as jest.Mock).mockRejectedValue(error);
 
       await expect(service.crawl({ urls: ['https://example.com'] })).rejects.toThrow(
         'Connection refused: connect ECONNREFUSED 127.0.0.1:11235',
@@ -213,7 +213,7 @@ describe('Crawl4AI Service - Network Failures', () => {
       const error = new Error('socket hang up') as ErrorWithCode;
       error.code = 'ECONNRESET';
       error.isAxiosError = true;
-      mockAxiosInstance.post.mockRejectedValue(error);
+      (mockAxiosInstance.post as jest.Mock).mockRejectedValue(error);
 
       await expect(service.captureScreenshot({ url: 'https://example.com' })).rejects.toThrow(
         'Connection reset: socket hang up',
@@ -224,7 +224,7 @@ describe('Crawl4AI Service - Network Failures', () => {
       const error = new Error('connect ENETUNREACH') as ErrorWithCode;
       error.code = 'ENETUNREACH';
       error.isAxiosError = true;
-      mockAxiosInstance.post.mockRejectedValue(error);
+      (mockAxiosInstance.post as jest.Mock).mockRejectedValue(error);
 
       await expect(service.executeJS({ url: 'https://example.com', scripts: ['return 1;'] })).rejects.toThrow(
         'Network unreachable: connect ENETUNREACH',
@@ -236,7 +236,7 @@ describe('Crawl4AI Service - Network Failures', () => {
     it('should handle invalid JSON response', async () => {
       // This test is not applicable anymore since we handle errors at axios level
       // The service will return whatever axios returns
-      mockAxiosInstance.post.mockResolvedValue({
+      (mockAxiosInstance.post as jest.Mock).mockResolvedValue({
         data: '<html>Not JSON</html>',
         headers: { 'content-type': 'text/html' },
       });
@@ -246,7 +246,7 @@ describe('Crawl4AI Service - Network Failures', () => {
     });
 
     it('should handle empty response', async () => {
-      mockAxiosInstance.post.mockResolvedValue({
+      (mockAxiosInstance.post as jest.Mock).mockResolvedValue({
         data: null,
       });
 
@@ -256,7 +256,7 @@ describe('Crawl4AI Service - Network Failures', () => {
     });
 
     it('should handle malformed response structure', async () => {
-      mockAxiosInstance.post.mockResolvedValue({
+      (mockAxiosInstance.post as jest.Mock).mockResolvedValue({
         data: { unexpected: 'structure' },
       });
 
@@ -280,7 +280,7 @@ describe('Crawl4AI Service - Network Failures', () => {
       error.response = { status: 413 };
       error.isAxiosError = true;
       error.message = 'Request Entity Too Large';
-      mockAxiosInstance.post.mockRejectedValue(error);
+      (mockAxiosInstance.post as jest.Mock).mockRejectedValue(error);
 
       const hugeScript = 'x'.repeat(10 * 1024 * 1024); // 10MB
       await expect(service.executeJS({ url: 'https://example.com', scripts: [hugeScript] })).rejects.toThrow(
@@ -291,7 +291,7 @@ describe('Crawl4AI Service - Network Failures', () => {
 
   describe('Partial Response Handling', () => {
     it('should handle successful response with partial data', async () => {
-      mockAxiosInstance.post.mockResolvedValue({
+      (mockAxiosInstance.post as jest.Mock).mockResolvedValue({
         data: {
           results: [
             { success: true, url: 'https://example.com', markdown: 'Content' },
@@ -307,7 +307,7 @@ describe('Crawl4AI Service - Network Failures', () => {
     });
 
     it('should handle response with missing optional fields', async () => {
-      mockAxiosInstance.post.mockResolvedValue({
+      (mockAxiosInstance.post as jest.Mock).mockResolvedValue({
         data: {
           success: true,
           url: 'https://example.com',

@@ -175,5 +175,42 @@ describe('batch_crawl Integration Tests', () => {
       },
       TEST_TIMEOUTS.short,
     );
+
+    it(
+      'should handle per-URL configs array',
+      async () => {
+        const result = await client.callTool({
+          name: 'batch_crawl',
+          arguments: {
+            urls: ['https://httpbingo.org/html', 'https://httpbingo.org/json'],
+            configs: [
+              {
+                url: 'https://httpbingo.org/html',
+                browser_config: { browser_type: 'chromium' },
+                crawler_config: { word_count_threshold: 10 },
+              },
+              {
+                url: 'https://httpbingo.org/json',
+                browser_config: { browser_type: 'firefox' },
+                crawler_config: { word_count_threshold: 20 },
+              },
+            ],
+            max_concurrent: 2,
+          },
+        });
+
+        const content = (result as ToolResult).content;
+        expect(content).toHaveLength(1);
+        expect(content[0].type).toBe('text');
+
+        const text = content[0].text || '';
+        expect(text).toContain('Batch crawl completed');
+        expect(text).toContain('Processed 2 URLs');
+        // Both should succeed regardless of different configs
+        expect(text).toContain('https://httpbingo.org/html: Success');
+        expect(text).toContain('https://httpbingo.org/json: Success');
+      },
+      TEST_TIMEOUTS.medium,
+    );
   });
 });

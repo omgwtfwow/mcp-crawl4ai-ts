@@ -91,6 +91,20 @@ export const BatchCrawlSchema = createStatelessSchema(
     max_concurrent: z.number().optional(),
     remove_images: z.boolean().optional(),
     bypass_cache: z.boolean().optional(),
+    // New: Support per-URL configs array (0.7.3/0.7.4)
+    configs: z
+      .array(
+        z.object({
+          url: z.string().url(),
+          browser_config: z.record(z.unknown()).optional(),
+          crawler_config: z.record(z.unknown()).optional(),
+          extraction_strategy: z.record(z.unknown()).optional(),
+          table_extraction_strategy: z.record(z.unknown()).optional(),
+          markdown_generator_options: z.record(z.unknown()).optional(),
+          matcher: z.union([z.string(), z.function()]).optional(),
+        }),
+      )
+      .optional(),
   }),
   'batch_crawl',
 );
@@ -237,6 +251,12 @@ export const CrawlSchema = z
 
     // Debug
     log_console: z.boolean().optional(),
+
+    // New parameters from 0.7.3/0.7.4
+    delay_before_return_html: z.number().optional(),
+    css_selector: z.string().optional(),
+    include_links: z.boolean().optional(),
+    resolve_absolute_urls: z.boolean().optional(),
   })
   .refine(
     (data) => {
