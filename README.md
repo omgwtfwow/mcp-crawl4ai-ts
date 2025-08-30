@@ -380,8 +380,13 @@ export LLM_PROVIDER=openai/gpt-4o-mini
 export LLM_API_TOKEN=your-llm-api-key
 export LLM_BASE_URL=https://api.openai.com/v1  # If using custom endpoint
 
-# Run integration tests
+# Run integration tests (ALWAYS use the npm script; don't call `jest` directly)
 npm run test:integration
+
+# Run a single integration test file
+npm run test:integration -- src/__tests__/integration/extract-links.integration.test.ts
+
+> IMPORTANT: Do NOT run `npx jest` directly for integration tests. The npm script injects `NODE_OPTIONS=--experimental-vm-modules` which is required for ESM + ts-jest. Running Jest directly will produce `SyntaxError: Cannot use import statement outside a module` and hang.
 ```
 
 Integration tests cover:
@@ -394,6 +399,29 @@ Integration tests cover:
 - Content filtering
 - Bot detection avoidance
 - Error handling
+
+### Integration Test Checklist
+1. Docker container healthy:
+  ```bash
+  docker ps --filter name=crawl4ai --format '{{.Names}} {{.Status}}'
+  curl -sf http://localhost:11235/health || echo "Health check failed"
+  ```
+2. Env vars loaded (either exported or in `.env`): `CRAWL4AI_BASE_URL` (required), optional: `CRAWL4AI_API_KEY`, `LLM_PROVIDER`, `LLM_API_TOKEN`, `LLM_BASE_URL`.
+3. Use `npm run test:integration` (never raw `jest`).
+4. To target one file add it after `--` (see example above).
+5. Expect total runtime ~2–3 minutes; longer or immediate hang usually means missing `NODE_OPTIONS` or wrong Jest version.
+
+### Troubleshooting
+| Symptom | Likely Cause | Fix |
+|---------|--------------|-----|
+| `SyntaxError: Cannot use import statement outside a module` | Ran `jest` directly without script flags | Re-run with `npm run test:integration` |
+| Hangs on first test (RUNS ...) | Missing experimental VM modules flag | Use npm script / ensure `NODE_OPTIONS=--experimental-vm-modules` |
+| Network timeouts | Crawl4AI container not healthy / DNS blocked | Restart container: `docker restart <name>` |
+| LLM tests skipped | Missing `LLM_PROVIDER` or `LLM_API_TOKEN` | Export required LLM vars |
+| New Jest major upgrade breaks tests | Version mismatch with `ts-jest` | Keep Jest 29.x unless `ts-jest` upgraded accordingly |
+
+### Version Compatibility Note
+Current stack: `jest@29.x` + `ts-jest@29.x` + ESM (`"type": "module"`). Updating Jest to 30+ requires upgrading `ts-jest` and revisiting `jest.config.cjs`. Keep versions aligned to avoid parse errors.
 
 ## License
 
