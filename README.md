@@ -189,11 +189,15 @@ Executes JavaScript and returns results. Each script can use 'return' to get val
   urls: string[],           // Required: List of URLs to crawl
   max_concurrent?: number,  // Parallel request limit (default: 5)
   remove_images?: boolean,  // Remove images from output (default: false)
-  bypass_cache?: boolean    // Bypass cache for all URLs (default: false)
+  bypass_cache?: boolean,   // Bypass cache for all URLs (default: false)
+  configs?: Array<{         // Optional: Per-URL configurations (v3.0.0+)
+    url: string,
+    [key: string]: any      // Any crawl parameters for this specific URL
+  }>
 }
 ```
 
-Efficiently crawls multiple URLs in parallel. Each URL gets a fresh browser instance.
+Efficiently crawls multiple URLs in parallel. Each URL gets a fresh browser instance. With `configs` array, you can specify different parameters for each URL.
 
 ### 6. `smart_crawl` - Auto-detect and handle different content types
 
@@ -260,13 +264,17 @@ Extracts all URLs from XML sitemaps. Supports regex filtering for specific URL p
 {
   url: string,                              // URL to crawl
   // Browser Configuration
-  browser_type?: 'chromium'|'firefox'|'webkit',  // Browser engine
+  browser_type?: 'chromium'|'firefox'|'webkit'|'undetected',  // Browser engine (undetected = stealth mode)
   viewport_width?: number,                  // Browser width (default: 1080)
   viewport_height?: number,                 // Browser height (default: 600)
   user_agent?: string,                      // Custom user agent
-  proxy_server?: string,                    // Proxy URL
-  proxy_username?: string,                  // Proxy auth
-  proxy_password?: string,                  // Proxy password
+  proxy_server?: string | {                 // Proxy URL (string or object format)
+    server: string,
+    username?: string,
+    password?: string
+  },
+  proxy_username?: string,                  // Proxy auth (if using string format)
+  proxy_password?: string,                  // Proxy password (if using string format)
   cookies?: Array<{name, value, domain}>,   // Pre-set cookies
   headers?: Record<string,string>,          // Custom headers
   
@@ -285,9 +293,34 @@ Extracts all URLs from XML sitemaps. Supports regex filtering for specific URL p
   pdf?: boolean,                           // Generate PDF
   session_id?: string,                      // Reuse browser session (only works with crawl tool)
   cache_mode?: 'ENABLED'|'BYPASS'|'DISABLED',  // Cache control
+  
+  // New in v3.0.0 (Crawl4AI 0.7.3/0.7.4)
+  css_selector?: string,                    // CSS selector to filter content
+  delay_before_return_html?: number,        // Delay in seconds before returning HTML
+  include_links?: boolean,                  // Include extracted links in response
+  resolve_absolute_urls?: boolean,          // Convert relative URLs to absolute
+  
+  // LLM Extraction (REST API only supports 'llm' type)
   extraction_type?: 'llm',                  // Only 'llm' extraction is supported via REST API
   extraction_schema?: object,               // Schema for structured extraction
   extraction_instruction?: string,          // Natural language extraction prompt
+  extraction_strategy?: {                   // Advanced extraction configuration
+    provider?: string,
+    api_key?: string,
+    model?: string,
+    [key: string]: any
+  },
+  table_extraction_strategy?: {             // Table extraction configuration
+    enable_chunking?: boolean,
+    thresholds?: object,
+    [key: string]: any
+  },
+  markdown_generator_options?: {            // Markdown generation options
+    include_links?: boolean,
+    preserve_formatting?: boolean,
+    [key: string]: any
+  },
+  
   timeout?: number,                         // Overall timeout (default: 60000)
   verbose?: boolean                         // Detailed logging
 }
@@ -300,7 +333,7 @@ Extracts all URLs from XML sitemaps. Supports regex filtering for specific URL p
   action: 'create' | 'clear' | 'list',    // Required: Action to perform
   session_id?: string,                    // For 'create' and 'clear' actions
   initial_url?: string,                   // For 'create' action: URL to load
-  browser_type?: 'chromium' | 'firefox' | 'webkit'  // For 'create' action
+  browser_type?: 'chromium' | 'firefox' | 'webkit' | 'undetected'  // For 'create' action
 }
 ```
 

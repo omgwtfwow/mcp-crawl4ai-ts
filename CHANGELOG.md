@@ -1,5 +1,13 @@
 # Changelog
 
+## Version 3.0.1 (2025-08-30)
+
+### Documentation
+- Updated README.md to accurately document all new parameters from v3.0.0
+- Added documentation for batch_crawl configs array parameter
+- Clarified proxy object format support
+- Documented all new crawler parameters from Crawl4AI 0.7.3/0.7.4
+
 ## Version 3.0.0 (2025-08-30)
 
 ### Features
