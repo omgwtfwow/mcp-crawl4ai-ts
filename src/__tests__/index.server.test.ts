@@ -623,7 +623,6 @@ describe('Crawl4AIServer Tool Handlers', () => {
       });
     });
 
-
     describe('extract_with_llm', () => {
       it('should handle successful LLM extraction', async () => {
         mockExtractWithLLM.mockResolvedValue({
@@ -935,7 +934,6 @@ describe('Crawl4AIServer Tool Handlers', () => {
         expect(result.content[0].text).toContain('All links from https://example.com:');
         expect(result.content[0].text).toMatch(/\n\s*$/);
       });
-
 
       it('should handle smart crawl with HEAD request failure', async () => {
         mockHead.mockRejectedValue(new Error('HEAD failed'));
@@ -1507,10 +1505,6 @@ describe('Crawl4AIServer Tool Handlers', () => {
         expect(result.content[0].text).toContain('Filtered URLs: 2');
       });
 
-
-
-
-
       it('should handle crawl_recursive', async () => {
         mockCrawl.mockResolvedValue({
           success: true,
@@ -1531,7 +1525,6 @@ describe('Crawl4AIServer Tool Handlers', () => {
 
         expect(result.content[0].text).toContain('Recursive crawl completed');
       });
-
 
       it('should handle parse_sitemap error', async () => {
         mockParseSitemap.mockRejectedValue(new Error('Network error'));

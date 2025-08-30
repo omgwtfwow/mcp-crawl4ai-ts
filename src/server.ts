@@ -976,7 +976,6 @@ export class Crawl4AIServer {
     return this.crawlHandlers.crawl(options);
   }
 
-
   // Setter for axiosClient to update all handlers (for testing)
   set axiosClientForTesting(client: AxiosInstance) {
     this.axiosClient = client;
