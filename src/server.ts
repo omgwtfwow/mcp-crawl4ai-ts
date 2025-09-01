@@ -760,48 +760,31 @@ export class Crawl4AIServer {
             '3. List sessions: {action: "list"}\n\n' +
             'Browser sessions maintain ALL state (cookies, localStorage, page) across multiple crawl calls. Essential for: forms, login flows, multi-step processes, maintaining state across operations.',
           inputSchema: {
+            // Anthropic/Claude tools require top-level schemas to be a plain object without oneOf/allOf/anyOf
             type: 'object',
-            oneOf: [
-              {
-                type: 'object',
-                properties: {
-                  action: { type: 'string', const: 'create' },
-                  session_id: {
-                    type: 'string',
-                    description: 'Custom session identifier. Auto-generated if not provided.',
-                  },
-                  initial_url: {
-                    type: 'string',
-                    description: 'URL to load when creating session.',
-                  },
-                  browser_type: {
-                    type: 'string',
-                    enum: ['chromium', 'firefox', 'webkit'],
-                    description: 'Browser engine for the session',
-                    default: 'chromium',
-                  },
-                },
-                required: ['action'],
+            properties: {
+              action: {
+                type: 'string',
+                description: 'Action to perform: create, clear, or list',
+                enum: ['create', 'clear', 'list'],
               },
-              {
-                type: 'object',
-                properties: {
-                  action: { type: 'string', const: 'clear' },
-                  session_id: {
-                    type: 'string',
-                    description: 'Session ID to remove from tracking',
-                  },
-                },
-                required: ['action', 'session_id'],
+              session_id: {
+                type: 'string',
+                description:
+                  'Session identifier. Required for action="clear". Optional for create (auto-generated if omitted).',
               },
-              {
-                type: 'object',
-                properties: {
-                  action: { type: 'string', const: 'list' },
-                },
-                required: ['action'],
+              initial_url: {
+                type: 'string',
+                description: 'URL to load when creating session (action="create").',
               },
-            ],
+              browser_type: {
+                type: 'string',
+                enum: ['chromium', 'firefox', 'webkit'],
+                description: 'Browser engine for the session (action="create").',
+                default: 'chromium',
+              },
+            },
+            required: ['action'],
           },
         },
         {

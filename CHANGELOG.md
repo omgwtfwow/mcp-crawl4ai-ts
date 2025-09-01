@@ -1,5 +1,13 @@
 # Changelog
 
+## Version 3.0.2 (2025-09-01)
+
+### Bug Fixes
+- Fixed manage_session tool schema compatibility with Claude/Anthropic tools
+  - Removed oneOf/allOf/anyOf from top-level schema
+  - Simplified to plain object schema with enum constraints
+  - Maintains all functionality while improving MCP client compatibility
+
 ## Version 3.0.1 (2025-08-30)
 
 ### Documentation
