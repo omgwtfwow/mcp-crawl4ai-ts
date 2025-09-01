@@ -1042,24 +1042,7 @@
 <a name='L977'></a><a href='#L977'>977</a>
 <a name='L978'></a><a href='#L978'>978</a>
 <a name='L979'></a><a href='#L979'>979</a>
-<a name='L980'></a><a href='#L980'>980</a>
-<a name='L981'></a><a href='#L981'>981</a>
-<a name='L982'></a><a href='#L982'>982</a>
-<a name='L983'></a><a href='#L983'>983</a>
-<a name='L984'></a><a href='#L984'>984</a>
-<a name='L985'></a><a href='#L985'>985</a>
-<a name='L986'></a><a href='#L986'>986</a>
-<a name='L987'></a><a href='#L987'>987</a>
-<a name='L988'></a><a href='#L988'>988</a>
-<a name='L989'></a><a href='#L989'>989</a>
-<a name='L990'></a><a href='#L990'>990</a>
-<a name='L991'></a><a href='#L991'>991</a>
-<a name='L992'></a><a href='#L992'>992</a>
-<a name='L993'></a><a href='#L993'>993</a>
-<a name='L994'></a><a href='#L994'>994</a>
-<a name='L995'></a><a href='#L995'>995</a>
-<a name='L996'></a><a href='#L996'>996</a>
-<a name='L997'></a><a href='#L997'>997</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L980'></a><a href='#L980'>980</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -1177,23 +1160,6 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">79x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -2817,48 +2783,31 @@ export class Crawl4AIServer {
             '3. List sessions: {action: "list"}\n\n' +
             'Browser sessions maintain ALL state (cookies, localStorage, page) across multiple crawl calls. Essential for: forms, login flows, multi-step processes, maintaining state across operations.',
           inputSchema: {
+            // Anthropic/Claude tools require top-level schemas to be a plain object without oneOf/allOf/anyOf
             type: 'object',
-            oneOf: [
-              {
-                type: 'object',
-                properties: {
-                  action: { type: 'string', const: 'create' },
-                  session_id: {
-                    type: 'string',
-                    description: 'Custom session identifier. Auto-generated if not provided.',
-                  },
-                  initial_url: {
-                    type: 'string',
-                    description: 'URL to load when creating session.',
-                  },
-                  browser_type: {
-                    type: 'string',
-                    enum: ['chromium', 'firefox', 'webkit'],
-                    description: 'Browser engine for the session',
-                    default: 'chromium',
-                  },
-                },
-                required: ['action'],
+            properties: {
+              action: {
+                type: 'string',
+                description: 'Action to perform: create, clear, or list',
+                enum: ['create', 'clear', 'list'],
               },
-              {
-                type: 'object',
-                properties: {
-                  action: { type: 'string', const: 'clear' },
-                  session_id: {
-                    type: 'string',
-                    description: 'Session ID to remove from tracking',
-                  },
-                },
-                required: ['action', 'session_id'],
+              session_id: {
+                type: 'string',
+                description:
+                  'Session identifier. Required for action="clear". Optional for create (auto-generated if omitted).',
               },
-              {
-                type: 'object',
-                properties: {
-                  action: { type: 'string', const: 'list' },
-                },
-                required: ['action'],
+              initial_url: {
+                type: 'string',
+                description: 'URL to load when creating session (action="create").',
               },
-            ],
+              browser_type: {
+                type: 'string',
+                enum: ['chromium', 'firefox', 'webkit'],
+                description: 'Browser engine for the session (action="create").',
+                default: 'chromium',
+              },
+            },
+            required: ['action'],
           },
         },
         {
@@ -3058,7 +3007,7 @@ export class Crawl4AIServer {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-08-30T01:47:00.590Z
+                at 2025-09-01T11:09:43.193Z
             </div>
         <script src="../prettify.js"></script>
         <script>
